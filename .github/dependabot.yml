@@ -1,0 +1,190 @@
+version: 2
+
+registries:
+  npm-npmjs:
+    type: npm-registry
+    url: https://registry.npmjs.org
+    replaces-base: true
+
+updates:
+  # Root package.json and pnpm workspace
+  - package-ecosystem: "npm"
+    directory: "/"
+    registries:
+      - npm-npmjs
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    reviewers:
+      - "pickle-play/core-team"
+    groups:
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@typescript-eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "playwright"
+          - "@playwright/*"
+        update-types:
+          - "minor"
+          - "patch"
+      build-tools:
+        patterns:
+          - "turbo"
+          - "vite"
+          - "esbuild"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Web app dependencies
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    registries:
+      - npm-npmjs
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps(web)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+      - "web"
+    groups:
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      ui:
+        patterns:
+          - "@radix-ui/*"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "class-variance-authority"
+          - "clsx"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # API app dependencies
+  - package-ecosystem: "npm"
+    directory: "/apps/api"
+    registries:
+      - npm-npmjs
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps(api)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+      - "api"
+    groups:
+      database:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+          - "@neondatabase/*"
+          - "postgres"
+          - "pg"
+        update-types:
+          - "minor"
+          - "patch"
+      hono:
+        patterns:
+          - "hono"
+          - "@hono/*"
+        update-types:
+          - "minor"
+          - "patch"
+      auth:
+        patterns:
+          - "lucia"
+          - "@lucia-auth/*"
+          - "arctic"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "ci/cd"
+      - "automated"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker dependencies (if using Docker)
+  - package-ecosystem: "docker"
+    directory: "/apps/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    commit-message:
+      prefix: "docker(api)"
+    labels:
+      - "docker"
+      - "automated"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

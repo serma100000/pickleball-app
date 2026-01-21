@@ -1,0 +1,267 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Home,
+  MapPin,
+  Trophy,
+  Users,
+  Calendar,
+  User,
+  Plus,
+  Menu,
+  X,
+  Bell,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+// Check if Clerk is configured
+const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Courts', href: '/courts', icon: MapPin },
+  { name: 'Games', href: '/games', icon: Trophy },
+  { name: 'Clubs', href: '/clubs', icon: Users },
+  { name: 'Leagues', href: '/leagues', icon: Calendar },
+  { name: 'Tournaments', href: '/tournaments', icon: Trophy },
+  { name: 'Profile', href: '/profile', icon: User },
+];
+
+const mobileNavigation = [
+  { name: 'Home', href: '/dashboard', icon: Home },
+  { name: 'Courts', href: '/courts', icon: MapPin },
+  { name: 'Log', href: '/games/new', icon: Plus, highlight: true },
+  { name: 'Games', href: '/games', icon: Trophy },
+  { name: 'Profile', href: '/profile', icon: User },
+];
+
+// User button component that conditionally renders Clerk or a placeholder
+function UserAvatar() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [ClerkComponent, setClerkComponent] = useState<any>(null);
+
+  useEffect(() => {
+    if (isClerkConfigured) {
+      import('@clerk/nextjs').then((clerk) => {
+        setClerkComponent(() => clerk.UserButton);
+      });
+    }
+  }, []);
+
+  if (!isClerkConfigured || !ClerkComponent) {
+    // Fallback avatar for demo mode
+    return (
+      <div className="w-9 h-9 rounded-full bg-pickle-500 flex items-center justify-center">
+        <span className="text-white text-sm font-medium">DU</span>
+      </div>
+    );
+  }
+
+  return (
+    <ClerkComponent
+      appearance={{
+        elements: {
+          avatarBox: 'w-9 h-9',
+        },
+      }}
+      afterSignOutUrl="/"
+    />
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+          {/* Logo */}
+          <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+                <span className="text-white font-bold">P</span>
+              </div>
+              <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+            </Link>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1 px-3 py-4">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Quick Action */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <Link
+              href="/games/new"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Log Game
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white dark:bg-gray-800 transition-transform duration-300 ease-in-out lg:hidden ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+              <span className="text-white font-bold">P</span>
+            </div>
+            <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <nav className="flex-1 space-y-1 px-3 py-4">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 lg:px-6">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Search - Desktop */}
+          <div className="hidden md:flex flex-1 max-w-md">
+            <div className="relative w-full">
+              <input
+                type="search"
+                placeholder="Search courts, players, games..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+              />
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className="flex-1 lg:flex-none" />
+
+          {/* Right side */}
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            </button>
+            <UserAvatar />
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">{children}</main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-bottom">
+          <div className="flex items-center justify-around h-16">
+            {mobileNavigation.map((item) => {
+              const isActive = pathname === item.href;
+              if (item.highlight) {
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center justify-center w-14 h-14 -mt-5 bg-pickle-500 rounded-full shadow-lg"
+                  >
+                    <item.icon className="w-6 h-6 text-white" />
+                  </Link>
+                );
+              }
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex flex-col items-center gap-1 px-3 py-2 ${
+                    isActive
+                      ? 'text-pickle-600 dark:text-pickle-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-xs">{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.pickle-play.com
+    about: Check our documentation for guides and API references
+  - name: Discussions
+    url: https://github.com/pickle-play/pickle-play/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Discord Community
+    url: https://discord.gg/pickle-play
+    about: Join our Discord for real-time help and community chat
+  - name: Security Vulnerabilities
+    url: https://github.com/pickle-play/pickle-play/security/advisories/new
+    about: Report security vulnerabilities privately

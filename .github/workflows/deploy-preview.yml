@@ -1,0 +1,234 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  preview-info:
+    name: Preview Info
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.pr.outputs.number }}
+      short_sha: ${{ steps.sha.outputs.short }}
+    steps:
+      - name: Get PR number
+        id: pr
+        run: echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+  build-preview:
+    name: Build Preview
+    runs-on: ubuntu-latest
+    needs: preview-info
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: https://api-pr-${{ needs.preview-info.outputs.pr_number }}.pickle-play.dev
+          NEXT_PUBLIC_ENVIRONMENT: preview
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-preview-build
+          path: apps/web/.next
+          retention-days: 1
+
+      - name: Upload API build
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-preview-build
+          path: apps/api/dist
+          retention-days: 1
+
+  deploy-web-preview:
+    name: Deploy Web Preview
+    runs-on: ubuntu-latest
+    needs: [preview-info, build-preview]
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.preview_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-preview-build
+          path: apps/web/.next
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel Preview
+        id: deploy
+        run: |
+          PREVIEW_URL=$(vercel deploy \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ vars.VERCEL_ORG_ID }} \
+            --yes \
+            --prebuilt \
+            --meta pr=${{ needs.preview-info.outputs.pr_number }} \
+            ./apps/web)
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_WEB_PROJECT_ID }}
+
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+
+  deploy-api-preview:
+    name: Deploy API Preview
+    runs-on: ubuntu-latest
+    needs: [preview-info, build-preview]
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.api_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download API build
+        uses: actions/download-artifact@v4
+        with:
+          name: api-preview-build
+          path: apps/api/dist
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway Preview
+        id: deploy
+        run: |
+          cd apps/api
+          railway up --environment pr-${{ needs.preview-info.outputs.pr_number }} --detach
+          API_URL="https://api-pr-${{ needs.preview-info.outputs.pr_number }}.pickle-play.dev"
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    outputs:
+      api_url: ${{ steps.deploy.outputs.api_url }}
+
+  run-preview-db-migrations:
+    name: Run Preview DB Migrations
+    runs-on: ubuntu-latest
+    needs: [preview-info, deploy-api-preview]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+
+  comment-preview-urls:
+    name: Comment Preview URLs
+    runs-on: ubuntu-latest
+    needs: [preview-info, deploy-web-preview, deploy-api-preview, run-preview-db-migrations]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ needs.preview-info.outputs.pr_number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Preview Deployment
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ needs.preview-info.outputs.pr_number }}
+          edit-mode: replace
+          body: |
+            ## Preview Deployment
+
+            | Application | URL | Status |
+            |-------------|-----|--------|
+            | Web App | [${{ needs.deploy-web-preview.outputs.preview_url }}](${{ needs.deploy-web-preview.outputs.preview_url }}) | Deployed |
+            | API | [${{ needs.deploy-api-preview.outputs.api_url }}](${{ needs.deploy-api-preview.outputs.api_url }}) | Deployed |
+
+            **Commit:** `${{ github.sha }}`
+            **Branch:** `${{ github.head_ref }}`
+
+            ---
+
+            ### Quick Links
+            - [Web App](${{ needs.deploy-web-preview.outputs.preview_url }})
+            - [API Health Check](${{ needs.deploy-api-preview.outputs.api_url }}/health)
+            - [API Docs](${{ needs.deploy-api-preview.outputs.api_url }}/docs)
+
+            ---
+            <sub>Preview deployments are automatically deleted when the PR is closed or merged.</sub>
+
+  cleanup-on-close:
+    name: Cleanup Preview on Close
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Delete Railway preview environment
+        run: |
+          railway environment delete pr-${{ github.event.pull_request.number }} --yes || true
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        continue-on-error: true
+
+      - name: Delete Vercel preview deployment
+        run: |
+          curl -X DELETE \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            "https://api.vercel.com/v12/deployments?meta-pr=${{ github.event.pull_request.number }}&teamId=${{ vars.VERCEL_ORG_ID }}"
+        continue-on-error: true

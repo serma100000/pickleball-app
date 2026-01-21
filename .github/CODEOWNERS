@@ -1,0 +1,54 @@
+# CODEOWNERS file for Pickle Play
+# These owners will be requested for review when someone opens a pull request
+# that modifies code that they own.
+
+# Default owners for everything in the repo
+* @pickle-play/core-team
+
+# Web application
+/apps/web/ @pickle-play/frontend-team
+/apps/web/src/components/ @pickle-play/frontend-team @pickle-play/design-team
+/apps/web/src/app/ @pickle-play/frontend-team
+
+# API application
+/apps/api/ @pickle-play/backend-team
+/apps/api/src/routes/ @pickle-play/backend-team
+/apps/api/src/db/ @pickle-play/backend-team @pickle-play/dba-team
+
+# Shared packages
+/packages/ui/ @pickle-play/frontend-team @pickle-play/design-team
+/packages/types/ @pickle-play/core-team
+/packages/utils/ @pickle-play/core-team
+/packages/validation/ @pickle-play/backend-team
+
+# Infrastructure and CI/CD
+/.github/ @pickle-play/devops-team
+/.github/workflows/ @pickle-play/devops-team
+/docker/ @pickle-play/devops-team
+/infrastructure/ @pickle-play/devops-team
+
+# Documentation
+/docs/ @pickle-play/docs-team
+*.md @pickle-play/docs-team
+
+# Configuration files
+package.json @pickle-play/core-team
+pnpm-workspace.yaml @pickle-play/core-team
+turbo.json @pickle-play/core-team
+tsconfig*.json @pickle-play/core-team
+
+# Security-sensitive files
+/apps/api/src/auth/ @pickle-play/security-team @pickle-play/backend-team
+/apps/api/src/middleware/ @pickle-play/security-team @pickle-play/backend-team
+.env* @pickle-play/security-team @pickle-play/devops-team
+
+# Database migrations
+/apps/api/src/db/migrations/ @pickle-play/dba-team @pickle-play/backend-team
+/apps/api/src/db/schema/ @pickle-play/dba-team @pickle-play/backend-team
+
+# Testing
+/apps/web/tests/ @pickle-play/qa-team @pickle-play/frontend-team
+/apps/api/tests/ @pickle-play/qa-team @pickle-play/backend-team
+/e2e/ @pickle-play/qa-team
+playwright.config.ts @pickle-play/qa-team
+vitest.config.ts @pickle-play/qa-team
