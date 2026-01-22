@@ -14,8 +14,9 @@ export type GameEventType = 'single_match' | 'round_robin' | 'set_partner_round_
 
 export interface GameTypeConfig {
   type: GameEventType;
-  playerCount?: number; // for round robin (4-16 players)
-  teamCount?: number; // for set partner round robin (4-16 teams)
+  playerCount?: number; // for round robin (3-24 players)
+  teamCount?: number; // for set partner round robin (3-24 teams)
+  numberOfRounds?: number; // for round robins (1-10 rounds)
   reportToDupr: boolean;
 }
 
@@ -61,8 +62,11 @@ const GAME_TYPE_OPTIONS: GameTypeOption[] = [
   },
 ];
 
-const MIN_COUNT = 4;
-const MAX_COUNT = 16;
+const MIN_COUNT = 3;
+const MAX_COUNT = 24;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 10;
+const DEFAULT_ROUNDS = 1;
 
 // ============================================================================
 // Toggle Switch Component
@@ -154,20 +158,22 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
     }
   };
 
-  const handleIncrement = () => {
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (value < max) {
       onChange(value + 1);
     }
   };
 
-  const handleDecrement = () => {
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (value > min) {
       onChange(value - 1);
     }
   };
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg" onClick={(e) => e.stopPropagation()}>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
       </label>
@@ -228,8 +234,10 @@ interface GameTypeCardProps {
   onSelect: () => void;
   playerCount?: number;
   teamCount?: number;
+  numberOfRounds?: number;
   onPlayerCountChange?: (count: number) => void;
   onTeamCountChange?: (count: number) => void;
+  onNumberOfRoundsChange?: (count: number) => void;
 }
 
 function GameTypeCard({
@@ -238,8 +246,10 @@ function GameTypeCard({
   onSelect,
   playerCount,
   teamCount,
+  numberOfRounds,
   onPlayerCountChange,
   onTeamCountChange,
+  onNumberOfRoundsChange,
 }: GameTypeCardProps) {
   const Icon = option.icon;
 
@@ -286,20 +296,42 @@ function GameTypeCard({
 
       {/* Player count input for round robin */}
       {selected && option.showPlayerCount && onPlayerCountChange && (
-        <CountInput
-          value={playerCount ?? MIN_COUNT}
-          onChange={onPlayerCountChange}
-          label="Number of Players"
-        />
+        <>
+          <CountInput
+            value={playerCount ?? MIN_COUNT}
+            onChange={onPlayerCountChange}
+            label="Number of Players"
+          />
+          {onNumberOfRoundsChange && (
+            <CountInput
+              value={numberOfRounds ?? DEFAULT_ROUNDS}
+              onChange={onNumberOfRoundsChange}
+              label="Number of Rounds"
+              min={MIN_ROUNDS}
+              max={MAX_ROUNDS}
+            />
+          )}
+        </>
       )}
 
       {/* Team count input for set partner round robin */}
       {selected && option.showTeamCount && onTeamCountChange && (
-        <CountInput
-          value={teamCount ?? MIN_COUNT}
-          onChange={onTeamCountChange}
-          label="Number of Teams"
-        />
+        <>
+          <CountInput
+            value={teamCount ?? MIN_COUNT}
+            onChange={onTeamCountChange}
+            label="Number of Teams"
+          />
+          {onNumberOfRoundsChange && (
+            <CountInput
+              value={numberOfRounds ?? DEFAULT_ROUNDS}
+              onChange={onNumberOfRoundsChange}
+              label="Number of Rounds"
+              min={MIN_ROUNDS}
+              max={MAX_ROUNDS}
+            />
+          )}
+        </>
       )}
     </Card>
   );
@@ -319,13 +351,16 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
     // Set defaults for count fields based on type
     if (type === 'round_robin') {
       newConfig.playerCount = value.playerCount ?? MIN_COUNT;
+      newConfig.numberOfRounds = value.numberOfRounds ?? DEFAULT_ROUNDS;
       delete newConfig.teamCount;
     } else if (type === 'set_partner_round_robin') {
       newConfig.teamCount = value.teamCount ?? MIN_COUNT;
+      newConfig.numberOfRounds = value.numberOfRounds ?? DEFAULT_ROUNDS;
       delete newConfig.playerCount;
     } else {
       delete newConfig.playerCount;
       delete newConfig.teamCount;
+      delete newConfig.numberOfRounds;
     }
 
     onChange(newConfig);
@@ -342,6 +377,13 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
     onChange({
       ...value,
       teamCount: count,
+    });
+  };
+
+  const handleNumberOfRoundsChange = (count: number) => {
+    onChange({
+      ...value,
+      numberOfRounds: count,
     });
   };
 
@@ -368,8 +410,10 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
               onSelect={() => handleTypeSelect(option.type)}
               playerCount={value.playerCount}
               teamCount={value.teamCount}
+              numberOfRounds={value.numberOfRounds}
               onPlayerCountChange={handlePlayerCountChange}
               onTeamCountChange={handleTeamCountChange}
+              onNumberOfRoundsChange={handleNumberOfRoundsChange}
             />
           ))}
         </div>
