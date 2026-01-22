@@ -25,6 +25,7 @@ import {
 import {
   generateTeamRoundRobin,
   generateIndividualRoundRobin,
+  generateSinglesRoundRobin,
   getMatchesByRound,
   type Player,
   type Team,
@@ -34,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
 
 type SingleMatchType = 'singles' | 'doubles';
+type GameFormat = 'singles' | 'doubles';
 type ScoreEntry = { team1: number; team2: number };
 
 // Extended player type with DUPR info
@@ -66,6 +68,8 @@ interface WizardState {
   step: number;
   gameMode: GameMode;
   duprEnabled: boolean;
+  // Round robin format (singles 1v1 or doubles with rotating partners)
+  gameFormat: GameFormat;
   // Single match state
   singleMatchType: SingleMatchType;
   singleMatchScores: ScoreEntry[];
@@ -96,6 +100,7 @@ export default function NewGamePage() {
     step: 0,
     gameMode: 'single-match',
     duprEnabled: false,
+    gameFormat: 'doubles',
     singleMatchType: 'doubles',
     singleMatchScores: [{ team1: 0, team2: 0 }],
     partner: '',
@@ -182,9 +187,15 @@ export default function NewGamePage() {
   const handleNext = () => {
     if (state.step === 1) {
       // Generate matchups when moving from player/team selection to scores
-      if (state.gameMode === 'round-robin' && state.roundRobinPlayers.length >= 4) {
-        const result = generateIndividualRoundRobin(state.roundRobinPlayers);
-        setState((prev) => ({ ...prev, roundRobinMatches: result.matches }));
+      if (state.gameMode === 'round-robin') {
+        const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
+        if (state.roundRobinPlayers.length >= minPlayers) {
+          // Use singles or doubles generator based on format
+          const result = state.gameFormat === 'singles'
+            ? generateSinglesRoundRobin(state.roundRobinPlayers)
+            : generateIndividualRoundRobin(state.roundRobinPlayers);
+          setState((prev) => ({ ...prev, roundRobinMatches: result.matches }));
+        }
       }
       if (state.gameMode === 'set-partner-round-robin' && state.teams.length >= 2) {
         const result = generateTeamRoundRobin(state.teams);
@@ -350,7 +361,9 @@ export default function NewGamePage() {
           return true; // Match details
         }
         if (state.gameMode === 'round-robin') {
-          return state.roundRobinPlayers.length >= 4;
+          // Singles needs at least 2 players, doubles needs at least 4
+          const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
+          return state.roundRobinPlayers.length >= minPlayers;
         }
         if (state.gameMode === 'set-partner-round-robin') {
           return state.teams.length >= 2;
@@ -421,12 +434,14 @@ export default function NewGamePage() {
             value={{
               type: gameModeToEventType[state.gameMode],
               reportToDupr: state.duprEnabled,
+              gameFormat: state.gameFormat,
             }}
             onChange={(config: GameTypeConfig) => {
               setState((prev) => ({
                 ...prev,
                 gameMode: gameEventTypeToMode[config.type],
                 duprEnabled: config.reportToDupr,
+                gameFormat: config.gameFormat ?? 'doubles',
               }));
             }}
           />
@@ -455,6 +470,7 @@ export default function NewGamePage() {
             setNewPlayerName={setNewPlayerName}
             addPlayer={addPlayer}
             removePlayer={removePlayer}
+            gameFormat={state.gameFormat}
           />
         )}
 
@@ -823,20 +839,27 @@ function AddPlayersStep({
   setNewPlayerName,
   addPlayer,
   removePlayer,
+  gameFormat,
 }: {
   players: Player[];
   newPlayerName: string;
   setNewPlayerName: (name: string) => void;
   addPlayer: () => void;
   removePlayer: (id: string) => void;
+  gameFormat: GameFormat;
 }) {
+  const minPlayers = gameFormat === 'singles' ? 2 : 4;
+  const description = gameFormat === 'singles'
+    ? `Add at least ${minPlayers} players for a singles round robin. Each player plays against every other player.`
+    : `Add at least ${minPlayers} players for a doubles round robin. Players will rotate partners each match.`;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         Add Players
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Add at least 4 players for a round robin tournament. Players will rotate partners each match.
+        {description}
       </p>
 
       {/* Add Player Input */}
@@ -888,13 +911,13 @@ function AddPlayersStep({
         ))}
       </div>
 
-      {players.length > 0 && players.length < 4 && (
+      {players.length > 0 && players.length < minPlayers && (
         <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
-          Add {4 - players.length} more player{4 - players.length > 1 ? 's' : ''} to start the tournament
+          Add {minPlayers - players.length} more player{minPlayers - players.length > 1 ? 's' : ''} to start the tournament
         </p>
       )}
 
-      {players.length >= 4 && (
+      {players.length >= minPlayers && (
         <p className="mt-4 text-sm text-pickle-600 dark:text-pickle-400">
           Ready to generate matchups with {players.length} players!
         </p>
@@ -1013,6 +1036,29 @@ function EnterScoresStep({
 }) {
   const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
 
+  // Helper to get participant name(s) for display
+  const getParticipantName = (match: Match, side: 'team1' | 'team2'): string => {
+    // Singles match (player1/player2 format)
+    if (match.player1 && match.player2) {
+      return side === 'team1' ? match.player1.name : match.player2.name;
+    }
+    // Doubles/Team match (team1/team2 format)
+    const team = side === 'team1' ? match.team1 : match.team2;
+    if (team) {
+      return `${team.player1.name} & ${team.player2.name}`;
+    }
+    return side === 'team1' ? 'Player 1' : 'Player 2';
+  };
+
+  // Check if this is a singles tournament
+  const isSingles = (matches: Match[]): boolean => {
+    const firstMatch = matches[0];
+    return firstMatch ? !!firstMatch.player1 && !!firstMatch.player2 : false;
+  };
+
+  const allMatches = Array.from(matchesByRound.values()).flat();
+  const singlesMode = isSingles(allMatches);
+
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -1039,25 +1085,23 @@ function EnterScoresStep({
                 className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex flex-col gap-3">
-                  {/* Team Labels Row */}
+                  {/* Labels Row */}
                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide">
                     <span className="text-pickle-600 dark:text-pickle-400 flex-1 text-center sm:text-right sm:pr-4">
-                      Team A
+                      {singlesMode ? 'Player A' : 'Team A'}
                     </span>
                     <div className="w-[180px]" /> {/* Spacer for score inputs */}
                     <span className="text-gray-500 dark:text-gray-400 flex-1 text-center sm:text-left sm:pl-4">
-                      Team B
+                      {singlesMode ? 'Player B' : 'Team B'}
                     </span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {/* Team 1 */}
+                    {/* Side 1 */}
                     <div className="flex-1 text-center sm:text-right">
                       <div className="inline-block sm:block bg-pickle-50 dark:bg-pickle-900/20 rounded-lg px-3 py-2 border border-pickle-200 dark:border-pickle-800">
                         <span className="text-sm font-medium text-pickle-700 dark:text-pickle-300">
-                          {match.team1
-                            ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                            : 'Team 1'}
+                          {getParticipantName(match, 'team1')}
                         </span>
                       </div>
                     </div>
@@ -1068,7 +1112,7 @@ function EnterScoresStep({
                         <ScoreInput
                           value={match.score.team1}
                           onChange={(val) => updateMatchScore(match.id, 'team1', val)}
-                          label="Team 1 score"
+                          label={singlesMode ? 'Player 1 score' : 'Team 1 score'}
                         />
                       </div>
                       <span className="text-gray-400 font-bold text-sm px-1">vs</span>
@@ -1076,18 +1120,16 @@ function EnterScoresStep({
                         <ScoreInput
                           value={match.score.team2}
                           onChange={(val) => updateMatchScore(match.id, 'team2', val)}
-                          label="Team 2 score"
+                          label={singlesMode ? 'Player 2 score' : 'Team 2 score'}
                         />
                       </div>
                     </div>
 
-                    {/* Team 2 */}
+                    {/* Side 2 */}
                     <div className="flex-1 text-center sm:text-left">
                       <div className="inline-block sm:block bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {match.team2
-                            ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                            : 'Team 2'}
+                          {getParticipantName(match, 'team2')}
                         </span>
                       </div>
                     </div>

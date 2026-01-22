@@ -44,6 +44,61 @@ function generateId(): string {
 }
 
 /**
+ * Generate singles round robin matchups (1v1)
+ * Each player plays against every other player exactly once
+ */
+export function generateSinglesRoundRobin(players: Player[]): RoundRobinResult {
+  const matches: Match[] = [];
+  const n = players.length;
+
+  if (n < 2) {
+    return { matches: [], rounds: 0 };
+  }
+
+  // Use circle method for optimal round-robin scheduling
+  const playersCopy = [...players];
+
+  // If odd number of players, add a "bye" placeholder
+  const hasBye = n % 2 === 1;
+  if (hasBye) {
+    playersCopy.push({ id: 'bye', name: 'BYE' });
+  }
+
+  const numPlayers = playersCopy.length;
+  const rounds = numPlayers - 1;
+  const matchesPerRound = numPlayers / 2;
+
+  for (let round = 0; round < rounds; round++) {
+    for (let match = 0; match < matchesPerRound; match++) {
+      const home = match;
+      const away = numPlayers - 1 - match;
+
+      // Rotate players (keep first player fixed for circle method)
+      const homePlayer = playersCopy[home === 0 ? 0 : ((home + round - 1) % (numPlayers - 1)) + 1];
+      const awayPlayer = playersCopy[away === 0 ? 0 : ((away + round - 1) % (numPlayers - 1)) + 1];
+
+      // Skip bye matches
+      if (homePlayer?.id === 'bye' || awayPlayer?.id === 'bye') {
+        continue;
+      }
+
+      if (homePlayer && awayPlayer) {
+        matches.push({
+          id: generateId(),
+          round: round + 1,
+          player1: homePlayer,
+          player2: awayPlayer,
+          score: { team1: 0, team2: 0 },
+          completed: false,
+        });
+      }
+    }
+  }
+
+  return { matches, rounds };
+}
+
+/**
  * Generate round robin matchups for individual players (doubles with rotating partners)
  * Each player plays with every other player as a partner AND against every other player
  */
