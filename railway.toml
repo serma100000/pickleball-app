@@ -4,3 +4,7 @@ buildCommand = "pnpm install && pnpm turbo build --filter=@pickle-play/api"
 
 [deploy]
 startCommand = "cd apps/api && NODE_ENV=production node dist/index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
