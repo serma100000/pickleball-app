@@ -20,19 +20,49 @@ interface LocationAutocompleteProps {
   className?: string;
 }
 
-interface MapboxFeature {
-  id: string;
-  place_name: string;
-  center: [number, number]; // [lng, lat]
-  text: string;
-  context?: Array<{
-    id: string;
-    text: string;
+// Mapbox Search API suggestion
+interface MapboxSuggestion {
+  name: string;
+  mapbox_id: string;
+  feature_type: string;
+  address?: string;
+  full_address?: string;
+  place_formatted?: string;
+}
+
+// Mapbox Search API response
+interface MapboxSuggestResponse {
+  suggestions: MapboxSuggestion[];
+}
+
+// Mapbox Retrieve API response
+interface MapboxRetrieveResponse {
+  features: Array<{
+    geometry: {
+      coordinates: [number, number]; // [lng, lat]
+    };
+    properties: {
+      name: string;
+      full_address?: string;
+    };
   }>;
 }
 
-interface MapboxResponse {
-  features: MapboxFeature[];
+// ============================================================================
+// Session Token (required by Mapbox Search API)
+// ============================================================================
+
+let sessionToken: string | null = null;
+
+function getSessionToken(): string {
+  if (!sessionToken) {
+    sessionToken = crypto.randomUUID();
+  }
+  return sessionToken;
+}
+
+function resetSessionToken(): void {
+  sessionToken = null;
 }
 
 // ============================================================================
@@ -82,10 +112,10 @@ function useClickOutside(
 }
 
 // ============================================================================
-// Mapbox Geocoding API
+// Mapbox Search API
 // ============================================================================
 
-async function searchLocations(query: string): Promise<MapboxFeature[]> {
+async function searchLocations(query: string): Promise<MapboxSuggestion[]> {
   if (!query || query.trim().length < 2) {
     return [];
   }
@@ -99,7 +129,9 @@ async function searchLocations(query: string): Promise<MapboxFeature[]> {
 
   try {
     const encodedQuery = encodeURIComponent(query.trim());
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${accessToken}&limit=5&types=place,locality,neighborhood,address,poi`;
+    const token = getSessionToken();
+    // Use Mapbox Search API for better POI/business results (parks, venues, etc)
+    const url = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodedQuery}&access_token=${accessToken}&session_token=${token}&limit=8&types=poi,place,neighborhood,address&country=us&language=en`;
 
     const response = await fetch(url);
 
@@ -107,11 +139,52 @@ async function searchLocations(query: string): Promise<MapboxFeature[]> {
       throw new Error(`Mapbox API error: ${response.status}`);
     }
 
-    const data: MapboxResponse = await response.json();
-    return data.features || [];
+    const data: MapboxSuggestResponse = await response.json();
+    return data.suggestions || [];
   } catch (error) {
     console.error('Error fetching locations:', error);
     return [];
+  }
+}
+
+async function retrieveLocation(mapboxId: string): Promise<{ name: string; fullAddress: string; coordinates: Coordinates } | null> {
+  const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  try {
+    const token = getSessionToken();
+    const url = `https://api.mapbox.com/search/searchbox/v1/retrieve/${mapboxId}?access_token=${accessToken}&session_token=${token}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Mapbox API error: ${response.status}`);
+    }
+
+    const data: MapboxRetrieveResponse = await response.json();
+    const feature = data.features[0];
+
+    if (!feature) {
+      return null;
+    }
+
+    // Reset session token after retrieval (as per Mapbox billing best practices)
+    resetSessionToken();
+
+    return {
+      name: feature.properties.name,
+      fullAddress: feature.properties.full_address || feature.properties.name,
+      coordinates: {
+        lng: feature.geometry.coordinates[0],
+        lat: feature.geometry.coordinates[1],
+      },
+    };
+  } catch (error) {
+    console.error('Error retrieving location:', error);
+    return null;
   }
 }
 
@@ -120,16 +193,14 @@ async function searchLocations(query: string): Promise<MapboxFeature[]> {
 // ============================================================================
 
 interface ResultItemProps {
-  feature: MapboxFeature;
+  suggestion: MapboxSuggestion;
   isActive: boolean;
   onClick: () => void;
 }
 
-function ResultItem({ feature, isActive, onClick }: ResultItemProps) {
-  // Extract the main name and secondary info from place_name
-  const parts = feature.place_name.split(', ');
-  const mainName = parts[0];
-  const secondaryInfo = parts.slice(1).join(', ');
+function ResultItem({ suggestion, isActive, onClick }: ResultItemProps) {
+  const mainName = suggestion.name;
+  const secondaryInfo = suggestion.place_formatted || suggestion.full_address || suggestion.address;
 
   return (
     <button
@@ -184,8 +255,9 @@ export function LocationAutocomplete({
   className,
 }: LocationAutocompleteProps) {
   const [inputValue, setInputValue] = React.useState(value);
-  const [results, setResults] = React.useState<MapboxFeature[]>([]);
+  const [results, setResults] = React.useState<MapboxSuggestion[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isRetrieving, setIsRetrieving] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
 
@@ -216,9 +288,9 @@ export function LocationAutocomplete({
       }
 
       setIsLoading(true);
-      const features = await searchLocations(debouncedQuery);
-      setResults(features);
-      setIsOpen(features.length > 0 || debouncedQuery.length >= 2);
+      const suggestions = await searchLocations(debouncedQuery);
+      setResults(suggestions);
+      setIsOpen(suggestions.length > 0 || debouncedQuery.length >= 2);
       setIsLoading(false);
       setActiveIndex(-1);
     };
@@ -242,14 +314,24 @@ export function LocationAutocomplete({
     onChange(newValue, undefined);
   };
 
-  const handleSelectResult = (feature: MapboxFeature) => {
-    const coordinates: Coordinates = {
-      lat: feature.center[1],
-      lng: feature.center[0],
-    };
-    setInputValue(feature.place_name);
-    onChange(feature.place_name, coordinates);
+  const handleSelectResult = async (suggestion: MapboxSuggestion) => {
+    setIsRetrieving(true);
     setIsOpen(false);
+
+    // Retrieve full location details with coordinates
+    const location = await retrieveLocation(suggestion.mapbox_id);
+
+    if (location) {
+      setInputValue(location.fullAddress);
+      onChange(location.fullAddress, location.coordinates);
+    } else {
+      // Fallback to suggestion data without coordinates
+      const displayName = suggestion.full_address || suggestion.name;
+      setInputValue(displayName);
+      onChange(displayName, undefined);
+    }
+
+    setIsRetrieving(false);
     setActiveIndex(-1);
     inputRef.current?.blur();
   };
@@ -315,7 +397,7 @@ export function LocationAutocomplete({
       {/* Input Field */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          {isLoading ? (
+          {isLoading || isRetrieving ? (
             <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
           ) : (
             <MapPin className="h-5 w-5 text-gray-400" />
@@ -330,7 +412,7 @@ export function LocationAutocomplete({
           onFocus={handleFocus}
           placeholder={placeholder}
           className={cn(
-            'flex h-10 w-full rounded-lg border bg-white pl-10 pr-10 py-2 text-sm',
+            'flex h-12 w-full rounded-lg border bg-white pl-10 pr-10 py-2 text-sm',
             'placeholder:text-gray-500 dark:placeholder:text-gray-400',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
             'disabled:cursor-not-allowed disabled:opacity-50',
@@ -364,7 +446,7 @@ export function LocationAutocomplete({
           className={cn(
             'absolute z-50 mt-1 w-full rounded-lg border bg-white shadow-lg',
             'dark:bg-gray-800 dark:border-gray-600',
-            'max-h-60 overflow-auto'
+            'max-h-72 overflow-auto'
           )}
         >
           <ul
@@ -379,12 +461,12 @@ export function LocationAutocomplete({
                 <span className="sr-only">Loading locations...</span>
               </li>
             ) : results.length > 0 ? (
-              results.map((feature, index) => (
-                <li key={feature.id} id={`location-option-${index}`}>
+              results.map((suggestion, index) => (
+                <li key={suggestion.mapbox_id} id={`location-option-${index}`}>
                   <ResultItem
-                    feature={feature}
+                    suggestion={suggestion}
                     isActive={index === activeIndex}
-                    onClick={() => handleSelectResult(feature)}
+                    onClick={() => handleSelectResult(suggestion)}
                   />
                 </li>
               ))
@@ -392,7 +474,7 @@ export function LocationAutocomplete({
               <li className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
                 <MapPin className="h-5 w-5 mx-auto mb-1 opacity-50" />
                 <p>No locations found</p>
-                <p className="text-xs mt-1">Try a different search term</p>
+                <p className="text-xs mt-1">Try searching for a park, venue, or address</p>
               </li>
             )}
           </ul>
