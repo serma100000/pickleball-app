@@ -1,14 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import {
-  Trophy,
   TrendingUp,
-  Calendar,
-  MapPin,
-  Users,
-  Award,
-  Edit2,
   ChevronRight,
+  Link as LinkIcon,
+  Check,
+  Loader2,
+  ExternalLink,
+  Settings,
 } from 'lucide-react';
 import { UserButton, useUser } from '@clerk/nextjs';
 
@@ -27,18 +27,52 @@ function ProfileAvatar() {
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
+  const [duprId, setDuprId] = useState('');
+  const [isLinkingDupr, setIsLinkingDupr] = useState(false);
+  const [duprLinked, setDuprLinked] = useState(false);
+  const [duprError, setDuprError] = useState('');
 
   // Get display name from Clerk user
-  const displayName = isLoaded && user
-    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'User'
-    : 'Loading...';
+  const displayName =
+    isLoaded && user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.username ||
+        'User'
+      : 'Loading...';
+
+  const handleLinkDupr = async () => {
+    if (!duprId.trim()) {
+      setDuprError('Please enter your DUPR ID');
+      return;
+    }
+
+    setIsLinkingDupr(true);
+    setDuprError('');
+
+    try {
+      // TODO: Call API to link DUPR account
+      // const response = await fetch('/api/user/dupr', {
+      //   method: 'POST',
+      //   body: JSON.stringify({ duprId: duprId.trim() }),
+      // });
+
+      // Simulate API call for now
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setDuprLinked(true);
+    } catch {
+      setDuprError('Failed to link DUPR account. Please try again.');
+    } finally {
+      setIsLinkingDupr(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Profile Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {/* Banner */}
-        <div className="h-32 bg-gradient-to-r from-pickle-500 to-pickle-600" />
+        <div className="h-32 bg-gradient-to-r from-brand-500 to-brand-600" />
 
         {/* Profile Info */}
         <div className="px-6 pb-6">
@@ -50,128 +84,156 @@ export default function ProfilePage() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {displayName}
               </h1>
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mt-1">
-                <MapPin className="w-4 h-4" />
-                San Francisco, CA
-              </div>
+              {isLoaded && user?.primaryEmailAddress && (
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  {user.primaryEmailAddress.emailAddress}
+                </p>
+              )}
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <Edit2 className="w-4 h-4" />
-              Edit Profile
-            </button>
           </div>
 
-          {/* Bio */}
-          <p className="mt-4 text-gray-600 dark:text-gray-300">
-            Passionate pickleball player since 2022. Love playing doubles and always looking
-            for new partners to improve with!
-          </p>
-
-          {/* Quick Stats */}
+          {/* Quick Stats - Placeholder for real data */}
           <div className="grid grid-cols-4 gap-4 mt-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">3.75</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Skill Rating</div>
+              <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                --
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Skill Rating
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">47</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Games</div>
+              <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                0
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Games
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">68%</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Win Rate</div>
+              <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                --
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Win Rate
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">2</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Clubs</div>
+              <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                0
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Clubs
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats & Achievements Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Performance Stats */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-pickle-500" />
-            Performance Stats
+      {/* DUPR Account Linking */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <LinkIcon className="w-5 h-5 text-brand-500" />
+          <h2 className="font-semibold text-gray-900 dark:text-white">
+            DUPR Account
           </h2>
+        </div>
+
+        {duprLinked ? (
+          <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                <Check className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  DUPR Account Linked
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  ID: {duprId}
+                </p>
+              </div>
+            </div>
+            <a
+              href={`https://www.dupr.com/player/${duprId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium"
+            >
+              View Profile
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        ) : (
           <div className="space-y-4">
-            <StatRow label="Singles Record" value="12-5" subvalue="70.6% win rate" />
-            <StatRow label="Doubles Record" value="20-10" subvalue="66.7% win rate" />
-            <StatRow label="Avg Points/Game" value="9.2" />
-            <StatRow label="Longest Win Streak" value="7 games" />
-            <StatRow label="Current Streak" value="3W" positive />
-          </div>
-        </div>
+            <p className="text-gray-600 dark:text-gray-300">
+              Link your DUPR account to import your official rating and match
+              history.
+            </p>
 
-        {/* Achievements */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Award className="w-5 h-5 text-ball-500" />
-            Achievements
-          </h2>
-          <div className="space-y-3">
-            <AchievementBadge
-              title="First Win"
-              description="Won your first game"
-              unlocked
-            />
-            <AchievementBadge
-              title="10 Game Streak"
-              description="Win 10 games in a row"
-              unlocked={false}
-              progress={3}
-              total={10}
-            />
-            <AchievementBadge
-              title="Club Champion"
-              description="Win a club tournament"
-              unlocked
-            />
-            <AchievementBadge
-              title="Social Butterfly"
-              description="Play with 20 different partners"
-              unlocked={false}
-              progress={12}
-              total={20}
-            />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={duprId}
+                  onChange={(e) => {
+                    setDuprId(e.target.value);
+                    setDuprError('');
+                  }}
+                  placeholder="Enter your DUPR ID (e.g., 12345678)"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
+                {duprError && (
+                  <p className="mt-1 text-sm text-red-500">{duprError}</p>
+                )}
+              </div>
+              <button
+                onClick={handleLinkDupr}
+                disabled={isLinkingDupr}
+                className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLinkingDupr ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Linking...
+                  </>
+                ) : (
+                  'Link Account'
+                )}
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Don&apos;t have a DUPR account?{' '}
+              <a
+                href="https://www.dupr.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-600 hover:text-brand-700 font-medium"
+              >
+                Create one here
+              </a>
+            </p>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Activity Feed */}
+      {/* Stats Section - Empty State */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-court-500" />
-          Recent Activity
+          <TrendingUp className="w-5 h-5 text-brand-500" />
+          Performance Stats
         </h2>
-        <div className="space-y-4">
-          <ActivityItem
-            icon={<Trophy className="w-4 h-4" />}
-            title="Won a doubles match"
-            description="11-7, 11-9 vs John D. & Sarah M."
-            time="2 hours ago"
-          />
-          <ActivityItem
-            icon={<Users className="w-4 h-4" />}
-            title="Joined Bay Area Pickleball Club"
-            description="Welcome to the community!"
-            time="1 day ago"
-          />
-          <ActivityItem
-            icon={<Award className="w-4 h-4" />}
-            title="Earned achievement"
-            description="Club Champion - Won a club tournament"
-            time="3 days ago"
-          />
-          <ActivityItem
-            icon={<TrendingUp className="w-4 h-4" />}
-            title="Rating increased"
-            description="3.70 → 3.75 (+0.05)"
-            time="1 week ago"
-          />
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <TrendingUp className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-gray-500 dark:text-gray-400">
+            No games played yet
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            Start playing to track your stats!
+          </p>
         </div>
       </div>
 
@@ -181,6 +243,13 @@ export default function ProfilePage() {
           href="/profile/settings"
           title="Account Settings"
           description="Manage your account and preferences"
+          icon={<Settings className="w-5 h-5" />}
+        />
+        <SettingsLink
+          href="/profile/dupr-settings"
+          title="DUPR Settings"
+          description="Manage your DUPR account connection and sync preferences"
+          icon={<LinkIcon className="w-5 h-5" />}
         />
         <SettingsLink
           href="/profile/notifications"
@@ -197,152 +266,32 @@ export default function ProfilePage() {
   );
 }
 
-function StatRow({
-  label,
-  value,
-  subvalue,
-  positive,
-}: {
-  label: string;
-  value: string;
-  subvalue?: string;
-  positive?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-600 dark:text-gray-400">{label}</span>
-      <div className="text-right">
-        <span
-          className={`font-semibold ${
-            positive
-              ? 'text-green-600 dark:text-green-400'
-              : 'text-gray-900 dark:text-white'
-          }`}
-        >
-          {value}
-        </span>
-        {subvalue && (
-          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-            {subvalue}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AchievementBadge({
-  title,
-  description,
-  unlocked,
-  progress,
-  total,
-}: {
-  title: string;
-  description: string;
-  unlocked: boolean;
-  progress?: number;
-  total?: number;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-3 p-3 rounded-lg ${
-        unlocked
-          ? 'bg-ball-50 dark:bg-ball-900/20'
-          : 'bg-gray-50 dark:bg-gray-700/50'
-      }`}
-    >
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          unlocked
-            ? 'bg-ball-500 text-white'
-            : 'bg-gray-200 dark:bg-gray-600 text-gray-400'
-        }`}
-      >
-        <Award className="w-5 h-5" />
-      </div>
-      <div className="flex-1">
-        <p
-          className={`font-medium ${
-            unlocked
-              ? 'text-gray-900 dark:text-white'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
-        >
-          {title}
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
-        {!unlocked && progress !== undefined && total !== undefined && (
-          <div className="mt-2">
-            <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full">
-              <div
-                className="h-full bg-pickle-500 rounded-full"
-                style={{ width: `${(progress / total) * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {progress}/{total}
-            </p>
-          </div>
-        )}
-      </div>
-      {unlocked && (
-        <div className="text-ball-500">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActivityItem({
-  icon,
-  title,
-  description,
-  time,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  time: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-        {icon}
-      </div>
-      <div className="flex-1">
-        <p className="font-medium text-gray-900 dark:text-white">{title}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
-      </div>
-      <span className="text-sm text-gray-400 dark:text-gray-500">{time}</span>
-    </div>
-  );
-}
-
 function SettingsLink({
   href,
   title,
   description,
+  icon,
 }: {
   href: string;
   title: string;
   description: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <a
       href={href}
       className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
-      <div>
-        <p className="font-medium text-gray-900 dark:text-white">{title}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
+      <div className="flex items-center gap-3">
+        {icon && (
+          <div className="text-gray-400 dark:text-gray-500">{icon}</div>
+        )}
+        <div>
+          <p className="font-medium text-gray-900 dark:text-white">{title}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {description}
+          </p>
+        </div>
       </div>
       <ChevronRight className="w-5 h-5 text-gray-400" />
     </a>

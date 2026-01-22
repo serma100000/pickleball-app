@@ -1,40 +1,280 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, MapPin, Users, Trophy, Plus, Minus, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Users,
+  Trophy,
+  Plus,
+  Minus,
+  X,
+  Check,
+  UserPlus,
+} from 'lucide-react';
+import {
+  GameTypeSelector,
+  type GameEventType,
+  type GameTypeConfig,
+} from '@/components/games/game-type-selector';
+import {
+  generateTeamRoundRobin,
+  generateIndividualRoundRobin,
+  getMatchesByRound,
+  type Player,
+  type Team,
+  type Match,
+} from '@/lib/round-robin';
+import { cn } from '@/lib/utils';
 
-type GameType = 'singles' | 'doubles';
+type SingleMatchType = 'singles' | 'doubles';
 type ScoreEntry = { team1: number; team2: number };
 
-export default function NewGamePage() {
-  const [gameType, setGameType] = useState<GameType>('doubles');
-  const [scores, setScores] = useState<ScoreEntry[]>([{ team1: 0, team2: 0 }]);
-  const [partners, setPartners] = useState<string[]>(['']);
-  const [opponents, setOpponents] = useState<string[]>(['', '']);
+// Map internal game mode to GameEventType
+type GameMode = 'single-match' | 'round-robin' | 'set-partner-round-robin';
 
+const gameEventTypeToMode: Record<GameEventType, GameMode> = {
+  single_match: 'single-match',
+  round_robin: 'round-robin',
+  set_partner_round_robin: 'set-partner-round-robin',
+};
+
+const gameModeToEventType: Record<GameMode, GameEventType> = {
+  'single-match': 'single_match',
+  'round-robin': 'round_robin',
+  'set-partner-round-robin': 'set_partner_round_robin',
+};
+
+interface WizardState {
+  step: number;
+  gameMode: GameMode;
+  duprEnabled: boolean;
+  // Single match state
+  singleMatchType: SingleMatchType;
+  singleMatchScores: ScoreEntry[];
+  partner: string;
+  opponents: string[];
+  // Round robin state
+  roundRobinPlayers: Player[];
+  roundRobinMatches: Match[];
+  // Set partner round robin state
+  teams: Team[];
+  teamRoundRobinMatches: Match[];
+  // Common fields
+  location: string;
+  notes: string;
+}
+
+const STEPS = {
+  'single-match': ['Game Type', 'Match Details', 'Review'],
+  'round-robin': ['Game Type', 'Add Players', 'Enter Scores', 'Review'],
+  'set-partner-round-robin': ['Game Type', 'Add Teams', 'Enter Scores', 'Review'],
+};
+
+export default function NewGamePage() {
+  const [state, setState] = useState<WizardState>({
+    step: 0,
+    gameMode: 'single-match',
+    duprEnabled: false,
+    singleMatchType: 'doubles',
+    singleMatchScores: [{ team1: 0, team2: 0 }],
+    partner: '',
+    opponents: ['', ''],
+    roundRobinPlayers: [],
+    roundRobinMatches: [],
+    teams: [],
+    teamRoundRobinMatches: [],
+    location: '',
+    notes: '',
+  });
+
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newTeamPlayer1, setNewTeamPlayer1] = useState('');
+  const [newTeamPlayer2, setNewTeamPlayer2] = useState('');
+
+  const steps = STEPS[state.gameMode] as string[];
+  const isLastStep = state.step === steps.length - 1;
+  const isFirstStep = state.step === 0;
+
+  // Generate matchups when players/teams change
+  const matchesByRound = useMemo(() => {
+    if (state.gameMode === 'round-robin' && state.roundRobinMatches.length > 0) {
+      return getMatchesByRound(state.roundRobinMatches);
+    }
+    if (state.gameMode === 'set-partner-round-robin' && state.teamRoundRobinMatches.length > 0) {
+      return getMatchesByRound(state.teamRoundRobinMatches);
+    }
+    return new Map<number, Match[]>();
+  }, [state.gameMode, state.roundRobinMatches, state.teamRoundRobinMatches]);
+
+  const handleNext = () => {
+    if (state.step === 1) {
+      // Generate matchups when moving from player/team selection to scores
+      if (state.gameMode === 'round-robin' && state.roundRobinPlayers.length >= 4) {
+        const result = generateIndividualRoundRobin(state.roundRobinPlayers);
+        setState((prev) => ({ ...prev, roundRobinMatches: result.matches }));
+      }
+      if (state.gameMode === 'set-partner-round-robin' && state.teams.length >= 2) {
+        const result = generateTeamRoundRobin(state.teams);
+        setState((prev) => ({ ...prev, teamRoundRobinMatches: result.matches }));
+      }
+    }
+    setState((prev) => ({ ...prev, step: Math.min(prev.step + 1, steps.length - 1) }));
+  };
+
+  const handleBack = () => {
+    setState((prev) => ({ ...prev, step: Math.max(prev.step - 1, 0) }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const submitData = {
+      gameMode: state.gameMode,
+      duprEnabled: state.duprEnabled,
+      location: state.location,
+      notes: state.notes,
+      timestamp: new Date().toISOString(),
+      ...(state.gameMode === 'single-match' && {
+        matchType: state.singleMatchType,
+        scores: state.singleMatchScores,
+        partner: state.partner,
+        opponents: state.opponents,
+      }),
+      ...(state.gameMode === 'round-robin' && {
+        players: state.roundRobinPlayers,
+        matches: state.roundRobinMatches,
+      }),
+      ...(state.gameMode === 'set-partner-round-robin' && {
+        teams: state.teams,
+        matches: state.teamRoundRobinMatches,
+      }),
+    };
+
+    console.log('Submitting game data:', submitData);
+    alert('Game data logged to console!');
+  };
+
+  // Single match helpers
   const addGame = () => {
-    if (scores.length < 3) {
-      setScores([...scores, { team1: 0, team2: 0 }]);
+    if (state.singleMatchScores.length < 3) {
+      setState((prev) => ({
+        ...prev,
+        singleMatchScores: [...prev.singleMatchScores, { team1: 0, team2: 0 }],
+      }));
     }
   };
 
   const removeGame = (index: number) => {
-    if (scores.length > 1) {
-      setScores(scores.filter((_, i) => i !== index));
+    if (state.singleMatchScores.length > 1) {
+      setState((prev) => ({
+        ...prev,
+        singleMatchScores: prev.singleMatchScores.filter((_, i) => i !== index),
+      }));
     }
   };
 
-  const updateScore = (
-    gameIndex: number,
-    team: 'team1' | 'team2',
-    value: number
-  ) => {
-    const newScores = [...scores];
-    const game = newScores[gameIndex];
-    if (game) {
-      game[team] = Math.max(0, Math.min(21, value));
-      setScores(newScores);
+  const updateSingleMatchScore = (gameIndex: number, team: 'team1' | 'team2', value: number) => {
+    setState((prev) => {
+      const newScores = [...prev.singleMatchScores];
+      const game = newScores[gameIndex];
+      if (game) {
+        game[team] = Math.max(0, Math.min(21, value));
+      }
+      return { ...prev, singleMatchScores: newScores };
+    });
+  };
+
+  // Round robin player helpers
+  const addPlayer = () => {
+    if (newPlayerName.trim()) {
+      const player: Player = {
+        id: Math.random().toString(36).substring(2, 9),
+        name: newPlayerName.trim(),
+      };
+      setState((prev) => ({
+        ...prev,
+        roundRobinPlayers: [...prev.roundRobinPlayers, player],
+      }));
+      setNewPlayerName('');
+    }
+  };
+
+  const removePlayer = (playerId: string) => {
+    setState((prev) => ({
+      ...prev,
+      roundRobinPlayers: prev.roundRobinPlayers.filter((p) => p.id !== playerId),
+    }));
+  };
+
+  // Team helpers
+  const addTeam = () => {
+    if (newTeamPlayer1.trim() && newTeamPlayer2.trim()) {
+      const team: Team = {
+        id: Math.random().toString(36).substring(2, 9),
+        player1: {
+          id: Math.random().toString(36).substring(2, 9),
+          name: newTeamPlayer1.trim(),
+        },
+        player2: {
+          id: Math.random().toString(36).substring(2, 9),
+          name: newTeamPlayer2.trim(),
+        },
+      };
+      setState((prev) => ({
+        ...prev,
+        teams: [...prev.teams, team],
+      }));
+      setNewTeamPlayer1('');
+      setNewTeamPlayer2('');
+    }
+  };
+
+  const removeTeam = (teamId: string) => {
+    setState((prev) => ({
+      ...prev,
+      teams: prev.teams.filter((t) => t.id !== teamId),
+    }));
+  };
+
+  // Match score update
+  const updateMatchScore = (matchId: string, team: 'team1' | 'team2', value: number) => {
+    const isRoundRobin = state.gameMode === 'round-robin';
+    const matchesKey = isRoundRobin ? 'roundRobinMatches' : 'teamRoundRobinMatches';
+
+    setState((prev) => ({
+      ...prev,
+      [matchesKey]: prev[matchesKey].map((m) =>
+        m.id === matchId
+          ? {
+              ...m,
+              score: { ...m.score, [team]: Math.max(0, Math.min(21, value)) },
+              completed: true,
+            }
+          : m
+      ),
+    }));
+  };
+
+  const canProceed = () => {
+    switch (state.step) {
+      case 0:
+        return true; // Game type selection always valid
+      case 1:
+        if (state.gameMode === 'single-match') {
+          return true; // Match details
+        }
+        if (state.gameMode === 'round-robin') {
+          return state.roundRobinPlayers.length >= 4;
+        }
+        if (state.gameMode === 'set-partner-round-robin') {
+          return state.teams.length >= 2;
+        }
+        return false;
+      default:
+        return true;
     }
   };
 
@@ -49,211 +289,768 @@ export default function NewGamePage() {
           <ChevronLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Log New Game
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Record your match details
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Log New Game</h1>
+          <p className="text-gray-600 dark:text-gray-300">Record your match details</p>
         </div>
       </div>
 
-      <form className="space-y-6">
-        {/* Game Type */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Game Type
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setGameType('singles');
-                setPartners(['']);
-                setOpponents(['']);
-              }}
-              className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                gameType === 'singles'
-                  ? 'border-pickle-500 bg-pickle-50 dark:bg-pickle-900/20 text-pickle-700 dark:text-pickle-400'
-                  : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-              }`}
-            >
-              <Trophy className="w-5 h-5" />
-              Singles
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setGameType('doubles');
-                setPartners(['']);
-                setOpponents(['', '']);
-              }}
-              className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                gameType === 'doubles'
-                  ? 'border-pickle-500 bg-pickle-50 dark:bg-pickle-900/20 text-pickle-700 dark:text-pickle-400'
-                  : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              Doubles
-            </button>
-          </div>
-        </div>
-
-        {/* Players */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Your Team */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                {gameType === 'singles' ? 'You' : 'Your Team'}
-              </label>
-              <div className="space-y-3">
-                <div className="p-3 bg-pickle-50 dark:bg-pickle-900/20 rounded-lg border border-pickle-200 dark:border-pickle-800">
-                  <span className="text-pickle-700 dark:text-pickle-400 font-medium">
-                    You
-                  </span>
-                </div>
-                {gameType === 'doubles' && (
-                  <input
-                    type="text"
-                    placeholder="Partner's name"
-                    value={partners[0]}
-                    onChange={(e) => setPartners([e.target.value])}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-                  />
+      {/* Step Indicator */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          {steps.map((stepName: string, index: number) => (
+            <div key={stepName} className="flex items-center">
+              <div
+                className={cn(
+                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
+                  index < state.step
+                    ? 'bg-pickle-500 text-white'
+                    : index === state.step
+                      ? 'bg-pickle-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                 )}
+              >
+                {index < state.step ? <Check className="w-4 h-4" /> : index + 1}
               </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={cn(
+                    'w-12 sm:w-24 h-1 mx-2',
+                    index < state.step ? 'bg-pickle-500' : 'bg-gray-200 dark:bg-gray-700'
+                  )}
+                />
+              )}
             </div>
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+          {steps.map((stepName: string) => (
+            <span key={stepName} className="text-center flex-1">
+              {stepName}
+            </span>
+          ))}
+        </div>
+      </div>
 
-            {/* Opponents */}
-            <div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Step 0: Game Type Selection */}
+        {state.step === 0 && (
+          <GameTypeSelector
+            value={{
+              type: gameModeToEventType[state.gameMode],
+              reportToDupr: state.duprEnabled,
+            }}
+            onChange={(config: GameTypeConfig) => {
+              setState((prev) => ({
+                ...prev,
+                gameMode: gameEventTypeToMode[config.type],
+                duprEnabled: config.reportToDupr,
+              }));
+            }}
+          />
+        )}
+
+        {/* Step 1: Match Details / Add Players / Add Teams */}
+        {state.step === 1 && state.gameMode === 'single-match' && (
+          <SingleMatchStep
+            matchType={state.singleMatchType}
+            setMatchType={(type) => setState((prev) => ({ ...prev, singleMatchType: type }))}
+            scores={state.singleMatchScores}
+            addGame={addGame}
+            removeGame={removeGame}
+            updateScore={updateSingleMatchScore}
+            partner={state.partner}
+            setPartner={(p) => setState((prev) => ({ ...prev, partner: p }))}
+            opponents={state.opponents}
+            setOpponents={(o) => setState((prev) => ({ ...prev, opponents: o }))}
+          />
+        )}
+
+        {state.step === 1 && state.gameMode === 'round-robin' && (
+          <AddPlayersStep
+            players={state.roundRobinPlayers}
+            newPlayerName={newPlayerName}
+            setNewPlayerName={setNewPlayerName}
+            addPlayer={addPlayer}
+            removePlayer={removePlayer}
+          />
+        )}
+
+        {state.step === 1 && state.gameMode === 'set-partner-round-robin' && (
+          <AddTeamsStep
+            teams={state.teams}
+            newTeamPlayer1={newTeamPlayer1}
+            newTeamPlayer2={newTeamPlayer2}
+            setNewTeamPlayer1={setNewTeamPlayer1}
+            setNewTeamPlayer2={setNewTeamPlayer2}
+            addTeam={addTeam}
+            removeTeam={removeTeam}
+          />
+        )}
+
+        {/* Step 2 for round robins: Enter Scores */}
+        {state.step === 2 && state.gameMode !== 'single-match' && (
+          <EnterScoresStep
+            matchesByRound={matchesByRound}
+            updateMatchScore={updateMatchScore}
+          />
+        )}
+
+        {/* Review Step */}
+        {isLastStep && (
+          <ReviewStep
+            state={state}
+            matchesByRound={matchesByRound}
+          />
+        )}
+
+        {/* Common fields on last step before review or on review */}
+        {(state.step === steps.length - 2 || isLastStep) && (
+          <>
+            {/* Location */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                {gameType === 'singles' ? 'Opponent' : 'Opponents'}
+                Location (Optional)
               </label>
-              <div className="space-y-3">
+              <div className="relative">
                 <input
                   type="text"
-                  placeholder="Opponent's name"
-                  value={opponents[0]}
-                  onChange={(e) =>
-                    setOpponents([e.target.value, opponents[1] || ''])
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                  placeholder="Search for a court..."
+                  value={state.location}
+                  onChange={(e) => setState((prev) => ({ ...prev, location: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
                 />
-                {gameType === 'doubles' && (
-                  <input
-                    type="text"
-                    placeholder="Opponent's partner"
-                    value={opponents[1]}
-                    onChange={(e) =>
-                      setOpponents([opponents[0] ?? '', e.target.value])
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-                  />
-                )}
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Scores */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Score
-            </label>
-            {scores.length < 3 && (
-              <button
-                type="button"
-                onClick={addGame}
-                className="flex items-center gap-1 text-sm text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300"
-              >
-                <Plus className="w-4 h-4" />
-                Add Game
-              </button>
-            )}
-          </div>
-          <div className="space-y-4">
-            {scores.map((score, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <span className="text-sm text-gray-500 dark:text-gray-400 w-16">
-                  Game {index + 1}
-                </span>
-                <div className="flex items-center gap-2">
-                  <ScoreInput
-                    value={score.team1}
-                    onChange={(val) => updateScore(index, 'team1', val)}
-                    label="Your score"
-                  />
-                  <span className="text-gray-400">-</span>
-                  <ScoreInput
-                    value={score.team2}
-                    onChange={(val) => updateScore(index, 'team2', val)}
-                    label="Opponent score"
-                  />
-                </div>
-                {scores.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeGame(index)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+            {/* Notes */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Notes (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Any notes about this game..."
+                value={state.notes}
+                onChange={(e) => setState((prev) => ({ ...prev, notes: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent resize-none"
+              />
+            </div>
+          </>
+        )}
 
-        {/* Location */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Location (Optional)
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search for a court..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-            />
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Notes (Optional)
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Any notes about this game..."
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent resize-none"
-          />
-        </div>
-
-        {/* Submit */}
+        {/* Navigation Buttons */}
         <div className="flex items-center gap-4">
-          <Link
-            href="/games"
-            className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-center font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            className="flex-1 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-xl font-medium transition-colors"
-          >
-            Save Game
-          </button>
+          {isFirstStep ? (
+            <Link
+              href="/games"
+              className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-center font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+          )}
+
+          {isLastStep ? (
+            <button
+              type="submit"
+              className="flex-1 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-xl font-medium transition-colors"
+            >
+              Save Game
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!canProceed()}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-colors',
+                canProceed()
+                  ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
+                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              )}
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </form>
     </div>
   );
 }
 
+// Single Match Step Component
+function SingleMatchStep({
+  matchType,
+  setMatchType,
+  scores,
+  addGame,
+  removeGame,
+  updateScore,
+  partner,
+  setPartner,
+  opponents,
+  setOpponents,
+}: {
+  matchType: SingleMatchType;
+  setMatchType: (type: SingleMatchType) => void;
+  scores: ScoreEntry[];
+  addGame: () => void;
+  removeGame: (index: number) => void;
+  updateScore: (index: number, team: 'team1' | 'team2', value: number) => void;
+  partner: string;
+  setPartner: (value: string) => void;
+  opponents: string[];
+  setOpponents: (value: string[]) => void;
+}) {
+  return (
+    <>
+      {/* Game Type */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          Match Type
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setMatchType('singles');
+              setPartner('');
+              setOpponents(['']);
+            }}
+            className={cn(
+              'flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-colors',
+              matchType === 'singles'
+                ? 'border-pickle-500 bg-pickle-50 dark:bg-pickle-900/20 text-pickle-700 dark:text-pickle-400'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            )}
+          >
+            <Trophy className="w-5 h-5" />
+            Singles
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMatchType('doubles');
+              setPartner('');
+              setOpponents(['', '']);
+            }}
+            className={cn(
+              'flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-colors',
+              matchType === 'doubles'
+                ? 'border-pickle-500 bg-pickle-50 dark:bg-pickle-900/20 text-pickle-700 dark:text-pickle-400'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            )}
+          >
+            <Users className="w-5 h-5" />
+            Doubles
+          </button>
+        </div>
+      </div>
+
+      {/* Players */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Your Team */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              {matchType === 'singles' ? 'You' : 'Your Team'}
+            </label>
+            <div className="space-y-3">
+              <div className="p-3 bg-pickle-50 dark:bg-pickle-900/20 rounded-lg border border-pickle-200 dark:border-pickle-800">
+                <span className="text-pickle-700 dark:text-pickle-400 font-medium">You</span>
+              </div>
+              {matchType === 'doubles' && (
+                <input
+                  type="text"
+                  placeholder="Partner's name"
+                  value={partner}
+                  onChange={(e) => setPartner(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Opponents */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              {matchType === 'singles' ? 'Opponent' : 'Opponents'}
+            </label>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Opponent's name"
+                value={opponents[0]}
+                onChange={(e) => setOpponents([e.target.value, opponents[1] || ''])}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+              />
+              {matchType === 'doubles' && (
+                <input
+                  type="text"
+                  placeholder="Opponent's partner"
+                  value={opponents[1]}
+                  onChange={(e) => setOpponents([opponents[0] ?? '', e.target.value])}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scores */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Score
+          </label>
+          {scores.length < 3 && (
+            <button
+              type="button"
+              onClick={addGame}
+              className="flex items-center gap-1 text-sm text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300"
+            >
+              <Plus className="w-4 h-4" />
+              Add Game
+            </button>
+          )}
+        </div>
+        <div className="space-y-4">
+          {scores.map((score, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Game {index + 1}</span>
+              <div className="flex items-center gap-2">
+                <ScoreInput
+                  value={score.team1}
+                  onChange={(val) => updateScore(index, 'team1', val)}
+                  label="Your score"
+                />
+                <span className="text-gray-400">-</span>
+                <ScoreInput
+                  value={score.team2}
+                  onChange={(val) => updateScore(index, 'team2', val)}
+                  label="Opponent score"
+                />
+              </div>
+              {scores.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeGame(index)}
+                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Add Players Step Component
+function AddPlayersStep({
+  players,
+  newPlayerName,
+  setNewPlayerName,
+  addPlayer,
+  removePlayer,
+}: {
+  players: Player[];
+  newPlayerName: string;
+  setNewPlayerName: (name: string) => void;
+  addPlayer: () => void;
+  removePlayer: (id: string) => void;
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Add Players
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Add at least 4 players for a round robin tournament. Players will rotate partners each match.
+      </p>
+
+      {/* Add Player Input */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Player name"
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addPlayer())}
+          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+        />
+        <button
+          type="button"
+          onClick={addPlayer}
+          disabled={!newPlayerName.trim()}
+          className={cn(
+            'px-4 py-3 rounded-lg font-medium transition-colors',
+            newPlayerName.trim()
+              ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+          )}
+        >
+          <UserPlus className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Players List */}
+      <div className="space-y-2">
+        {players.map((player, index) => (
+          <div
+            key={player.id}
+            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-6 h-6 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium">
+                {index + 1}
+              </span>
+              <span className="text-gray-900 dark:text-white">{player.name}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => removePlayer(player.id)}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {players.length > 0 && players.length < 4 && (
+        <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
+          Add {4 - players.length} more player{4 - players.length > 1 ? 's' : ''} to start the tournament
+        </p>
+      )}
+
+      {players.length >= 4 && (
+        <p className="mt-4 text-sm text-pickle-600 dark:text-pickle-400">
+          Ready to generate matchups with {players.length} players!
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Add Teams Step Component
+function AddTeamsStep({
+  teams,
+  newTeamPlayer1,
+  newTeamPlayer2,
+  setNewTeamPlayer1,
+  setNewTeamPlayer2,
+  addTeam,
+  removeTeam,
+}: {
+  teams: Team[];
+  newTeamPlayer1: string;
+  newTeamPlayer2: string;
+  setNewTeamPlayer1: (name: string) => void;
+  setNewTeamPlayer2: (name: string) => void;
+  addTeam: () => void;
+  removeTeam: (id: string) => void;
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Add Teams
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Add at least 2 teams. Each team will play against every other team.
+      </p>
+
+      {/* Add Team Input */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Player 1"
+          value={newTeamPlayer1}
+          onChange={(e) => setNewTeamPlayer1(e.target.value)}
+          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+        />
+        <input
+          type="text"
+          placeholder="Player 2"
+          value={newTeamPlayer2}
+          onChange={(e) => setNewTeamPlayer2(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTeam())}
+          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+        />
+        <button
+          type="button"
+          onClick={addTeam}
+          disabled={!newTeamPlayer1.trim() || !newTeamPlayer2.trim()}
+          className={cn(
+            'px-4 py-3 rounded-lg font-medium transition-colors',
+            newTeamPlayer1.trim() && newTeamPlayer2.trim()
+              ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+          )}
+        >
+          <UserPlus className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Teams List */}
+      <div className="space-y-2">
+        {teams.map((team, index) => (
+          <div
+            key={team.id}
+            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-6 h-6 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium">
+                {index + 1}
+              </span>
+              <span className="text-gray-900 dark:text-white">
+                {team.player1.name} & {team.player2.name}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeTeam(team.id)}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {teams.length > 0 && teams.length < 2 && (
+        <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
+          Add {2 - teams.length} more team{2 - teams.length > 1 ? 's' : ''} to start the tournament
+        </p>
+      )}
+
+      {teams.length >= 2 && (
+        <p className="mt-4 text-sm text-pickle-600 dark:text-pickle-400">
+          Ready to generate matchups with {teams.length} teams!
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Enter Scores Step Component
+function EnterScoresStep({
+  matchesByRound,
+  updateMatchScore,
+}: {
+  matchesByRound: Map<number, Match[]>;
+  updateMatchScore: (matchId: string, team: 'team1' | 'team2', value: number) => void;
+}) {
+  const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Enter Scores
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Enter the scores for each match. Matches are organized by round.
+        </p>
+      </div>
+
+      {rounds.map((round) => (
+        <div
+          key={round}
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
+        >
+          <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-4">
+            Round {round}
+          </h3>
+          <div className="space-y-4">
+            {matchesByRound.get(round)?.map((match) => (
+              <div
+                key={match.id}
+                className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Team 1 */}
+                  <div className="flex-1 text-center sm:text-right">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {match.team1
+                        ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                        : 'Team 1'}
+                    </span>
+                  </div>
+
+                  {/* Score Input */}
+                  <div className="flex items-center justify-center gap-2">
+                    <ScoreInput
+                      value={match.score.team1}
+                      onChange={(val) => updateMatchScore(match.id, 'team1', val)}
+                      label="Team 1 score"
+                    />
+                    <span className="text-gray-400 font-medium">vs</span>
+                    <ScoreInput
+                      value={match.score.team2}
+                      onChange={(val) => updateMatchScore(match.id, 'team2', val)}
+                      label="Team 2 score"
+                    />
+                  </div>
+
+                  {/* Team 2 */}
+                  <div className="flex-1 text-center sm:text-left">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {match.team2
+                        ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                        : 'Team 2'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Review Step Component
+function ReviewStep({
+  state,
+  matchesByRound,
+}: {
+  state: WizardState;
+  matchesByRound: Map<number, Match[]>;
+}) {
+  const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Review & Submit
+      </h2>
+
+      {/* Game Mode Badge */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="px-3 py-1 bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400 rounded-full text-sm font-medium">
+          {state.gameMode === 'single-match'
+            ? 'Single Match'
+            : state.gameMode === 'round-robin'
+              ? 'Round Robin'
+              : 'Set Partner Round Robin'}
+        </span>
+        {state.duprEnabled && (
+          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium">
+            DUPR Rated
+          </span>
+        )}
+      </div>
+
+      {/* Single Match Summary */}
+      {state.gameMode === 'single-match' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+              {state.singleMatchType === 'singles' ? 'Singles Match' : 'Doubles Match'}
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  You{state.singleMatchType === 'doubles' && state.partner && ` & ${state.partner}`}
+                </p>
+              </div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
+                {state.singleMatchScores.map((s) => `${s.team1}-${s.team2}`).join(', ')}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {state.opponents.filter(Boolean).join(' & ') || 'Opponents'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Round Robin Summary */}
+      {state.gameMode !== 'single-match' && rounds.length > 0 && (
+        <div className="space-y-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+              Tournament Summary
+            </h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {state.gameMode === 'round-robin'
+                    ? state.roundRobinPlayers.length
+                    : state.teams.length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {state.gameMode === 'round-robin' ? 'Players' : 'Teams'}
+                </p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{rounds.length}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Rounds</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {state.gameMode === 'round-robin'
+                    ? state.roundRobinMatches.length
+                    : state.teamRoundRobinMatches.length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Matches</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Match Results */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Match Results</h3>
+            {rounds.map((round) => (
+              <div key={round}>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Round {round}</p>
+                {matchesByRound.get(round)?.map((match) => (
+                  <div
+                    key={match.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded mb-1 text-sm"
+                  >
+                    <span className="truncate flex-1 text-gray-900 dark:text-white">
+                      {match.team1
+                        ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                        : 'Team 1'}
+                    </span>
+                    <span className="px-3 font-mono font-medium text-gray-900 dark:text-white">
+                      {match.score.team1} - {match.score.team2}
+                    </span>
+                    <span className="truncate flex-1 text-right text-gray-900 dark:text-white">
+                      {match.team2
+                        ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                        : 'Team 2'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Score Input Component
 function ScoreInput({
   value,
   onChange,
@@ -268,7 +1065,7 @@ function ScoreInput({
       <button
         type="button"
         onClick={() => onChange(value - 1)}
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600"
+        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600"
         aria-label={`Decrease ${label}`}
       >
         <Minus className="w-4 h-4" />
@@ -285,7 +1082,7 @@ function ScoreInput({
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600"
+        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600"
         aria-label={`Increase ${label}`}
       >
         <Plus className="w-4 h-4" />

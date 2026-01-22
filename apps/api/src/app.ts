@@ -17,6 +17,7 @@ import clubsRoutes from './routes/clubs.js';
 import leaguesRoutes from './routes/leagues.js';
 import tournamentsRoutes from './routes/tournaments.js';
 import socialRoutes from './routes/social.js';
+import duprRoutes from './routes/dupr.js';
 
 const app = new Hono();
 
@@ -70,6 +71,7 @@ api.route('/clubs', clubsRoutes);
 api.route('/leagues', leaguesRoutes);
 api.route('/tournaments', tournamentsRoutes);
 api.route('/social', socialRoutes);
+api.route('/dupr', duprRoutes);
 
 // Mount API under /api/v1
 app.route('/api/v1', api);
