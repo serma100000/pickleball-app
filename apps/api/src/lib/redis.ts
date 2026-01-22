@@ -7,8 +7,16 @@ let isConnecting = false;
 
 /**
  * Initialize Redis connection
+ * Only connects if REDIS_URL environment variable is explicitly set
  */
 export async function initRedis(): Promise<RedisClient | null> {
+  // Skip Redis entirely if REDIS_URL is not set
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    console.log('Redis: REDIS_URL not set, running without Redis (using in-memory fallback)');
+    return null;
+  }
+
   if (redisClient) {
     return redisClient;
   }
@@ -28,16 +36,14 @@ export async function initRedis(): Promise<RedisClient | null> {
   isConnecting = true;
 
   try {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
-
     redisClient = createClient({
       url,
       socket: {
         connectTimeout: 5000,
         reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis: Max reconnection attempts reached');
-            return new Error('Max reconnection attempts reached');
+          if (retries > 3) {
+            console.error('Redis: Max reconnection attempts reached, disabling Redis');
+            return false; // Stop reconnecting
           }
           return Math.min(retries * 100, 3000);
         },
@@ -45,7 +51,8 @@ export async function initRedis(): Promise<RedisClient | null> {
     });
 
     redisClient.on('error', (err) => {
-      console.error('Redis Client Error:', err);
+      console.error('Redis Client Error:', err.message);
+      // Don't crash on Redis errors - gracefully degrade
     });
 
     redisClient.on('connect', () => {
@@ -56,11 +63,16 @@ export async function initRedis(): Promise<RedisClient | null> {
       console.log('Redis: Reconnecting...');
     });
 
+    redisClient.on('end', () => {
+      console.log('Redis: Connection closed');
+      redisClient = null;
+    });
+
     await redisClient.connect();
     isConnecting = false;
     return redisClient;
   } catch (error) {
-    console.error('Failed to connect to Redis:', error);
+    console.error('Failed to connect to Redis:', (error as Error).message);
     isConnecting = false;
     redisClient = null;
     return null;
@@ -181,5 +193,7 @@ export const cache = {
   },
 };
 
-// Initialize Redis on module load (non-blocking)
-initRedis().catch(console.error);
+// Initialize Redis on module load (non-blocking, graceful degradation)
+initRedis().catch((err) => {
+  console.warn('Redis initialization skipped:', err.message || 'Unknown error');
+});
