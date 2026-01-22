@@ -103,6 +103,7 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        baseTheme: undefined,
         variables: {
           colorPrimary: '#0891B2',
           colorText: '#1f2937',
@@ -115,6 +116,29 @@ export default function RootLayout({
         elements: {
           formButtonPrimary: 'bg-brand-500 hover:bg-brand-600',
           footerActionLink: 'text-brand-600 hover:text-brand-700',
+          card: 'dark:bg-gray-800 dark:border-gray-700',
+          headerTitle: 'dark:text-white',
+          headerSubtitle: 'dark:text-gray-300',
+          socialButtonsBlockButton: 'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600',
+          socialButtonsBlockButtonText: 'dark:text-white',
+          dividerLine: 'dark:bg-gray-600',
+          dividerText: 'dark:text-gray-400',
+          formFieldLabel: 'dark:text-gray-300',
+          formFieldInput: 'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400',
+          footerAction: 'dark:bg-gray-800 dark:border-gray-700',
+          footerActionText: 'dark:text-gray-300',
+          footerActionLink: 'text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300',
+          footer: 'dark:bg-gray-800 dark:[&>*]:bg-gray-800',
+          footerPages: 'dark:bg-gray-800',
+          footerPagesLink: 'dark:text-gray-400',
+          identityPreview: 'dark:bg-gray-700 dark:border-gray-600',
+          identityPreviewText: 'dark:text-white',
+          identityPreviewEditButton: 'dark:text-brand-400',
+          formResendCodeLink: 'dark:text-brand-400',
+          otpCodeFieldInput: 'dark:bg-gray-700 dark:border-gray-600 dark:text-white',
+          alert: 'dark:bg-gray-700 dark:border-gray-600',
+          alertText: 'dark:text-gray-200',
+          badge: 'dark:bg-gray-700 dark:text-gray-300',
         },
       }}
     >
