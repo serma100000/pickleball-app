@@ -128,6 +128,43 @@ export const leagueStatusEnum = pgEnum('league_status', [
   'cancelled',
 ]);
 
+// New league management enums
+export const leagueTypeEnum = pgEnum('league_type', [
+  'ladder',
+  'doubles',
+  'king_of_court',
+  'pool_play',
+  'hybrid',
+]);
+
+export const leagueStatusEnumV2 = pgEnum('league_status_v2', [
+  'draft',
+  'registration',
+  'active',
+  'playoffs',
+  'completed',
+]);
+
+export const playoffFormatEnum = pgEnum('playoff_format', [
+  'single_elimination',
+  'double_elimination',
+  'best_of_3',
+]);
+
+export const leaguePlayerStatusEnum = pgEnum('league_player_status', [
+  'registered',
+  'active',
+  'eliminated',
+  'withdrawn',
+]);
+
+export const leagueMatchStatusEnum = pgEnum('league_match_status', [
+  'scheduled',
+  'in_progress',
+  'completed',
+  'cancelled',
+]);
+
 export const genderEnum = pgEnum('gender', [
   'male',
   'female',
@@ -1271,6 +1308,193 @@ export const leagueStandingsHistory = pgTable(
 );
 
 // ============================================================================
+// LEAGUE MANAGEMENT SYSTEM (4 tables)
+// ============================================================================
+
+// Managed Leagues table
+export const managedLeagues = pgTable(
+  'managed_leagues',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+
+    // League type and status
+    leagueType: leagueTypeEnum('league_type').notNull(),
+    status: leagueStatusEnumV2('status').notNull().default('draft'),
+
+    // Schedule
+    startDate: date('start_date'),
+    endDate: date('end_date'),
+    numberOfWeeks: integer('number_of_weeks').default(8),
+    daysPerWeek: jsonb('days_per_week').notNull().default([]), // e.g., ["Monday", "Wednesday"]
+
+    // Player limits
+    maxPlayers: integer('max_players'),
+    minPlayers: integer('min_players').default(4),
+
+    // Playoff configuration
+    hasPlayoffs: boolean('has_playoffs').default(false),
+    playoffFormat: playoffFormatEnum('playoff_format'),
+    playoffTeams: integer('playoff_teams'), // Number of teams that make playoffs
+
+    // DUPR integration
+    reportToDupr: boolean('report_to_dupr').default(false),
+
+    // Location
+    location: varchar('location', { length: 500 }),
+    locationCoordinates: jsonb('location_coordinates'), // { lat: number, lng: number }
+
+    // Management
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index('managed_leagues_status_idx').on(table.status),
+    leagueTypeIdx: index('managed_leagues_type_idx').on(table.leagueType),
+    createdByIdx: index('managed_leagues_created_by_idx').on(table.createdBy),
+    startDateIdx: index('managed_leagues_start_date_idx').on(table.startDate),
+  })
+);
+
+// League Players table
+export const leaguePlayers = pgTable(
+  'league_players',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    leagueId: uuid('league_id')
+      .notNull()
+      .references(() => managedLeagues.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Partner for doubles leagues
+    partnerId: uuid('partner_id').references(() => users.id, { onDelete: 'set null' }),
+    teamName: varchar('team_name', { length: 100 }),
+
+    // Ladder rank (for ladder leagues)
+    ladderRank: integer('ladder_rank'),
+
+    // Pool number (for pool play leagues)
+    poolNumber: integer('pool_number'),
+
+    // Status
+    status: leaguePlayerStatusEnum('status').notNull().default('registered'),
+
+    // Timestamps
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    leagueIdIdx: index('league_players_league_id_idx').on(table.leagueId),
+    userIdIdx: index('league_players_user_id_idx').on(table.userId),
+    statusIdx: index('league_players_status_idx').on(table.status),
+    ladderRankIdx: index('league_players_ladder_rank_idx').on(table.leagueId, table.ladderRank),
+    uniqueLeagueUser: unique('league_players_league_user').on(table.leagueId, table.userId),
+  })
+);
+
+// League Matches (managed) table
+export const leagueMatchesManaged = pgTable(
+  'league_matches_managed',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    leagueId: uuid('league_id')
+      .notNull()
+      .references(() => managedLeagues.id, { onDelete: 'cascade' }),
+
+    // Match scheduling
+    weekNumber: integer('week_number').notNull(),
+    matchDate: timestamp('match_date', { withTimezone: true }),
+
+    // Participants (references leaguePlayers)
+    player1Id: uuid('player1_id')
+      .notNull()
+      .references(() => leaguePlayers.id, { onDelete: 'cascade' }),
+    player2Id: uuid('player2_id')
+      .notNull()
+      .references(() => leaguePlayers.id, { onDelete: 'cascade' }),
+
+    // Scoring: { team1: number, team2: number, games: [{t1: number, t2: number}] }
+    score: jsonb('score'),
+
+    // Winner
+    winnerId: uuid('winner_id').references(() => leaguePlayers.id, { onDelete: 'set null' }),
+
+    // Playoff information
+    isPlayoff: boolean('is_playoff').default(false),
+    playoffRound: varchar('playoff_round', { length: 50 }), // 'quarterfinal', 'semifinal', 'final'
+
+    // Status
+    status: leagueMatchStatusEnum('status').notNull().default('scheduled'),
+
+    // Reporting
+    reportedBy: uuid('reported_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // DUPR integration
+    duprSubmissionStatus: duprSubmissionStatusEnum('dupr_submission_status').default('not_applicable'),
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    leagueIdIdx: index('league_matches_managed_league_id_idx').on(table.leagueId),
+    weekNumberIdx: index('league_matches_managed_week_idx').on(table.leagueId, table.weekNumber),
+    statusIdx: index('league_matches_managed_status_idx').on(table.status),
+    matchDateIdx: index('league_matches_managed_date_idx').on(table.matchDate),
+    playoffIdx: index('league_matches_managed_playoff_idx').on(table.leagueId, table.isPlayoff),
+  })
+);
+
+// League Standings (denormalized for quick access) table
+export const leagueStandings = pgTable(
+  'league_standings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    leagueId: uuid('league_id')
+      .notNull()
+      .references(() => managedLeagues.id, { onDelete: 'cascade' }),
+    leaguePlayerId: uuid('league_player_id')
+      .notNull()
+      .references(() => leaguePlayers.id, { onDelete: 'cascade' }),
+
+    // Week tracking
+    weekNumber: integer('week_number').notNull(),
+
+    // Win/Loss record
+    wins: integer('wins').default(0),
+    losses: integer('losses').default(0),
+
+    // Points tracking
+    pointsFor: integer('points_for').default(0),
+    pointsAgainst: integer('points_against').default(0),
+    pointDifferential: integer('point_differential').default(0),
+
+    // Ladder rank (for ladder leagues)
+    ladderRank: integer('ladder_rank'),
+
+    // Timestamps
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    leagueIdIdx: index('league_standings_league_id_idx').on(table.leagueId),
+    weekNumberIdx: index('league_standings_week_idx').on(table.leagueId, table.weekNumber),
+    uniqueLeaguePlayerWeek: unique('league_standings_unique').on(
+      table.leagueId,
+      table.leaguePlayerId,
+      table.weekNumber
+    ),
+  })
+);
+
+// ============================================================================
 // SOCIAL FEATURES (5 tables)
 // ============================================================================
 
@@ -1537,6 +1761,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   tournamentRegistrationPlayers: many(tournamentRegistrationPlayers),
   leaguesOrganized: many(leagues),
   leagueParticipantPlayers: many(leagueParticipantPlayers),
+  // Managed leagues relations
+  managedLeaguesCreated: many(managedLeagues),
+  leaguePlayerMemberships: many(leaguePlayers),
+  leaguePlayerPartnerships: many(leaguePlayers, { relationName: 'partner' }),
+  leagueMatchesReported: many(leagueMatchesManaged, { relationName: 'reportedBy' }),
+  leagueMatchesVerified: many(leagueMatchesManaged, { relationName: 'verifiedBy' }),
   sentFriendRequests: many(userFriendships, { relationName: 'requester' }),
   receivedFriendRequests: many(userFriendships, { relationName: 'addressee' }),
   achievements: many(userAchievements),
@@ -1923,6 +2153,83 @@ export const leagueStandingsHistoryRelations = relations(
   })
 );
 
+// Managed Leagues relations
+export const managedLeaguesRelations = relations(managedLeagues, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [managedLeagues.createdBy],
+    references: [users.id],
+  }),
+  players: many(leaguePlayers),
+  matches: many(leagueMatchesManaged),
+  standings: many(leagueStandings),
+}));
+
+// League Players relations
+export const leaguePlayersRelations = relations(leaguePlayers, ({ one, many }) => ({
+  league: one(managedLeagues, {
+    fields: [leaguePlayers.leagueId],
+    references: [managedLeagues.id],
+  }),
+  user: one(users, {
+    fields: [leaguePlayers.userId],
+    references: [users.id],
+  }),
+  partner: one(users, {
+    fields: [leaguePlayers.partnerId],
+    references: [users.id],
+    relationName: 'partner',
+  }),
+  matchesAsPlayer1: many(leagueMatchesManaged, { relationName: 'player1' }),
+  matchesAsPlayer2: many(leagueMatchesManaged, { relationName: 'player2' }),
+  matchesWon: many(leagueMatchesManaged, { relationName: 'matchWinner' }),
+  standings: many(leagueStandings),
+}));
+
+// League Matches (managed) relations
+export const leagueMatchesManagedRelations = relations(leagueMatchesManaged, ({ one }) => ({
+  league: one(managedLeagues, {
+    fields: [leagueMatchesManaged.leagueId],
+    references: [managedLeagues.id],
+  }),
+  player1: one(leaguePlayers, {
+    fields: [leagueMatchesManaged.player1Id],
+    references: [leaguePlayers.id],
+    relationName: 'player1',
+  }),
+  player2: one(leaguePlayers, {
+    fields: [leagueMatchesManaged.player2Id],
+    references: [leaguePlayers.id],
+    relationName: 'player2',
+  }),
+  winner: one(leaguePlayers, {
+    fields: [leagueMatchesManaged.winnerId],
+    references: [leaguePlayers.id],
+    relationName: 'matchWinner',
+  }),
+  reportedByUser: one(users, {
+    fields: [leagueMatchesManaged.reportedBy],
+    references: [users.id],
+    relationName: 'reportedBy',
+  }),
+  verifiedByUser: one(users, {
+    fields: [leagueMatchesManaged.verifiedBy],
+    references: [users.id],
+    relationName: 'verifiedBy',
+  }),
+}));
+
+// League Standings relations
+export const leagueStandingsRelations = relations(leagueStandings, ({ one }) => ({
+  league: one(managedLeagues, {
+    fields: [leagueStandings.leagueId],
+    references: [managedLeagues.id],
+  }),
+  leaguePlayer: one(leaguePlayers, {
+    fields: [leagueStandings.leaguePlayerId],
+    references: [leaguePlayers.id],
+  }),
+}));
+
 // User friendships relations
 export const userFriendshipsRelations = relations(userFriendships, ({ one }) => ({
   requester: one(users, {
@@ -2073,6 +2380,18 @@ export type NewLeagueMatch = typeof leagueMatches.$inferInsert;
 
 export type LeagueStandingsHistory = typeof leagueStandingsHistory.$inferSelect;
 export type NewLeagueStandingsHistory = typeof leagueStandingsHistory.$inferInsert;
+
+export type ManagedLeague = typeof managedLeagues.$inferSelect;
+export type NewManagedLeague = typeof managedLeagues.$inferInsert;
+
+export type LeaguePlayer = typeof leaguePlayers.$inferSelect;
+export type NewLeaguePlayer = typeof leaguePlayers.$inferInsert;
+
+export type LeagueMatchManaged = typeof leagueMatchesManaged.$inferSelect;
+export type NewLeagueMatchManaged = typeof leagueMatchesManaged.$inferInsert;
+
+export type LeagueStanding = typeof leagueStandings.$inferSelect;
+export type NewLeagueStanding = typeof leagueStandings.$inferInsert;
 
 export type UserFriendship = typeof userFriendships.$inferSelect;
 export type NewUserFriendship = typeof userFriendships.$inferInsert;

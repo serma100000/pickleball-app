@@ -62,7 +62,8 @@ const GAME_TYPE_OPTIONS: GameTypeOption[] = [
   },
 ];
 
-const MIN_COUNT = 3;
+const MIN_PLAYERS = 4; // Regular round robin needs at least 4 players
+const MIN_TEAMS = 3;   // Set partner round robin can have 3 teams
 const MAX_COUNT = 24;
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 10;
@@ -150,8 +151,9 @@ interface CountInputProps {
   max?: number;
 }
 
-function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }: CountInputProps) {
+function CountInput({ value, onChange, label, min = MIN_PLAYERS, max = MAX_COUNT }: CountInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const newValue = parseInt(e.target.value, 10);
     if (!isNaN(newValue)) {
       onChange(Math.max(min, Math.min(max, newValue)));
@@ -160,6 +162,7 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (value < max) {
       onChange(value + 1);
     }
@@ -167,13 +170,26 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (value > min) {
       onChange(value - 1);
     }
   };
 
+  const handleInputClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleInputFocus = (e: React.FocusEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
       </label>
@@ -181,6 +197,7 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
         <button
           type="button"
           onClick={handleDecrement}
+          onMouseDown={(e) => e.stopPropagation()}
           disabled={value <= min}
           className={cn(
             'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
@@ -197,6 +214,9 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
           type="number"
           value={value}
           onChange={handleChange}
+          onClick={handleInputClick}
+          onFocus={handleInputFocus}
+          onMouseDown={(e) => e.stopPropagation()}
           min={min}
           max={max}
           className="w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -204,6 +224,7 @@ function CountInput({ value, onChange, label, min = MIN_COUNT, max = MAX_COUNT }
         <button
           type="button"
           onClick={handleIncrement}
+          onMouseDown={(e) => e.stopPropagation()}
           disabled={value >= max}
           className={cn(
             'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
@@ -298,9 +319,11 @@ function GameTypeCard({
       {selected && option.showPlayerCount && onPlayerCountChange && (
         <>
           <CountInput
-            value={playerCount ?? MIN_COUNT}
+            value={playerCount ?? MIN_PLAYERS}
             onChange={onPlayerCountChange}
             label="Number of Players"
+            min={MIN_PLAYERS}
+            max={MAX_COUNT}
           />
           {onNumberOfRoundsChange && (
             <CountInput
@@ -318,9 +341,11 @@ function GameTypeCard({
       {selected && option.showTeamCount && onTeamCountChange && (
         <>
           <CountInput
-            value={teamCount ?? MIN_COUNT}
+            value={teamCount ?? MIN_TEAMS}
             onChange={onTeamCountChange}
             label="Number of Teams"
+            min={MIN_TEAMS}
+            max={MAX_COUNT}
           />
           {onNumberOfRoundsChange && (
             <CountInput
@@ -350,11 +375,11 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
 
     // Set defaults for count fields based on type
     if (type === 'round_robin') {
-      newConfig.playerCount = value.playerCount ?? MIN_COUNT;
+      newConfig.playerCount = value.playerCount ?? MIN_PLAYERS;
       newConfig.numberOfRounds = value.numberOfRounds ?? DEFAULT_ROUNDS;
       delete newConfig.teamCount;
     } else if (type === 'set_partner_round_robin') {
-      newConfig.teamCount = value.teamCount ?? MIN_COUNT;
+      newConfig.teamCount = value.teamCount ?? MIN_TEAMS;
       newConfig.numberOfRounds = value.numberOfRounds ?? DEFAULT_ROUNDS;
       delete newConfig.playerCount;
     } else {
