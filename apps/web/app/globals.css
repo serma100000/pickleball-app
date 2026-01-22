@@ -134,6 +134,27 @@
   }
 }
 
+/* Clerk dark mode overrides */
+.dark .cl-footer,
+.dark .cl-footerAction,
+.dark .cl-footerPages,
+.dark .cl-footerPagesLink,
+.dark [class*="cl-footer"],
+.dark [class*="cl-internal"] {
+  background-color: rgb(31 41 55) !important;
+  background: rgb(31 41 55) !important;
+}
+
+.dark .cl-card,
+.dark [class*="cl-card"] {
+  background-color: rgb(31 41 55) !important;
+}
+
+/* Force all Clerk backgrounds in dark mode */
+.dark [data-clerk] * {
+  --clerk-footer-background: rgb(31 41 55);
+}
+
 /* Hide Clerk branding */
 .cl-internal-b3fm6y {
   display: none;

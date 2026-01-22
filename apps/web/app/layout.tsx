@@ -114,9 +114,10 @@ export default function RootLayout({
           borderRadius: '0.5rem',
         },
         elements: {
+          rootBox: 'dark:[&_*]:border-gray-700',
+          cardBox: 'dark:bg-gray-800',
+          card: 'dark:bg-gray-800 dark:border-gray-700 dark:shadow-none',
           formButtonPrimary: 'bg-brand-500 hover:bg-brand-600',
-          footerActionLink: 'text-brand-600 hover:text-brand-700',
-          card: 'dark:bg-gray-800 dark:border-gray-700',
           headerTitle: 'dark:text-white',
           headerSubtitle: 'dark:text-gray-300',
           socialButtonsBlockButton: 'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600',
@@ -125,11 +126,11 @@ export default function RootLayout({
           dividerText: 'dark:text-gray-400',
           formFieldLabel: 'dark:text-gray-300',
           formFieldInput: 'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400',
-          footerAction: 'dark:bg-gray-800 dark:border-gray-700',
+          footer: 'dark:bg-gray-800 dark:text-gray-400 dark:[&_*]:bg-gray-800',
+          footerAction: 'dark:bg-gray-800 dark:border-gray-700 dark:[&_*]:bg-gray-800',
           footerActionText: 'dark:text-gray-300',
           footerActionLink: 'text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300',
-          footer: 'dark:bg-gray-800 dark:[&>*]:bg-gray-800',
-          footerPages: 'dark:bg-gray-800',
+          footerPages: 'dark:bg-gray-800 dark:[&_*]:bg-gray-800',
           footerPagesLink: 'dark:text-gray-400',
           identityPreview: 'dark:bg-gray-700 dark:border-gray-600',
           identityPreviewText: 'dark:text-white',
@@ -139,6 +140,8 @@ export default function RootLayout({
           alert: 'dark:bg-gray-700 dark:border-gray-600',
           alertText: 'dark:text-gray-200',
           badge: 'dark:bg-gray-700 dark:text-gray-300',
+          // Target all internal backgrounds
+          internal: 'dark:[&_*]:bg-gray-800',
         },
       }}
     >
