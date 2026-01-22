@@ -152,52 +152,15 @@ interface CountInputProps {
 }
 
 function CountInput({ value, onChange, label, min = MIN_PLAYERS, max = MAX_COUNT }: CountInputProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    const newValue = parseInt(e.target.value, 10);
-    if (!isNaN(newValue)) {
-      onChange(Math.max(min, Math.min(max, newValue)));
-    }
-  };
-
-  const handleIncrement = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (value < max) {
-      onChange(value + 1);
-    }
-  };
-
-  const handleDecrement = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (value > min) {
-      onChange(value - 1);
-    }
-  };
-
-  const handleInputClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  const handleInputFocus = (e: React.FocusEvent) => {
-    e.stopPropagation();
-  };
-
   return (
-    <div
-      className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+    <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
       </label>
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={handleDecrement}
-          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => value > min && onChange(value - 1)}
           disabled={value <= min}
           className={cn(
             'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
@@ -213,18 +176,19 @@ function CountInput({ value, onChange, label, min = MIN_PLAYERS, max = MAX_COUNT
         <Input
           type="number"
           value={value}
-          onChange={handleChange}
-          onClick={handleInputClick}
-          onFocus={handleInputFocus}
-          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const newValue = parseInt(e.target.value, 10);
+            if (!isNaN(newValue)) {
+              onChange(Math.max(min, Math.min(max, newValue)));
+            }
+          }}
           min={min}
           max={max}
           className="w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
           type="button"
-          onClick={handleIncrement}
-          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => value < max && onChange(value + 1)}
           disabled={value >= max}
           className={cn(
             'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
@@ -273,92 +237,103 @@ function GameTypeCard({
   onNumberOfRoundsChange,
 }: GameTypeCardProps) {
   const Icon = option.icon;
+  const hasConfigInputs = selected && (option.showPlayerCount || option.showTeamCount);
 
   return (
-    <Card
-      className={cn(
-        'p-4 cursor-pointer transition-all',
-        selected
-          ? 'ring-2 ring-brand-500 dark:ring-brand-400 border-brand-500 dark:border-brand-400'
-          : 'hover:border-gray-300 dark:hover:border-gray-600'
-      )}
-      onClick={onSelect}
-      role="radio"
-      aria-checked={selected}
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            'p-3 rounded-xl transition-colors',
-            selected
-              ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-          )}
-        >
-          <Icon className="h-6 w-6" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white">{option.title}</h3>
-            {selected && (
-              <div className="h-2 w-2 rounded-full bg-brand-500 dark:bg-brand-400" />
+    <div className="space-y-0">
+      {/* Clickable selection part */}
+      <Card
+        className={cn(
+          'p-4 cursor-pointer transition-all',
+          selected
+            ? 'ring-2 ring-brand-500 dark:ring-brand-400 border-brand-500 dark:border-brand-400'
+            : 'hover:border-gray-300 dark:hover:border-gray-600',
+          // Remove bottom corners if showing inputs
+          hasConfigInputs && 'rounded-b-none border-b-0'
+        )}
+        onClick={onSelect}
+        role="radio"
+        aria-checked={selected}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className={cn(
+              'p-3 rounded-xl transition-colors',
+              selected
+                ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
             )}
+          >
+            <Icon className="h-6 w-6" />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{option.description}</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 dark:text-white">{option.title}</h3>
+              {selected && (
+                <div className="h-2 w-2 rounded-full bg-brand-500 dark:bg-brand-400" />
+              )}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{option.description}</p>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Player count input for round robin */}
-      {selected && option.showPlayerCount && onPlayerCountChange && (
-        <>
-          <CountInput
-            value={playerCount ?? MIN_PLAYERS}
-            onChange={onPlayerCountChange}
-            label="Number of Players"
-            min={MIN_PLAYERS}
-            max={MAX_COUNT}
-          />
-          {onNumberOfRoundsChange && (
-            <CountInput
-              value={numberOfRounds ?? DEFAULT_ROUNDS}
-              onChange={onNumberOfRoundsChange}
-              label="Number of Rounds"
-              min={MIN_ROUNDS}
-              max={MAX_ROUNDS}
-            />
+      {/* Config inputs - OUTSIDE the Card, not clickable for selection */}
+      {hasConfigInputs && (
+        <div className="border-2 border-t-0 border-brand-500 dark:border-brand-400 rounded-b-xl bg-gray-50 dark:bg-gray-900/50 p-4 space-y-4">
+          {/* Player count input for round robin */}
+          {option.showPlayerCount && onPlayerCountChange && (
+            <>
+              <CountInput
+                value={playerCount ?? MIN_PLAYERS}
+                onChange={onPlayerCountChange}
+                label="Number of Players"
+                min={MIN_PLAYERS}
+                max={MAX_COUNT}
+              />
+              {onNumberOfRoundsChange && (
+                <CountInput
+                  value={numberOfRounds ?? DEFAULT_ROUNDS}
+                  onChange={onNumberOfRoundsChange}
+                  label="Number of Rounds"
+                  min={MIN_ROUNDS}
+                  max={MAX_ROUNDS}
+                />
+              )}
+            </>
           )}
-        </>
-      )}
 
-      {/* Team count input for set partner round robin */}
-      {selected && option.showTeamCount && onTeamCountChange && (
-        <>
-          <CountInput
-            value={teamCount ?? MIN_TEAMS}
-            onChange={onTeamCountChange}
-            label="Number of Teams"
-            min={MIN_TEAMS}
-            max={MAX_COUNT}
-          />
-          {onNumberOfRoundsChange && (
-            <CountInput
-              value={numberOfRounds ?? DEFAULT_ROUNDS}
-              onChange={onNumberOfRoundsChange}
-              label="Number of Rounds"
-              min={MIN_ROUNDS}
-              max={MAX_ROUNDS}
-            />
+          {/* Team count input for set partner round robin */}
+          {option.showTeamCount && onTeamCountChange && (
+            <>
+              <CountInput
+                value={teamCount ?? MIN_TEAMS}
+                onChange={onTeamCountChange}
+                label="Number of Teams"
+                min={MIN_TEAMS}
+                max={MAX_COUNT}
+              />
+              {onNumberOfRoundsChange && (
+                <CountInput
+                  value={numberOfRounds ?? DEFAULT_ROUNDS}
+                  onChange={onNumberOfRoundsChange}
+                  label="Number of Rounds"
+                  min={MIN_ROUNDS}
+                  max={MAX_ROUNDS}
+                />
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
 
