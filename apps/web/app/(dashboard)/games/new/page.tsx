@@ -367,7 +367,7 @@ export default function NewGamePage() {
       <div className="flex items-center gap-4 mb-6">
         <Link
           href="/games"
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
         </Link>
@@ -1333,7 +1333,7 @@ function ScoreInput({
       <button
         type="button"
         onClick={() => onChange(value - 1)}
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600"
+        className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600"
         aria-label={`Decrease ${label}`}
       >
         <Minus className="w-4 h-4" />
@@ -1344,13 +1344,13 @@ function ScoreInput({
         max="21"
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-        className="w-14 py-2 text-center border-y border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pickle-500"
+        className="w-14 py-3 text-center border-y border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pickle-500"
         aria-label={label}
       />
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600"
+        className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600"
         aria-label={`Increase ${label}`}
       >
         <Plus className="w-4 h-4" />

@@ -93,7 +93,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Quick Stats - Placeholder for real data */}
-          <div className="grid grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
                 --
