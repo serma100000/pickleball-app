@@ -193,6 +193,15 @@ export const auditActionEnum = pgEnum('audit_action', [
   'DELETE',
 ]);
 
+export const duprSubmissionStatusEnum = pgEnum('dupr_submission_status', [
+  'not_applicable',       // Non-DUPR game
+  'pending_verification', // Waiting for both teams to confirm
+  'verified',             // Both teams confirmed, ready to submit
+  'submitting',           // Currently being submitted to DUPR
+  'submitted',            // Successfully submitted to DUPR
+  'failed',               // Submission failed
+]);
+
 // ============================================================================
 // CORE USERS (3 tables)
 // ============================================================================
@@ -519,6 +528,13 @@ export const games = pgTable(
     isRated: boolean('is_rated').default(true),
     ratingProcessed: boolean('rating_processed').default(false),
     ratingProcessedAt: timestamp('rating_processed_at', { withTimezone: true }),
+
+    // DUPR Integration
+    reportToDupr: boolean('report_to_dupr').default(false),
+    duprSubmissionStatus: duprSubmissionStatusEnum('dupr_submission_status').default('not_applicable'),
+    duprSubmittedAt: timestamp('dupr_submitted_at', { withTimezone: true }),
+    duprMatchId: varchar('dupr_match_id', { length: 100 }), // ID returned from DUPR API
+    duprSubmissionError: text('dupr_submission_error'), // Error message if failed
 
     // References (nullable, for linking to tournaments/leagues)
     tournamentMatchId: uuid('tournament_match_id'),

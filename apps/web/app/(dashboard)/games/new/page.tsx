@@ -13,6 +13,10 @@ import {
   X,
   Check,
   UserPlus,
+  AlertTriangle,
+  Shield,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import {
   GameTypeSelector,
@@ -31,6 +35,17 @@ import { cn } from '@/lib/utils';
 
 type SingleMatchType = 'singles' | 'doubles';
 type ScoreEntry = { team1: number; team2: number };
+
+// Extended player type with DUPR info
+interface PlayerWithDupr extends Player {
+  duprId?: string;
+  hasDuprLinked?: boolean;
+}
+
+interface TeamWithDupr extends Team {
+  player1: PlayerWithDupr;
+  player2: PlayerWithDupr;
+}
 
 // Map internal game mode to GameEventType
 type GameMode = 'single-match' | 'round-robin' | 'set-partner-round-robin';
@@ -55,12 +70,14 @@ interface WizardState {
   singleMatchType: SingleMatchType;
   singleMatchScores: ScoreEntry[];
   partner: string;
+  partnerHasDupr: boolean;
   opponents: string[];
+  opponentsHaveDupr: boolean[];
   // Round robin state
-  roundRobinPlayers: Player[];
+  roundRobinPlayers: PlayerWithDupr[];
   roundRobinMatches: Match[];
   // Set partner round robin state
-  teams: Team[];
+  teams: TeamWithDupr[];
   teamRoundRobinMatches: Match[];
   // Common fields
   location: string;
@@ -81,7 +98,9 @@ export default function NewGamePage() {
     singleMatchType: 'doubles',
     singleMatchScores: [{ team1: 0, team2: 0 }],
     partner: '',
+    partnerHasDupr: false,
     opponents: ['', ''],
+    opponentsHaveDupr: [false, false],
     roundRobinPlayers: [],
     roundRobinMatches: [],
     teams: [],
@@ -109,6 +128,55 @@ export default function NewGamePage() {
     return new Map<number, Match[]>();
   }, [state.gameMode, state.roundRobinMatches, state.teamRoundRobinMatches]);
 
+  // Get list of players missing DUPR IDs when DUPR is enabled
+  const playersMissingDupr = useMemo(() => {
+    if (!state.duprEnabled) return [];
+
+    const missingPlayers: string[] = [];
+
+    if (state.gameMode === 'single-match') {
+      // For single match, check partner and opponents
+      // Note: Current user is assumed to have DUPR linked (would be validated server-side)
+      if (state.singleMatchType === 'doubles' && state.partner && !state.partnerHasDupr) {
+        missingPlayers.push(state.partner);
+      }
+      state.opponents.forEach((opponent, index) => {
+        if (opponent && !state.opponentsHaveDupr[index]) {
+          missingPlayers.push(opponent);
+        }
+      });
+    } else if (state.gameMode === 'round-robin') {
+      // For round robin, check all players
+      state.roundRobinPlayers.forEach((player) => {
+        if (!player.hasDuprLinked) {
+          missingPlayers.push(player.name);
+        }
+      });
+    } else if (state.gameMode === 'set-partner-round-robin') {
+      // For set partner round robin, check all team members
+      state.teams.forEach((team) => {
+        if (!team.player1.hasDuprLinked) {
+          missingPlayers.push(team.player1.name);
+        }
+        if (!team.player2.hasDuprLinked) {
+          missingPlayers.push(team.player2.name);
+        }
+      });
+    }
+
+    return missingPlayers;
+  }, [
+    state.duprEnabled,
+    state.gameMode,
+    state.singleMatchType,
+    state.partner,
+    state.partnerHasDupr,
+    state.opponents,
+    state.opponentsHaveDupr,
+    state.roundRobinPlayers,
+    state.teams,
+  ]);
+
   const handleNext = () => {
     if (state.step === 1) {
       // Generate matchups when moving from player/team selection to scores
@@ -133,7 +201,7 @@ export default function NewGamePage() {
 
     const submitData = {
       gameMode: state.gameMode,
-      duprEnabled: state.duprEnabled,
+      reportToDupr: state.duprEnabled,
       location: state.location,
       notes: state.notes,
       timestamp: new Date().toISOString(),
@@ -142,14 +210,23 @@ export default function NewGamePage() {
         scores: state.singleMatchScores,
         partner: state.partner,
         opponents: state.opponents,
+        reportToDupr: state.duprEnabled,
       }),
       ...(state.gameMode === 'round-robin' && {
         players: state.roundRobinPlayers,
-        matches: state.roundRobinMatches,
+        matches: state.roundRobinMatches.map((match) => ({
+          ...match,
+          reportToDupr: state.duprEnabled,
+        })),
+        reportToDupr: state.duprEnabled,
       }),
       ...(state.gameMode === 'set-partner-round-robin' && {
         teams: state.teams,
-        matches: state.teamRoundRobinMatches,
+        matches: state.teamRoundRobinMatches.map((match) => ({
+          ...match,
+          reportToDupr: state.duprEnabled,
+        })),
+        reportToDupr: state.duprEnabled,
       }),
     };
 
@@ -190,9 +267,10 @@ export default function NewGamePage() {
   // Round robin player helpers
   const addPlayer = () => {
     if (newPlayerName.trim()) {
-      const player: Player = {
+      const player: PlayerWithDupr = {
         id: Math.random().toString(36).substring(2, 9),
         name: newPlayerName.trim(),
+        hasDuprLinked: false, // Default to false, would be checked via API in real implementation
       };
       setState((prev) => ({
         ...prev,
@@ -212,15 +290,17 @@ export default function NewGamePage() {
   // Team helpers
   const addTeam = () => {
     if (newTeamPlayer1.trim() && newTeamPlayer2.trim()) {
-      const team: Team = {
+      const team: TeamWithDupr = {
         id: Math.random().toString(36).substring(2, 9),
         player1: {
           id: Math.random().toString(36).substring(2, 9),
           name: newTeamPlayer1.trim(),
+          hasDuprLinked: false, // Default to false, would be checked via API
         },
         player2: {
           id: Math.random().toString(36).substring(2, 9),
           name: newTeamPlayer2.trim(),
+          hasDuprLinked: false, // Default to false, would be checked via API
         },
       };
       setState((prev) => ({
@@ -397,10 +477,31 @@ export default function NewGamePage() {
 
         {/* Review Step */}
         {isLastStep && (
-          <ReviewStep
-            state={state}
-            matchesByRound={matchesByRound}
-          />
+          <>
+            {/* DUPR Warning Banner */}
+            {state.duprEnabled && playersMissingDupr.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">
+                      DUPR Account Required
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                      The following players need to link their DUPR accounts:{' '}
+                      <span className="font-medium">{playersMissingDupr.join(', ')}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ReviewStep
+              state={state}
+              matchesByRound={matchesByRound}
+              playersMissingDupr={playersMissingDupr}
+            />
+          </>
         )}
 
         {/* Common fields on last step before review or on review */}
@@ -928,124 +1029,214 @@ function EnterScoresStep({
 function ReviewStep({
   state,
   matchesByRound,
+  playersMissingDupr: _playersMissingDupr, // Available for future validation UI enhancements
 }: {
   state: WizardState;
   matchesByRound: Map<number, Match[]>;
+  playersMissingDupr: string[];
 }) {
+  // Note: _playersMissingDupr could be used for inline validation
+  // Currently the warning is shown in the parent component
+  void _playersMissingDupr;
   const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Review & Submit
-      </h2>
+  // Get all players for DUPR status display
+  const getAllPlayers = (): { name: string; hasDupr: boolean }[] => {
+    if (state.gameMode === 'single-match') {
+      const players: { name: string; hasDupr: boolean }[] = [
+        { name: 'You', hasDupr: true }, // Current user assumed to have DUPR
+      ];
+      if (state.singleMatchType === 'doubles' && state.partner) {
+        players.push({ name: state.partner, hasDupr: state.partnerHasDupr });
+      }
+      state.opponents.forEach((opponent, index) => {
+        if (opponent) {
+          players.push({ name: opponent, hasDupr: state.opponentsHaveDupr[index] ?? false });
+        }
+      });
+      return players;
+    } else if (state.gameMode === 'round-robin') {
+      return state.roundRobinPlayers.map((p) => ({
+        name: p.name,
+        hasDupr: p.hasDuprLinked ?? false,
+      }));
+    } else {
+      const players: { name: string; hasDupr: boolean }[] = [];
+      state.teams.forEach((team) => {
+        players.push({ name: team.player1.name, hasDupr: team.player1.hasDuprLinked ?? false });
+        players.push({ name: team.player2.name, hasDupr: team.player2.hasDuprLinked ?? false });
+      });
+      return players;
+    }
+  };
 
-      {/* Game Mode Badge */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="px-3 py-1 bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400 rounded-full text-sm font-medium">
-          {state.gameMode === 'single-match'
-            ? 'Single Match'
-            : state.gameMode === 'round-robin'
-              ? 'Round Robin'
-              : 'Set Partner Round Robin'}
-        </span>
-        {state.duprEnabled && (
-          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium">
-            DUPR Rated
+  return (
+    <div className="space-y-4">
+      {/* DUPR Info Section */}
+      {state.duprEnabled && (
+        <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+            <h3 className="font-semibold text-brand-800 dark:text-brand-200">DUPR Reporting</h3>
+          </div>
+
+          <div className="space-y-3 mb-4">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-brand-600 dark:text-brand-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-brand-700 dark:text-brand-300">
+                This game will be reported to DUPR
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-brand-600 dark:text-brand-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-brand-700 dark:text-brand-300">
+                Scores must be verified by both teams before submission
+              </p>
+            </div>
+          </div>
+
+          {/* Player DUPR Status List */}
+          <div className="border-t border-brand-200 dark:border-brand-700 pt-4">
+            <p className="text-sm font-medium text-brand-800 dark:text-brand-200 mb-2">
+              Player DUPR Status
+            </p>
+            <div className="grid gap-2">
+              {getAllPlayers().map((player, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between py-1.5 px-3 bg-white/50 dark:bg-gray-800/50 rounded-lg"
+                >
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{player.name}</span>
+                  {player.hasDupr ? (
+                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-xs font-medium">Linked</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <XCircle className="w-4 h-4" />
+                      <span className="text-xs font-medium">Not Linked</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Review & Submit
+        </h2>
+
+        {/* Game Mode Badge */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="px-3 py-1 bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400 rounded-full text-sm font-medium">
+            {state.gameMode === 'single-match'
+              ? 'Single Match'
+              : state.gameMode === 'round-robin'
+                ? 'Round Robin'
+                : 'Set Partner Round Robin'}
           </span>
+          {state.duprEnabled && (
+            <span className="px-3 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-full text-sm font-medium">
+              DUPR Rated
+            </span>
+          )}
+        </div>
+
+        {/* Single Match Summary */}
+        {state.gameMode === 'single-match' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                {state.singleMatchType === 'singles' ? 'Singles Match' : 'Doubles Match'}
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    You{state.singleMatchType === 'doubles' && state.partner && ` & ${state.partner}`}
+                  </p>
+                </div>
+                <div className="text-xl font-bold text-gray-900 dark:text-white">
+                  {state.singleMatchScores.map((s) => `${s.team1}-${s.team2}`).join(', ')}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {state.opponents.filter(Boolean).join(' & ') || 'Opponents'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Round Robin Summary */}
+        {state.gameMode !== 'single-match' && rounds.length > 0 && (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                Tournament Summary
+              </h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {state.gameMode === 'round-robin'
+                      ? state.roundRobinPlayers.length
+                      : state.teams.length}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {state.gameMode === 'round-robin' ? 'Players' : 'Teams'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{rounds.length}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Rounds</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {state.gameMode === 'round-robin'
+                      ? state.roundRobinMatches.length
+                      : state.teamRoundRobinMatches.length}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Matches</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Match Results */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Match Results</h3>
+              {rounds.map((round) => (
+                <div key={round}>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Round {round}</p>
+                  {matchesByRound.get(round)?.map((match) => (
+                    <div
+                      key={match.id}
+                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded mb-1 text-sm"
+                    >
+                      <span className="truncate flex-1 text-gray-900 dark:text-white">
+                        {match.team1
+                          ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                          : 'Team 1'}
+                      </span>
+                      <span className="px-3 font-mono font-medium text-gray-900 dark:text-white">
+                        {match.score.team1} - {match.score.team2}
+                      </span>
+                      <span className="truncate flex-1 text-right text-gray-900 dark:text-white">
+                        {match.team2
+                          ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                          : 'Team 2'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Single Match Summary */}
-      {state.gameMode === 'single-match' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-              {state.singleMatchType === 'singles' ? 'Singles Match' : 'Doubles Match'}
-            </h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  You{state.singleMatchType === 'doubles' && state.partner && ` & ${state.partner}`}
-                </p>
-              </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {state.singleMatchScores.map((s) => `${s.team1}-${s.team2}`).join(', ')}
-              </div>
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {state.opponents.filter(Boolean).join(' & ') || 'Opponents'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Round Robin Summary */}
-      {state.gameMode !== 'single-match' && rounds.length > 0 && (
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-              Tournament Summary
-            </h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {state.gameMode === 'round-robin'
-                    ? state.roundRobinPlayers.length
-                    : state.teams.length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {state.gameMode === 'round-robin' ? 'Players' : 'Teams'}
-                </p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{rounds.length}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Rounds</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {state.gameMode === 'round-robin'
-                    ? state.roundRobinMatches.length
-                    : state.teamRoundRobinMatches.length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Matches</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Match Results */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Match Results</h3>
-            {rounds.map((round) => (
-              <div key={round}>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Round {round}</p>
-                {matchesByRound.get(round)?.map((match) => (
-                  <div
-                    key={match.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded mb-1 text-sm"
-                  >
-                    <span className="truncate flex-1 text-gray-900 dark:text-white">
-                      {match.team1
-                        ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                        : 'Team 1'}
-                    </span>
-                    <span className="px-3 font-mono font-medium text-gray-900 dark:text-white">
-                      {match.score.team1} - {match.score.team2}
-                    </span>
-                    <span className="truncate flex-1 text-right text-gray-900 dark:text-white">
-                      {match.team2
-                        ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                        : 'Team 2'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

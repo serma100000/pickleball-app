@@ -387,6 +387,11 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
           description="Automatically submit match results to update DUPR ratings"
           icon={Shield}
         />
+        {value.reportToDupr && (
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 pl-1">
+            All players must have their DUPR accounts linked. Scores will require verification from both teams before submission.
+          </p>
+        )}
       </div>
     </div>
   );

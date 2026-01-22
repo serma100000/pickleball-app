@@ -108,6 +108,57 @@ const listGamesQuerySchema = z.object({
   past: z.coerce.boolean().optional(),
 });
 
+// DUPR submission status type (stored in game notes as JSON prefix)
+type DuprSubmissionStatus = 'pending' | 'verified' | 'submitting' | 'submitted' | 'failed';
+
+// Helper to extract DUPR status from game notes
+function extractDuprStatus(notes: string | null): { duprStatus: DuprSubmissionStatus | null; duprSubmittedAt: Date | null; cleanNotes: string | null } {
+  if (!notes) return { duprStatus: null, duprSubmittedAt: null, cleanNotes: null };
+
+  const duprMatch = notes.match(/^\[DUPR:(\w+)(?::(\d+))?\]/);
+  if (duprMatch) {
+    const status = duprMatch[1] as DuprSubmissionStatus;
+    const timestamp = duprMatch[2] ? new Date(parseInt(duprMatch[2])) : null;
+    const cleanNotes = notes.replace(/^\[DUPR:\w+(?::\d+)?\]\s*/, '') || null;
+    return { duprStatus: status, duprSubmittedAt: timestamp, cleanNotes };
+  }
+
+  return { duprStatus: null, duprSubmittedAt: null, cleanNotes: notes };
+}
+
+// Helper to encode DUPR status into notes
+function encodeDuprStatus(status: DuprSubmissionStatus, existingNotes: string | null, submittedAt?: Date): string {
+  const { cleanNotes } = extractDuprStatus(existingNotes);
+  const timestamp = submittedAt ? `:${submittedAt.getTime()}` : '';
+  const prefix = `[DUPR:${status}${timestamp}]`;
+  return cleanNotes ? `${prefix} ${cleanNotes}` : prefix;
+}
+
+// Interface for verification status response
+interface VerificationStatus {
+  gameId: string;
+  team1Verifications: Array<{
+    playerId: string;
+    username: string;
+    displayName: string | null;
+    isConfirmed: boolean;
+    confirmedAt: Date | null;
+  }>;
+  team2Verifications: Array<{
+    playerId: string;
+    username: string;
+    displayName: string | null;
+    isConfirmed: boolean;
+    confirmedAt: Date | null;
+  }>;
+  team1Verified: boolean;
+  team2Verified: boolean;
+  fullyVerified: boolean;
+  duprSubmissionStatus: DuprSubmissionStatus | null;
+  duprSubmittedAt: Date | null;
+  scores: unknown;
+}
+
 /**
  * GET /games
  * List games with filters
@@ -631,7 +682,7 @@ gamesRouter.post(
     }
 
     // Check if already verified
-    if (playerRecord.hasVerified) {
+    if (playerRecord.isConfirmed) {
       throw new HTTPException(409, {
         message: 'You have already verified this game',
       });
@@ -720,6 +771,327 @@ gamesRouter.post(
 );
 
 /**
+ * GET /games/:id/verification-status
+ * Get verification status for a game including DUPR submission status
+ */
+gamesRouter.get(
+  '/:id/verification-status',
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const game = await gameService.getById(id);
+    if (!game) {
+      throw new HTTPException(404, {
+        message: 'Game not found',
+      });
+    }
+
+    // Get all participants with their verification status
+    const participants = game.players || [];
+
+    const team1Players = participants.filter((p: { team: number }) => p.team === 1);
+    const team2Players = participants.filter((p: { team: number }) => p.team === 2);
+
+    // Check if at least one player from each team has verified
+    const team1Verified = team1Players.some((p: { isConfirmed: boolean | null }) => p.isConfirmed === true);
+    const team2Verified = team2Players.some((p: { isConfirmed: boolean | null }) => p.isConfirmed === true);
+    const fullyVerified = team1Verified && team2Verified;
+
+    // Extract DUPR status from notes
+    const { duprStatus, duprSubmittedAt } = extractDuprStatus(game.notes);
+
+    const response: VerificationStatus = {
+      gameId: id,
+      team1Verifications: team1Players.map((p: { userId: string; user: { username: string; displayName: string | null }; isConfirmed: boolean | null; confirmedAt: Date | null }) => ({
+        playerId: p.userId,
+        username: p.user.username,
+        displayName: p.user.displayName,
+        isConfirmed: p.isConfirmed === true,
+        confirmedAt: p.confirmedAt,
+      })),
+      team2Verifications: team2Players.map((p: { userId: string; user: { username: string; displayName: string | null }; isConfirmed: boolean | null; confirmedAt: Date | null }) => ({
+        playerId: p.userId,
+        username: p.user.username,
+        displayName: p.user.displayName,
+        isConfirmed: p.isConfirmed === true,
+        confirmedAt: p.confirmedAt,
+      })),
+      team1Verified,
+      team2Verified,
+      fullyVerified,
+      duprSubmissionStatus: duprStatus,
+      duprSubmittedAt,
+      scores: game.scores,
+    };
+
+    return c.json(response);
+  }
+);
+
+/**
+ * POST /games/:id/verify-score
+ * Verify/confirm scores for a game (enhanced verification with DUPR status update)
+ */
+gamesRouter.post(
+  '/:id/verify-score',
+  authMiddleware,
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { userId } = c.get('user');
+
+    // Get user from database
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, userId),
+    });
+
+    if (!dbUser) {
+      throw new HTTPException(401, {
+        message: 'User not found',
+      });
+    }
+
+    const game = await gameService.getById(id);
+    if (!game) {
+      throw new HTTPException(404, {
+        message: 'Game not found',
+      });
+    }
+
+    // Verify user is a participant
+    const playerRecord = game.players?.find((p: { userId: string }) => p.userId === dbUser.id);
+    if (!playerRecord) {
+      throw new HTTPException(403, {
+        message: 'Only game participants can verify scores',
+      });
+    }
+
+    // Check if game is completed
+    if (game.status !== 'completed') {
+      throw new HTTPException(400, {
+        message: 'Can only verify completed games',
+      });
+    }
+
+    // Check if already verified by this user
+    if (playerRecord.isConfirmed) {
+      throw new HTTPException(409, {
+        message: 'You have already verified this game',
+      });
+    }
+
+    // Update the participant's confirmation status
+    await db
+      .update(gameParticipants)
+      .set({
+        isConfirmed: true,
+        confirmedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(gameParticipants.gameId, id),
+          eq(gameParticipants.userId, dbUser.id)
+        )
+      );
+
+    // Re-fetch participants to check verification status
+    const updatedGame = await gameService.getById(id);
+    const participants = updatedGame?.players || [];
+
+    const team1Players = participants.filter((p: { team: number }) => p.team === 1);
+    const team2Players = participants.filter((p: { team: number }) => p.team === 2);
+
+    const team1Verified = team1Players.some((p: { isConfirmed: boolean | null }) => p.isConfirmed === true);
+    const team2Verified = team2Players.some((p: { isConfirmed: boolean | null }) => p.isConfirmed === true);
+    const fullyVerified = team1Verified && team2Verified;
+
+    // Extract current DUPR status
+    const { duprStatus: currentDuprStatus } = extractDuprStatus(game.notes);
+
+    // If both teams have verified and DUPR reporting was requested, update status to 'verified'
+    if (fullyVerified && (currentDuprStatus === 'pending' || game.notes?.includes('[DUPR:pending]'))) {
+      const newNotes = encodeDuprStatus('verified', game.notes);
+      await db
+        .update(games)
+        .set({
+          notes: newNotes,
+          updatedAt: new Date(),
+        })
+        .where(eq(games.id, id));
+    }
+
+    // Log activity
+    await userService.logActivity(dbUser.id, 'game_score_verified', 'game', id);
+
+    return c.json({
+      message: 'Score verified successfully',
+      verification: {
+        team1Verified,
+        team2Verified,
+        fullyVerified,
+        duprSubmissionStatus: fullyVerified && currentDuprStatus ? 'verified' : currentDuprStatus,
+      },
+    });
+  }
+);
+
+/**
+ * POST /games/:id/submit-dupr
+ * Trigger DUPR submission (placeholder implementation)
+ */
+gamesRouter.post(
+  '/:id/submit-dupr',
+  authMiddleware,
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { userId } = c.get('user');
+
+    // Get user from database
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, userId),
+    });
+
+    if (!dbUser) {
+      throw new HTTPException(401, {
+        message: 'User not found',
+      });
+    }
+
+    const game = await gameService.getById(id);
+    if (!game) {
+      throw new HTTPException(404, {
+        message: 'Game not found',
+      });
+    }
+
+    // Verify user is a participant
+    const isParticipant = game.players?.some((p: { userId: string }) => p.userId === dbUser.id);
+    if (!isParticipant) {
+      throw new HTTPException(403, {
+        message: 'Only game participants can submit to DUPR',
+      });
+    }
+
+    // Check if game is completed
+    if (game.status !== 'completed') {
+      throw new HTTPException(400, {
+        message: 'Can only submit completed games to DUPR',
+      });
+    }
+
+    // Extract current DUPR status
+    const { duprStatus } = extractDuprStatus(game.notes);
+
+    // Check if DUPR submission was requested for this game
+    if (!duprStatus) {
+      throw new HTTPException(400, {
+        message: 'DUPR reporting was not enabled for this game',
+      });
+    }
+
+    // Only allow submission if status is 'verified'
+    if (duprStatus !== 'verified') {
+      if (duprStatus === 'submitted') {
+        throw new HTTPException(409, {
+          message: 'This game has already been submitted to DUPR',
+        });
+      }
+      if (duprStatus === 'submitting') {
+        throw new HTTPException(409, {
+          message: 'This game is currently being submitted to DUPR',
+        });
+      }
+      if (duprStatus === 'pending') {
+        throw new HTTPException(400, {
+          message: 'Game scores must be verified by both teams before DUPR submission',
+        });
+      }
+      throw new HTTPException(400, {
+        message: `Cannot submit to DUPR with status: ${duprStatus}`,
+      });
+    }
+
+    // Update status to 'submitting'
+    let newNotes = encodeDuprStatus('submitting', game.notes);
+    await db
+      .update(games)
+      .set({
+        notes: newNotes,
+        updatedAt: new Date(),
+      })
+      .where(eq(games.id, id));
+
+    // PLACEHOLDER: In production, this would call the actual DUPR API
+    // For now, we simulate a successful submission
+    // await duprService.submitGame(game);
+
+    // Update status to 'submitted' with timestamp
+    const submittedAt = new Date();
+    newNotes = encodeDuprStatus('submitted', game.notes, submittedAt);
+    await db
+      .update(games)
+      .set({
+        notes: newNotes,
+        updatedAt: new Date(),
+      })
+      .where(eq(games.id, id));
+
+    // Log activity
+    await userService.logActivity(dbUser.id, 'game_submitted_to_dupr', 'game', id);
+
+    return c.json({
+      message: 'Game successfully submitted to DUPR',
+      duprSubmissionStatus: 'submitted',
+      duprSubmittedAt: submittedAt,
+    });
+  }
+);
+
+/**
+ * Helper function to validate DUPR eligibility for players
+ */
+async function validateDuprEligibility(playerIds: string[]): Promise<{ valid: boolean; missingDuprIds: Array<{ playerId: string; username: string }> }> {
+  const missingDuprIds: Array<{ playerId: string; username: string }> = [];
+
+  for (const playerId of playerIds) {
+    // Check if user has a DUPR ID linked
+    const userRating = await db.query.userRatings.findFirst({
+      where: and(
+        eq(schema.userRatings.userId, playerId),
+        eq(schema.userRatings.ratingType, 'dupr')
+      ),
+      with: {
+        user: {
+          columns: {
+            username: true,
+          },
+        },
+      },
+    });
+
+    // If no DUPR rating record exists or no DUPR ID is set
+    if (!userRating?.duprId) {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, playerId),
+        columns: { username: true },
+      });
+
+      missingDuprIds.push({
+        playerId,
+        username: user?.username || 'Unknown',
+      });
+    }
+  }
+
+  return {
+    valid: missingDuprIds.length === 0,
+    missingDuprIds,
+  };
+}
+
+/**
  * POST /games/create
  * Enhanced game creation supporting single matches and round robins
  */
@@ -777,6 +1149,18 @@ gamesRouter.post('/create', authMiddleware, validateBody(createGameEnhancedSchem
       });
     }
 
+    // Validate DUPR eligibility if reportToDupr is enabled
+    if (data.reportToDupr) {
+      const duprValidation = await validateDuprEligibility(allPlayers);
+      if (!duprValidation.valid) {
+        throw new HTTPException(400, {
+          message: 'All players must have linked DUPR accounts to report game to DUPR',
+          // @ts-expect-error - extending HTTPException response
+          playersWithoutDupr: duprValidation.missingDuprIds,
+        });
+      }
+    }
+
     // Determine status and winning team
     const hasScores = data.scores && data.scores.length > 0;
     const initialStatus = hasScores ? 'completed' : data.scheduledAt ? 'scheduled' : 'in_progress';
@@ -787,6 +1171,13 @@ gamesRouter.post('/create', authMiddleware, validateBody(createGameEnhancedSchem
       const team1Wins = data.scores.filter((s) => s.team1 > s.team2).length;
       const team2Wins = data.scores.filter((s) => s.team2 > s.team1).length;
       winningTeam = team1Wins > team2Wins ? 1 : 2;
+    }
+
+    // Prepare notes with DUPR status if reportToDupr is enabled
+    let gameNotes = data.notes || null;
+    if (data.reportToDupr) {
+      // Set initial DUPR status to 'pending' - requires verification before submission
+      gameNotes = encodeDuprStatus('pending', gameNotes);
     }
 
     // Create game in transaction
@@ -809,7 +1200,7 @@ gamesRouter.post('/create', authMiddleware, validateBody(createGameEnhancedSchem
           bestOf: data.bestOf,
           scores: data.scores || [],
           winningTeam,
-          notes: data.notes,
+          notes: gameNotes,
           createdBy: dbUser.id,
         })
         .returning();
@@ -882,6 +1273,24 @@ gamesRouter.post('/create', authMiddleware, validateBody(createGameEnhancedSchem
       });
     }
 
+    // Validate DUPR eligibility if reportToDupr is enabled
+    if (data.reportToDupr) {
+      const duprValidation = await validateDuprEligibility(data.participantIds);
+      if (!duprValidation.valid) {
+        throw new HTTPException(400, {
+          message: 'All players must have linked DUPR accounts to report games to DUPR',
+          // @ts-expect-error - extending HTTPException response
+          playersWithoutDupr: duprValidation.missingDuprIds,
+        });
+      }
+    }
+
+    // Prepare notes with DUPR and round robin markers
+    let roundRobinNotes = data.notes ? `[ROUND ROBIN] ${data.notes}` : '[ROUND ROBIN]';
+    if (data.reportToDupr) {
+      roundRobinNotes = encodeDuprStatus('pending', roundRobinNotes);
+    }
+
     // Create a "parent" game to represent the round robin event
     const result = await db.transaction(async (tx) => {
       const [parentGame] = await tx
@@ -898,7 +1307,7 @@ gamesRouter.post('/create', authMiddleware, validateBody(createGameEnhancedSchem
           pointsToWin: data.pointsToWin,
           winBy: data.winBy,
           bestOf: data.bestOf,
-          notes: data.notes ? `[ROUND ROBIN] ${data.notes}` : '[ROUND ROBIN]',
+          notes: roundRobinNotes,
           createdBy: dbUser.id,
         })
         .returning();
