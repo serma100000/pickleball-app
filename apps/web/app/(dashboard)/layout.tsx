@@ -4,9 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
-  MapPin,
   Trophy,
-  Users,
   Calendar,
   User,
   Plus,
@@ -21,9 +19,7 @@ import { Logo } from '@/components/logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Courts', href: '/courts', icon: MapPin },
   { name: 'Games', href: '/games', icon: Trophy },
-  { name: 'Clubs', href: '/clubs', icon: Users },
   { name: 'Leagues', href: '/leagues', icon: Calendar },
   { name: 'Tournaments', href: '/tournaments', icon: Trophy },
   { name: 'Profile', href: '/profile', icon: User },
@@ -31,9 +27,9 @@ const navigation = [
 
 const mobileNavigation = [
   { name: 'Home', href: '/dashboard', icon: Home },
-  { name: 'Courts', href: '/courts', icon: MapPin },
   { name: 'Log', href: '/games/new', icon: Plus, highlight: true },
   { name: 'Games', href: '/games', icon: Trophy },
+  { name: 'Leagues', href: '/leagues', icon: Calendar },
   { name: 'Profile', href: '/profile', icon: User },
 ];
 
