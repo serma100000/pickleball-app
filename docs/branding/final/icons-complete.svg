@@ -1,0 +1,553 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2400" width="1400" height="2400">
+  <title>PaddleUp Complete Icon Set</title>
+
+  <!-- Definitions for gradients and reusable elements -->
+  <defs>
+    <!-- Teal background gradient -->
+    <linearGradient id="tealBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0891B2"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+
+    <!-- Orange ball gradient -->
+    <linearGradient id="orangeBall" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+
+    <!-- White paddle for dark backgrounds -->
+    <linearGradient id="whitePaddle" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="2400" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="700" y="50" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#0E7490">PaddleUp Complete Icon Set</text>
+
+  <!-- ==================== APP ICONS SECTION ==================== -->
+  <text x="50" y="100" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">App Icons</text>
+  <line x1="50" y1="110" x2="1350" y2="110" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 1024x1024 (shown at 200px) -->
+  <g transform="translate(50, 130)">
+    <rect width="200" height="200" rx="40" fill="url(#tealBg)"/>
+    <!-- Paddle -->
+    <g transform="translate(100, 100)">
+      <!-- Paddle head -->
+      <rect x="-45" y="-55" width="90" height="70" rx="18" fill="url(#whitePaddle)"/>
+      <!-- Paddle handle -->
+      <rect x="-14" y="15" width="28" height="45" rx="6" fill="url(#whitePaddle)"/>
+    </g>
+    <!-- Ball -->
+    <circle cx="145" cy="55" r="22" fill="url(#orangeBall)"/>
+    <text x="100" y="220" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">1024x1024</text>
+    <text x="100" y="234" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 200px)</text>
+  </g>
+
+  <!-- 512x512 (shown at 100px) -->
+  <g transform="translate(280, 130)">
+    <rect width="100" height="100" rx="20" fill="url(#tealBg)"/>
+    <g transform="translate(50, 50)">
+      <rect x="-22" y="-28" width="44" height="35" rx="9" fill="url(#whitePaddle)"/>
+      <rect x="-7" y="7" width="14" height="22" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="72" cy="28" r="11" fill="url(#orangeBall)"/>
+    <text x="50" y="120" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">512x512</text>
+    <text x="50" y="134" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 100px)</text>
+  </g>
+
+  <!-- 256x256 -->
+  <g transform="translate(410, 130)">
+    <rect width="64" height="64" rx="12" fill="url(#tealBg)"/>
+    <g transform="translate(32, 32)">
+      <rect x="-14" y="-18" width="28" height="22" rx="6" fill="url(#whitePaddle)"/>
+      <rect x="-4" y="4" width="8" height="14" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="46" cy="18" r="7" fill="url(#orangeBall)"/>
+    <text x="32" y="84" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">256x256</text>
+  </g>
+
+  <!-- 128x128 -->
+  <g transform="translate(500, 146)">
+    <rect width="48" height="48" rx="10" fill="url(#tealBg)"/>
+    <g transform="translate(24, 24)">
+      <rect x="-10" y="-13" width="20" height="16" rx="4" fill="url(#whitePaddle)"/>
+      <rect x="-3" y="3" width="6" height="10" rx="1.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="35" cy="13" r="5" fill="url(#orangeBall)"/>
+    <text x="24" y="68" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">128x128</text>
+  </g>
+
+  <!-- 64x64 -->
+  <g transform="translate(570, 158)">
+    <rect width="36" height="36" rx="7" fill="url(#tealBg)"/>
+    <g transform="translate(18, 18)">
+      <rect x="-7" y="-9" width="14" height="11" rx="3" fill="url(#whitePaddle)"/>
+      <rect x="-2" y="2" width="4" height="7" rx="1" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="26" cy="10" r="4" fill="url(#orangeBall)"/>
+    <text x="18" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">64x64</text>
+  </g>
+
+  <!-- ==================== FAVICONS SECTION ==================== -->
+  <text x="50" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Favicons</text>
+  <line x1="50" y1="320" x2="1350" y2="320" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 48x48 -->
+  <g transform="translate(50, 340)">
+    <rect width="48" height="48" rx="8" fill="url(#tealBg)"/>
+    <g transform="translate(24, 24)">
+      <rect x="-10" y="-13" width="20" height="16" rx="4" fill="url(#whitePaddle)"/>
+      <rect x="-3" y="3" width="6" height="10" rx="1.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="35" cy="13" r="5" fill="url(#orangeBall)"/>
+    <text x="24" y="68" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">48x48</text>
+  </g>
+
+  <!-- 32x32 -->
+  <g transform="translate(130, 348)">
+    <rect width="32" height="32" rx="6" fill="url(#tealBg)"/>
+    <g transform="translate(16, 16)">
+      <rect x="-7" y="-9" width="14" height="11" rx="3" fill="url(#whitePaddle)"/>
+      <rect x="-2" y="2" width="4" height="7" rx="1" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="23" cy="9" r="3.5" fill="url(#orangeBall)"/>
+    <text x="16" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">32x32</text>
+  </g>
+
+  <!-- 16x16 -->
+  <g transform="translate(200, 356)">
+    <rect width="16" height="16" rx="3" fill="url(#tealBg)"/>
+    <g transform="translate(8, 8)">
+      <rect x="-3.5" y="-4.5" width="7" height="6" rx="1.5" fill="url(#whitePaddle)"/>
+      <rect x="-1" y="1.5" width="2" height="3.5" rx="0.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="12" cy="4" r="2" fill="url(#orangeBall)"/>
+    <text x="8" y="36" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">16x16</text>
+  </g>
+
+  <!-- ==================== APPLE TOUCH ICONS SECTION ==================== -->
+  <text x="50" y="460" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Apple Touch Icons</text>
+  <line x1="50" y1="470" x2="1350" y2="470" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 180x180 (shown at 90px) -->
+  <g transform="translate(50, 490)">
+    <rect width="90" height="90" rx="20" fill="url(#tealBg)"/>
+    <g transform="translate(45, 45)">
+      <rect x="-20" y="-25" width="40" height="32" rx="8" fill="url(#whitePaddle)"/>
+      <rect x="-6" y="7" width="12" height="20" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="65" cy="25" r="10" fill="url(#orangeBall)"/>
+    <text x="45" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">180x180</text>
+    <text x="45" y="124" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 90px)</text>
+  </g>
+
+  <!-- 152x152 (shown at 76px) -->
+  <g transform="translate(170, 497)">
+    <rect width="76" height="76" rx="17" fill="url(#tealBg)"/>
+    <g transform="translate(38, 38)">
+      <rect x="-17" y="-21" width="34" height="27" rx="7" fill="url(#whitePaddle)"/>
+      <rect x="-5" y="6" width="10" height="17" rx="2.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="55" cy="21" r="8" fill="url(#orangeBall)"/>
+    <text x="38" y="96" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">152x152</text>
+    <text x="38" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 76px)</text>
+  </g>
+
+  <!-- 120x120 (shown at 60px) -->
+  <g transform="translate(280, 505)">
+    <rect width="60" height="60" rx="13" fill="url(#tealBg)"/>
+    <g transform="translate(30, 30)">
+      <rect x="-13" y="-17" width="26" height="21" rx="5" fill="url(#whitePaddle)"/>
+      <rect x="-4" y="4" width="8" height="13" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="43" cy="17" r="6.5" fill="url(#orangeBall)"/>
+    <text x="30" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">120x120</text>
+    <text x="30" y="94" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 60px)</text>
+  </g>
+
+  <!-- 76x76 -->
+  <g transform="translate(370, 505)">
+    <rect width="60" height="60" rx="13" fill="url(#tealBg)"/>
+    <g transform="translate(30, 30)">
+      <rect x="-13" y="-17" width="26" height="21" rx="5" fill="url(#whitePaddle)"/>
+      <rect x="-4" y="4" width="8" height="13" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="43" cy="17" r="6.5" fill="url(#orangeBall)"/>
+    <text x="30" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">76x76</text>
+  </g>
+
+  <!-- ==================== ANDROID/PWA ICONS SECTION ==================== -->
+  <text x="50" y="660" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Android / PWA Icons</text>
+  <line x1="50" y1="670" x2="1350" y2="670" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 512x512 (shown at 100px) -->
+  <g transform="translate(50, 690)">
+    <rect width="100" height="100" rx="20" fill="url(#tealBg)"/>
+    <g transform="translate(50, 50)">
+      <rect x="-22" y="-28" width="44" height="35" rx="9" fill="url(#whitePaddle)"/>
+      <rect x="-7" y="7" width="14" height="22" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="72" cy="28" r="11" fill="url(#orangeBall)"/>
+    <text x="50" y="120" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">512x512</text>
+    <text x="50" y="134" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 100px)</text>
+  </g>
+
+  <!-- 192x192 (shown at 96px) -->
+  <g transform="translate(180, 692)">
+    <rect width="96" height="96" rx="19" fill="url(#tealBg)"/>
+    <g transform="translate(48, 48)">
+      <rect x="-21" y="-27" width="42" height="34" rx="8" fill="url(#whitePaddle)"/>
+      <rect x="-6" y="7" width="12" height="21" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="69" cy="27" r="10" fill="url(#orangeBall)"/>
+    <text x="48" y="116" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">192x192</text>
+    <text x="48" y="130" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 96px)</text>
+  </g>
+
+  <!-- 96x96 -->
+  <g transform="translate(310, 692)">
+    <rect width="96" height="96" rx="19" fill="url(#tealBg)"/>
+    <g transform="translate(48, 48)">
+      <rect x="-21" y="-27" width="42" height="34" rx="8" fill="url(#whitePaddle)"/>
+      <rect x="-6" y="7" width="12" height="21" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="69" cy="27" r="10" fill="url(#orangeBall)"/>
+    <text x="48" y="116" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">96x96</text>
+  </g>
+
+  <!-- ==================== MICROSOFT TILES SECTION ==================== -->
+  <text x="50" y="870" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Microsoft Tiles</text>
+  <line x1="50" y1="880" x2="1350" y2="880" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 310x310 (shown at 100px) -->
+  <g transform="translate(50, 900)">
+    <rect width="100" height="100" rx="0" fill="url(#tealBg)"/>
+    <g transform="translate(50, 50)">
+      <rect x="-22" y="-28" width="44" height="35" rx="9" fill="url(#whitePaddle)"/>
+      <rect x="-7" y="7" width="14" height="22" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="72" cy="28" r="11" fill="url(#orangeBall)"/>
+    <text x="50" y="120" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">310x310</text>
+    <text x="50" y="134" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 100px)</text>
+  </g>
+
+  <!-- 150x150 (shown at 75px) -->
+  <g transform="translate(180, 912)">
+    <rect width="75" height="75" rx="0" fill="url(#tealBg)"/>
+    <g transform="translate(37.5, 37.5)">
+      <rect x="-16" y="-21" width="32" height="26" rx="7" fill="url(#whitePaddle)"/>
+      <rect x="-5" y="5" width="10" height="16" rx="2.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="54" cy="21" r="8" fill="url(#orangeBall)"/>
+    <text x="37.5" y="95" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">150x150</text>
+    <text x="37.5" y="109" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">(at 75px)</text>
+  </g>
+
+  <!-- 70x70 -->
+  <g transform="translate(290, 915)">
+    <rect width="70" height="70" rx="0" fill="url(#tealBg)"/>
+    <g transform="translate(35, 35)">
+      <rect x="-15" y="-19" width="30" height="24" rx="6" fill="url(#whitePaddle)"/>
+      <rect x="-4.5" y="5" width="9" height="15" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="50" cy="20" r="7.5" fill="url(#orangeBall)"/>
+    <text x="35" y="90" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748B">70x70</text>
+  </g>
+
+  <!-- ==================== ICON ANATOMY SECTION ==================== -->
+  <text x="50" y="1080" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Icon Anatomy</text>
+  <line x1="50" y1="1090" x2="1350" y2="1090" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- Large anatomy diagram -->
+  <g transform="translate(50, 1110)">
+    <!-- Main icon -->
+    <rect width="200" height="200" rx="40" fill="url(#tealBg)" stroke="#0E7490" stroke-width="2" stroke-dasharray="5,5"/>
+    <g transform="translate(100, 100)">
+      <rect x="-45" y="-55" width="90" height="70" rx="18" fill="url(#whitePaddle)" stroke="#CBD5E1" stroke-width="1"/>
+      <rect x="-14" y="15" width="28" height="45" rx="6" fill="url(#whitePaddle)" stroke="#CBD5E1" stroke-width="1"/>
+    </g>
+    <circle cx="145" cy="55" r="22" fill="url(#orangeBall)" stroke="#EA580C" stroke-width="1"/>
+
+    <!-- Annotations -->
+    <line x1="220" y1="10" x2="200" y2="40" stroke="#64748B" stroke-width="1"/>
+    <text x="225" y="15" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">Corner radius: 40px (for 1024)</text>
+
+    <line x1="220" y1="55" x2="167" y2="55" stroke="#64748B" stroke-width="1"/>
+    <text x="225" y="60" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">Ball: Orange gradient</text>
+    <text x="225" y="73" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">#F97316 to #EA580C</text>
+
+    <line x1="220" y1="100" x2="145" y2="70" stroke="#64748B" stroke-width="1"/>
+    <text x="225" y="105" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">Paddle: White/light gray</text>
+    <text x="225" y="118" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">#FFFFFF to #F8FAFC</text>
+
+    <line x1="220" y1="160" x2="180" y2="180" stroke="#64748B" stroke-width="1"/>
+    <text x="225" y="165" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">Background: Teal gradient</text>
+    <text x="225" y="178" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">#0891B2 to #0E7490</text>
+  </g>
+
+  <!-- ==================== SIZE SCALING GUIDE ==================== -->
+  <text x="550" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#334155">Corner Radius Scaling</text>
+
+  <g transform="translate(550, 1130)">
+    <text x="0" y="20" font-family="monospace" font-size="11" fill="#64748B">1024px: rx=40 (4%)</text>
+    <text x="0" y="38" font-family="monospace" font-size="11" fill="#64748B">512px:  rx=20 (4%)</text>
+    <text x="0" y="56" font-family="monospace" font-size="11" fill="#64748B">256px:  rx=12 (5%)</text>
+    <text x="0" y="74" font-family="monospace" font-size="11" fill="#64748B">128px:  rx=10 (8%)</text>
+    <text x="0" y="92" font-family="monospace" font-size="11" fill="#64748B">64px:   rx=7  (11%)</text>
+    <text x="0" y="110" font-family="monospace" font-size="11" fill="#64748B">32px:   rx=6  (19%)</text>
+    <text x="0" y="128" font-family="monospace" font-size="11" fill="#64748B">16px:   rx=3  (19%)</text>
+  </g>
+
+  <text x="750" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#334155">Platform Requirements</text>
+
+  <g transform="translate(750, 1130)">
+    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#475569" font-weight="600">iOS/iPadOS:</text>
+    <text x="0" y="36" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">180x180 (iPhone), 152x152 (iPad), 120x120, 76x76</text>
+
+    <text x="0" y="60" font-family="system-ui, sans-serif" font-size="11" fill="#475569" font-weight="600">Android:</text>
+    <text x="0" y="76" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">512x512, 192x192, 96x96, 72x72, 48x48</text>
+
+    <text x="0" y="100" font-family="system-ui, sans-serif" font-size="11" fill="#475569" font-weight="600">PWA Manifest:</text>
+    <text x="0" y="116" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">512x512, 192x192 (required)</text>
+
+    <text x="0" y="140" font-family="system-ui, sans-serif" font-size="11" fill="#475569" font-weight="600">Favicon:</text>
+    <text x="0" y="156" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">48x48, 32x32, 16x16 (ICO or PNG)</text>
+
+    <text x="0" y="180" font-family="system-ui, sans-serif" font-size="11" fill="#475569" font-weight="600">Windows:</text>
+    <text x="0" y="196" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">310x310, 150x150, 70x70 (square, no rounding)</text>
+  </g>
+
+  <!-- ==================== COMPLETE SIZE REFERENCE ==================== -->
+  <text x="50" y="1380" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Complete Size Reference (All Icons at Actual Display Size)</text>
+  <line x1="50" y1="1390" x2="1350" y2="1390" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- Row 1: Large icons -->
+  <g transform="translate(50, 1410)">
+    <!-- 200px (1024 scaled) -->
+    <rect width="200" height="200" rx="40" fill="url(#tealBg)"/>
+    <g transform="translate(100, 100)">
+      <rect x="-45" y="-55" width="90" height="70" rx="18" fill="url(#whitePaddle)"/>
+      <rect x="-14" y="15" width="28" height="45" rx="6" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="145" cy="55" r="22" fill="url(#orangeBall)"/>
+    <text x="100" y="220" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">1024 @200px</text>
+  </g>
+
+  <g transform="translate(270, 1460)">
+    <!-- 100px -->
+    <rect width="100" height="100" rx="20" fill="url(#tealBg)"/>
+    <g transform="translate(50, 50)">
+      <rect x="-22" y="-28" width="44" height="35" rx="9" fill="url(#whitePaddle)"/>
+      <rect x="-7" y="7" width="14" height="22" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="72" cy="28" r="11" fill="url(#orangeBall)"/>
+    <text x="50" y="120" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">512 @100px</text>
+  </g>
+
+  <g transform="translate(390, 1478)">
+    <!-- 96px -->
+    <rect width="96" height="96" rx="19" fill="url(#tealBg)"/>
+    <g transform="translate(48, 48)">
+      <rect x="-21" y="-27" width="42" height="34" rx="8" fill="url(#whitePaddle)"/>
+      <rect x="-6" y="7" width="12" height="21" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="69" cy="27" r="10" fill="url(#orangeBall)"/>
+    <text x="48" y="116" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">192 @96px</text>
+  </g>
+
+  <g transform="translate(506, 1480)">
+    <!-- 90px -->
+    <rect width="90" height="90" rx="20" fill="url(#tealBg)"/>
+    <g transform="translate(45, 45)">
+      <rect x="-20" y="-25" width="40" height="32" rx="8" fill="url(#whitePaddle)"/>
+      <rect x="-6" y="7" width="12" height="20" rx="3" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="65" cy="25" r="10" fill="url(#orangeBall)"/>
+    <text x="45" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">180 @90px</text>
+  </g>
+
+  <g transform="translate(616, 1494)">
+    <!-- 76px -->
+    <rect width="76" height="76" rx="17" fill="url(#tealBg)"/>
+    <g transform="translate(38, 38)">
+      <rect x="-17" y="-21" width="34" height="27" rx="7" fill="url(#whitePaddle)"/>
+      <rect x="-5" y="6" width="10" height="17" rx="2.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="55" cy="21" r="8" fill="url(#orangeBall)"/>
+    <text x="38" y="96" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">152 @76px</text>
+  </g>
+
+  <g transform="translate(712, 1506)">
+    <!-- 64px -->
+    <rect width="64" height="64" rx="12" fill="url(#tealBg)"/>
+    <g transform="translate(32, 32)">
+      <rect x="-14" y="-18" width="28" height="22" rx="6" fill="url(#whitePaddle)"/>
+      <rect x="-4" y="4" width="8" height="14" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="46" cy="18" r="7" fill="url(#orangeBall)"/>
+    <text x="32" y="84" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">256 @64px</text>
+  </g>
+
+  <g transform="translate(796, 1510)">
+    <!-- 60px -->
+    <rect width="60" height="60" rx="13" fill="url(#tealBg)"/>
+    <g transform="translate(30, 30)">
+      <rect x="-13" y="-17" width="26" height="21" rx="5" fill="url(#whitePaddle)"/>
+      <rect x="-4" y="4" width="8" height="13" rx="2" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="43" cy="17" r="6.5" fill="url(#orangeBall)"/>
+    <text x="30" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">120 @60px</text>
+  </g>
+
+  <!-- Row 2: Small icons -->
+  <g transform="translate(50, 1650)">
+    <!-- 48px -->
+    <rect width="48" height="48" rx="10" fill="url(#tealBg)"/>
+    <g transform="translate(24, 24)">
+      <rect x="-10" y="-13" width="20" height="16" rx="4" fill="url(#whitePaddle)"/>
+      <rect x="-3" y="3" width="6" height="10" rx="1.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="35" cy="13" r="5" fill="url(#orangeBall)"/>
+    <text x="24" y="68" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">48x48</text>
+  </g>
+
+  <g transform="translate(120, 1658)">
+    <!-- 36px -->
+    <rect width="36" height="36" rx="7" fill="url(#tealBg)"/>
+    <g transform="translate(18, 18)">
+      <rect x="-7" y="-9" width="14" height="11" rx="3" fill="url(#whitePaddle)"/>
+      <rect x="-2" y="2" width="4" height="7" rx="1" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="26" cy="10" r="4" fill="url(#orangeBall)"/>
+    <text x="18" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">64 @36px</text>
+  </g>
+
+  <g transform="translate(178, 1662)">
+    <!-- 32px -->
+    <rect width="32" height="32" rx="6" fill="url(#tealBg)"/>
+    <g transform="translate(16, 16)">
+      <rect x="-7" y="-9" width="14" height="11" rx="3" fill="url(#whitePaddle)"/>
+      <rect x="-2" y="2" width="4" height="7" rx="1" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="23" cy="9" r="3.5" fill="url(#orangeBall)"/>
+    <text x="16" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">32x32</text>
+  </g>
+
+  <g transform="translate(232, 1670)">
+    <!-- 24px -->
+    <rect width="24" height="24" rx="5" fill="url(#tealBg)"/>
+    <g transform="translate(12, 12)">
+      <rect x="-5" y="-6.5" width="10" height="8" rx="2" fill="url(#whitePaddle)"/>
+      <rect x="-1.5" y="1.5" width="3" height="5" rx="0.75" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="17" cy="7" r="2.5" fill="url(#orangeBall)"/>
+    <text x="12" y="44" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">24x24</text>
+  </g>
+
+  <g transform="translate(278, 1678)">
+    <!-- 16px -->
+    <rect width="16" height="16" rx="3" fill="url(#tealBg)"/>
+    <g transform="translate(8, 8)">
+      <rect x="-3.5" y="-4.5" width="7" height="6" rx="1.5" fill="url(#whitePaddle)"/>
+      <rect x="-1" y="1.5" width="2" height="3.5" rx="0.5" fill="url(#whitePaddle)"/>
+    </g>
+    <circle cx="12" cy="4" r="2" fill="url(#orangeBall)"/>
+    <text x="8" y="36" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">16x16</text>
+  </g>
+
+  <!-- ==================== COLOR PALETTE ==================== -->
+  <text x="50" y="1780" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Color Palette</text>
+  <line x1="50" y1="1790" x2="1350" y2="1790" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- Teal colors -->
+  <g transform="translate(50, 1810)">
+    <rect width="80" height="60" rx="8" fill="#0891B2"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">Teal Light</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#0891B2</text>
+  </g>
+
+  <g transform="translate(150, 1810)">
+    <rect width="80" height="60" rx="8" fill="#0E7490"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">Teal Dark</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#0E7490</text>
+  </g>
+
+  <!-- Orange colors -->
+  <g transform="translate(260, 1810)">
+    <rect width="80" height="60" rx="8" fill="#F97316"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">Orange Light</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#F97316</text>
+  </g>
+
+  <g transform="translate(360, 1810)">
+    <rect width="80" height="60" rx="8" fill="#EA580C"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">Orange Dark</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#EA580C</text>
+  </g>
+
+  <!-- White/Gray colors -->
+  <g transform="translate(470, 1810)">
+    <rect width="80" height="60" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">White</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#FFFFFF</text>
+  </g>
+
+  <g transform="translate(570, 1810)">
+    <rect width="80" height="60" rx="8" fill="#F8FAFC" stroke="#E2E8F0"/>
+    <text x="40" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#334155" font-weight="600">Slate 50</text>
+    <text x="40" y="94" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748B">#F8FAFC</text>
+  </g>
+
+  <!-- ==================== EXPORT CHECKLIST ==================== -->
+  <text x="50" y="1960" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#334155">Export Checklist</text>
+  <line x1="50" y1="1970" x2="1350" y2="1970" stroke="#E2E8F0" stroke-width="2"/>
+
+  <g transform="translate(50, 1990)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">App Store / Play Store:</text>
+    <text x="20" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] 1024x1024 PNG (iOS App Store)</text>
+    <text x="20" y="38" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] 512x512 PNG (Play Store)</text>
+
+    <text x="0" y="70" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">PWA Manifest:</text>
+    <text x="20" y="90" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] 512x512 PNG (maskable)</text>
+    <text x="20" y="108" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] 192x192 PNG (maskable)</text>
+
+    <text x="0" y="140" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">Favicon:</text>
+    <text x="20" y="160" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] favicon.ico (16, 32, 48)</text>
+    <text x="20" y="178" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] favicon-32x32.png</text>
+    <text x="20" y="196" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] favicon-16x16.png</text>
+  </g>
+
+  <g transform="translate(350, 1990)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">Apple Touch Icons:</text>
+    <text x="20" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] apple-touch-icon.png (180x180)</text>
+    <text x="20" y="38" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] apple-touch-icon-152x152.png</text>
+    <text x="20" y="56" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] apple-touch-icon-120x120.png</text>
+    <text x="20" y="74" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] apple-touch-icon-76x76.png</text>
+
+    <text x="0" y="110" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">Android:</text>
+    <text x="20" y="130" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] android-chrome-512x512.png</text>
+    <text x="20" y="148" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] android-chrome-192x192.png</text>
+    <text x="20" y="166" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] android-chrome-96x96.png</text>
+  </g>
+
+  <g transform="translate(650, 1990)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">Microsoft:</text>
+    <text x="20" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] mstile-310x310.png</text>
+    <text x="20" y="38" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] mstile-150x150.png</text>
+    <text x="20" y="56" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] mstile-70x70.png</text>
+
+    <text x="0" y="92" font-family="system-ui, sans-serif" font-size="12" fill="#475569" font-weight="600">Additional:</text>
+    <text x="20" y="112" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] safari-pinned-tab.svg</text>
+    <text x="20" y="130" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] browserconfig.xml</text>
+    <text x="20" y="148" font-family="system-ui, sans-serif" font-size="11" fill="#64748B">[ ] site.webmanifest</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="700" y="2350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#94A3B8">PaddleUp Icon Set - Generated for Multi-Platform Deployment</text>
+  <text x="700" y="2370" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#CBD5E1">Design: Minimalist Geometric | Colors: Teal + Orange Gradients</text>
+</svg>

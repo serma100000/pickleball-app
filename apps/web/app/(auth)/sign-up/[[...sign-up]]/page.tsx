@@ -5,7 +5,7 @@ export default function SignUpPage() {
     <div className="flex flex-col items-center">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Join Pickle Play
+          Join PaddleUp
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
           Create an account to start your pickleball journey
@@ -23,9 +23,9 @@ export default function SignUpPage() {
             formFieldInput:
               'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white',
             formButtonPrimary:
-              'bg-green-600 hover:bg-green-700 text-white',
+              'bg-brand-600 hover:bg-brand-700 text-white',
             footerActionLink:
-              'text-green-600 hover:text-green-700 dark:text-green-400',
+              'text-brand-600 hover:text-brand-700 dark:text-brand-400',
             footer: 'bg-white dark:bg-gray-800',
           },
         }}

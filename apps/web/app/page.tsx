@@ -9,29 +9,31 @@ import {
   Smartphone,
   Zap,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-pickle-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-white to-brand-50 dark:from-gray-900 dark:to-gray-800">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-pickle-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-brand-500 flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
-            <span className="text-xl font-bold text-pickle-gradient">Pickle Play</span>
+            <span className="text-xl font-bold text-brand-gradient">PaddleUp</span>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link
               href="/sign-in"
-              className="text-gray-600 hover:text-pickle-600 dark:text-gray-300 dark:hover:text-pickle-400 transition-colors"
+              className="text-gray-600 hover:text-brand-600 dark:text-gray-300 dark:hover:text-brand-400 transition-colors"
             >
               Sign In
             </Link>
             <Link
               href="/sign-up"
-              className="px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-medium transition-colors"
             >
               Get Started
             </Link>
@@ -42,13 +44,13 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4">
         <div className="container mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-300 text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-sm font-medium mb-6">
             <Zap className="w-4 h-4" />
             The #1 Pickleball Community App
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 max-w-4xl mx-auto leading-tight">
             Find Courts, Track Games,{' '}
-            <span className="text-pickle-gradient">Build Your Pickleball Community</span>
+            <span className="text-brand-gradient">Level Up Your Game</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
             The ultimate companion app for pickleball enthusiasts. Discover nearby courts,
@@ -57,13 +59,13 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/sign-up"
-              className="w-full sm:w-auto px-8 py-4 bg-pickle-500 hover:bg-pickle-600 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
             >
               Start Playing Free
             </Link>
             <Link
               href="#features"
-              className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-pickle-500 dark:hover:border-pickle-500 text-gray-900 dark:text-white rounded-xl font-semibold text-lg transition-all"
+              className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 text-gray-900 dark:text-white rounded-xl font-semibold text-lg transition-all"
             >
               Explore Features
             </Link>
@@ -79,7 +81,7 @@ export default function LandingPage() {
               Everything You Need to Play
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              From finding courts to tracking your progress, Pickle Play has all the tools
+              From finding courts to tracking your progress, PaddleUp has all the tools
               to elevate your pickleball experience.
             </p>
           </div>
@@ -119,7 +121,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 bg-pickle-500">
+      <section className="py-20 px-4 bg-brand-600">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <StatCard value="10,000+" label="Active Players" />
@@ -143,7 +145,7 @@ export default function LandingPage() {
                 Play Anywhere, Track Everywhere
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                Pickle Play works seamlessly on your phone, tablet, or computer. Our progressive
+                PaddleUp works seamlessly on your phone, tablet, or computer. Our progressive
                 web app means you can install it like a native app and use it even offline.
               </p>
               <ul className="space-y-4">
@@ -163,18 +165,18 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-pickle-600 to-pickle-500">
+      <section className="py-20 px-4 bg-gradient-to-r from-brand-700 to-brand-600">
         <div className="container mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Join the Pickleball Community?
+            Ready to Level Up Your Game?
           </h2>
-          <p className="text-xl text-pickle-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-brand-100 mb-8 max-w-2xl mx-auto">
             Sign up for free and start discovering courts, tracking games, and connecting
             with players today.
           </p>
           <Link
             href="/sign-up"
-            className="inline-block px-8 py-4 bg-white text-pickle-600 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            className="inline-block px-8 py-4 bg-white text-brand-600 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
           >
             Create Free Account
           </Link>
@@ -186,10 +188,10 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center">
                 <span className="text-white font-bold">P</span>
               </div>
-              <span className="text-white font-semibold">Pickle Play</span>
+              <span className="text-white font-semibold">PaddleUp</span>
             </div>
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">
@@ -203,7 +205,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="text-sm">
-              &copy; {new Date().getFullYear()} Pickle Play. All rights reserved.
+              &copy; {new Date().getFullYear()} PaddleUp. All rights reserved.
             </p>
           </div>
         </div>
@@ -223,7 +225,7 @@ function FeatureCard({
 }) {
   return (
     <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl hover:shadow-lg transition-shadow">
-      <div className="w-12 h-12 rounded-xl bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center mb-4">
+      <div className="w-12 h-12 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center mb-4">
         {icon}
       </div>
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
@@ -236,7 +238,7 @@ function StatCard({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <div className="text-4xl font-bold text-white mb-2">{value}</div>
-      <div className="text-pickle-100">{label}</div>
+      <div className="text-brand-100">{label}</div>
     </div>
   );
 }
@@ -244,7 +246,7 @@ function StatCard({ value, label }: { value: string; label: string }) {
 function FeatureListItem({ text }: { text: string }) {
   return (
     <li className="flex items-center gap-3">
-      <div className="w-5 h-5 rounded-full bg-pickle-500 flex items-center justify-center">
+      <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center">
         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
         </svg>

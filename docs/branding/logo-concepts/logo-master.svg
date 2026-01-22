@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <!-- Gradient for subtle depth -->
+    <linearGradient id="paddleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0E7490;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="ballGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EA580C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="#FAFAFA"/>
+
+  <!-- ==================== MAIN LOGO (Icon + Text Horizontal) ==================== -->
+  <g transform="translate(400, 180)">
+    <!-- Icon: Abstract paddle (rounded rectangle) with ball -->
+    <g transform="translate(-180, 0)">
+      <!-- Paddle face - minimal rounded rectangle -->
+      <rect x="-32" y="-40" width="64" height="80" rx="20" ry="20" fill="url(#paddleGradient)"/>
+
+      <!-- Paddle handle - simple rectangle extending down -->
+      <rect x="-8" y="36" width="16" height="28" rx="4" ry="4" fill="url(#paddleGradient)"/>
+
+      <!-- Ball - positioned at top right of paddle, suggesting motion/action -->
+      <circle cx="38" cy="-24" r="14" fill="url(#ballGradient)"/>
+    </g>
+
+    <!-- Typography: "PaddleUp" -->
+    <g transform="translate(20, 0)">
+      <!-- "Paddle" - Bold weight -->
+      <text x="0" y="12" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="48" font-weight="700" fill="#0F172A" letter-spacing="-1">Paddle</text>
+      <!-- "Up" - Light weight -->
+      <text x="156" y="12" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="48" font-weight="300" fill="#0F172A" letter-spacing="-1">Up</text>
+    </g>
+  </g>
+
+  <!-- Subtle divider line -->
+  <line x1="300" y1="280" x2="500" y2="280" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- ==================== ICON-ONLY VERSION ==================== -->
+  <g transform="translate(400, 400)">
+    <!-- Paddle face -->
+    <rect x="-40" y="-50" width="80" height="100" rx="25" ry="25" fill="url(#paddleGradient)"/>
+
+    <!-- Paddle handle -->
+    <rect x="-10" y="45" width="20" height="35" rx="5" ry="5" fill="url(#paddleGradient)"/>
+
+    <!-- Ball -->
+    <circle cx="48" cy="-30" r="18" fill="url(#ballGradient)"/>
+
+    <!-- Label -->
+    <text x="0" y="120" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#64748B">App Icon</text>
+  </g>
+
+  <!-- ==================== CONCEPT LABEL ==================== -->
+  <text x="400" y="560" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#94A3B8" letter-spacing="2">CONCEPT A: MINIMALIST GEOMETRIC</text>
+
+  <!-- Color swatches -->
+  <g transform="translate(680, 540)">
+    <rect x="0" y="-12" width="24" height="24" rx="4" fill="#0891B2"/>
+    <rect x="30" y="-12" width="24" height="24" rx="4" fill="#F97316"/>
+  </g>
+</svg>

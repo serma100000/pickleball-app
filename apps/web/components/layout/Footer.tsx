@@ -10,10 +10,10 @@ export function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
                 <span className="text-white font-bold">P</span>
               </div>
-              <span className="text-white font-semibold">Pickle Play</span>
+              <span className="text-white font-semibold">PaddleUp</span>
             </div>
             <p className="text-sm">
               The ultimate companion app for pickleball enthusiasts. Find courts, track games,
@@ -106,7 +106,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm">
-            &copy; {currentYear} Pickle Play. All rights reserved.
+            &copy; {currentYear} PaddleUp. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a

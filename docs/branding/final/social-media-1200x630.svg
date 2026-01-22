@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0E7490;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Ball gradient (for accent) -->
+    <linearGradient id="ballGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EA580C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Large icon on the left -->
+  <g transform="translate(200, 280)">
+    <!-- Paddle face - minimal rounded rectangle -->
+    <rect x="-70" y="-88" width="140" height="176" rx="44" ry="44" fill="white" opacity="0.95"/>
+
+    <!-- Paddle handle -->
+    <rect x="-18" y="80" width="36" height="62" rx="9" ry="9" fill="white" opacity="0.95"/>
+
+    <!-- Ball - positioned at top right of paddle -->
+    <circle cx="84" cy="-52" r="32" fill="url(#ballGradient)"/>
+  </g>
+
+  <!-- Text content on the right -->
+  <g transform="translate(420, 220)">
+    <!-- PaddleUp logo text -->
+    <text x="0" y="0" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="96" fill="white">
+      <tspan font-weight="700">Paddle</tspan><tspan font-weight="300">Up</tspan>
+    </text>
+
+    <!-- Tagline -->
+    <text x="0" y="60" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="400" fill="white" opacity="0.9">Find Courts. Book Games. Level Up.</text>
+  </g>
+
+  <!-- Feature pills at bottom -->
+  <g transform="translate(420, 440)">
+    <!-- Pill 1: Find Players -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="160" height="44" rx="22" fill="white" opacity="0.15"/>
+      <text x="80" y="28" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="500" fill="white">Find Players</text>
+    </g>
+
+    <!-- Pill 2: Track Stats -->
+    <g transform="translate(180, 0)">
+      <rect x="0" y="0" width="150" height="44" rx="22" fill="white" opacity="0.15"/>
+      <text x="75" y="28" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="500" fill="white">Track Stats</text>
+    </g>
+
+    <!-- Pill 3: Join Leagues -->
+    <g transform="translate(350, 0)">
+      <rect x="0" y="0" width="152" height="44" rx="22" fill="white" opacity="0.15"/>
+      <text x="76" y="28" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="500" fill="white">Join Leagues</text>
+    </g>
+  </g>
+
+  <!-- URL at bottom -->
+  <text x="600" y="580" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="500" fill="white" opacity="0.7" letter-spacing="1">paddleup.app</text>
+</svg>

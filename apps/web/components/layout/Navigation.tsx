@@ -63,10 +63,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {/* Logo */}
           <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
                 <span className="text-white font-bold">P</span>
               </div>
-              <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+              <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
             </Link>
           </div>
 
@@ -81,7 +81,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   )}
                 >
@@ -96,7 +96,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <Link
               href="/games/new"
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
             >
               <Plus className="w-5 h-5" />
               Log Game
@@ -114,10 +114,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
               <span className="text-white font-bold">P</span>
             </div>
-            <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+            <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
           </Link>
           <button
             onClick={onClose}
@@ -137,7 +137,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                 )}
               >
@@ -167,7 +167,7 @@ export function BottomNavigation() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="flex items-center justify-center w-14 h-14 -mt-5 bg-pickle-500 rounded-full shadow-lg"
+                className="flex items-center justify-center w-14 h-14 -mt-5 bg-brand-600 rounded-full shadow-lg"
               >
                 <Icon className="w-6 h-6 text-white" />
               </Link>
@@ -181,7 +181,7 @@ export function BottomNavigation() {
               className={cn(
                 'flex flex-col items-center gap-1 px-3 py-2',
                 isActive
-                  ? 'text-pickle-600 dark:text-pickle-400'
+                  ? 'text-brand-600 dark:text-brand-400'
                   : 'text-gray-500 dark:text-gray-400'
               )}
             >

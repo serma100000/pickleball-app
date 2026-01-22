@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -59,10 +60,10 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
                 <span className="text-white font-bold">P</span>
               </div>
-              <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+              <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
             </Link>
           </div>
 
@@ -76,7 +77,7 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -91,7 +92,7 @@ export default function DashboardLayout({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <Link
               href="/games/new"
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
             >
               <Plus className="w-5 h-5" />
               Log Game
@@ -108,10 +109,10 @@ export default function DashboardLayout({
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-pickle-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
               <span className="text-white font-bold">P</span>
             </div>
-            <span className="text-lg font-bold text-pickle-gradient">Pickle Play</span>
+            <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -130,7 +131,7 @@ export default function DashboardLayout({
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400'
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                 }`}
               >
@@ -159,7 +160,7 @@ export default function DashboardLayout({
               <input
                 type="search"
                 placeholder="Search courts, players, games..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -181,6 +182,7 @@ export default function DashboardLayout({
 
           {/* Right side */}
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
               <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -209,7 +211,7 @@ export default function DashboardLayout({
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center justify-center w-14 h-14 -mt-5 bg-pickle-500 rounded-full shadow-lg"
+                    className="flex items-center justify-center w-14 h-14 -mt-5 bg-brand-600 rounded-full shadow-lg"
                   >
                     <item.icon className="w-6 h-6 text-white" />
                   </Link>
@@ -221,7 +223,7 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`flex flex-col items-center gap-1 px-3 py-2 ${
                     isActive
-                      ? 'text-pickle-600 dark:text-pickle-400'
+                      ? 'text-brand-600 dark:text-brand-400'
                       : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >

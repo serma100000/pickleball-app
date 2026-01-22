@@ -8,7 +8,7 @@ export default function SignInPage() {
           Welcome Back
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
-          Sign in to continue to Pickle Play
+          Sign in to continue to PaddleUp
         </p>
       </div>
       <SignIn
@@ -23,11 +23,11 @@ export default function SignInPage() {
             formFieldInput:
               'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white',
             formButtonPrimary:
-              'bg-green-600 hover:bg-green-700 text-white',
+              'bg-brand-600 hover:bg-brand-700 text-white',
             footerActionLink:
-              'text-green-600 hover:text-green-700 dark:text-green-400',
+              'text-brand-600 hover:text-brand-700 dark:text-brand-400',
             identityPreviewEditButton:
-              'text-green-600 hover:text-green-700',
+              'text-brand-600 hover:text-brand-700',
             footer: 'bg-white dark:bg-gray-800',
           },
         }}

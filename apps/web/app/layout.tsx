@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
+import { ThemeProvider } from 'next-themes';
 
 import { Providers } from './providers';
 import './globals.css';
@@ -13,11 +14,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Pickle Play - Find Courts, Track Games, Build Community',
-    template: '%s | Pickle Play',
+    default: 'PaddleUp - Find Courts, Book Games, Level Up',
+    template: '%s | PaddleUp',
   },
   description:
-    'The ultimate pickleball companion app. Find nearby courts, track your games, join clubs, and compete in leagues and tournaments.',
+    'The ultimate pickleball companion app. Find nearby courts, book games, track your progress, join clubs, and compete in leagues and tournaments.',
   keywords: [
     'pickleball',
     'courts',
@@ -27,10 +28,12 @@ export const metadata: Metadata = {
     'tournaments',
     'sports',
     'community',
+    'paddle',
+    'booking',
   ],
-  authors: [{ name: 'Pickle Play Team' }],
-  creator: 'Pickle Play',
-  publisher: 'Pickle Play',
+  authors: [{ name: 'PaddleUp Team' }],
+  creator: 'PaddleUp',
+  publisher: 'PaddleUp',
   formatDetection: {
     email: false,
     address: false,
@@ -38,19 +41,19 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   openGraph: {
-    title: 'Pickle Play - Find Courts, Track Games, Build Community',
+    title: 'PaddleUp - Find Courts, Book Games, Level Up',
     description:
-      'The ultimate pickleball companion app. Find nearby courts, track your games, join clubs, and compete in leagues and tournaments.',
+      'The ultimate pickleball companion app. Find nearby courts, book games, track your progress, join clubs, and compete in leagues and tournaments.',
     url: '/',
-    siteName: 'Pickle Play',
+    siteName: 'PaddleUp',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pickle Play - Find Courts, Track Games, Build Community',
+    title: 'PaddleUp - Find Courts, Book Games, Level Up',
     description:
-      'The ultimate pickleball companion app. Find nearby courts, track your games, join clubs, and compete in leagues and tournaments.',
+      'The ultimate pickleball companion app. Find nearby courts, book games, track your progress, join clubs, and compete in leagues and tournaments.',
   },
   robots: {
     index: true,
@@ -66,22 +69,24 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
       { url: '/icons/icon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.svg',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Pickle Play',
+    title: 'PaddleUp',
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#22c55e' },
-    { media: '(prefers-color-scheme: dark)', color: '#15803d' },
+    { media: '(prefers-color-scheme: light)', color: '#0891B2' },
+    { media: '(prefers-color-scheme: dark)', color: '#0E7490' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -99,7 +104,7 @@ export default function RootLayout({
     <ClerkProvider
       appearance={{
         variables: {
-          colorPrimary: '#22c55e',
+          colorPrimary: '#0891B2',
           colorText: '#1f2937',
           colorTextSecondary: '#6b7280',
           colorBackground: '#ffffff',
@@ -108,14 +113,16 @@ export default function RootLayout({
           borderRadius: '0.5rem',
         },
         elements: {
-          formButtonPrimary: 'bg-pickle-500 hover:bg-pickle-600',
-          footerActionLink: 'text-pickle-600 hover:text-pickle-700',
+          formButtonPrimary: 'bg-brand-500 hover:bg-brand-600',
+          footerActionLink: 'text-brand-600 hover:text-brand-700',
         },
       }}
     >
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
-          <Providers>{children}</Providers>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <Providers>{children}</Providers>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
