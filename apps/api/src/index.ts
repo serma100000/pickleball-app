@@ -7,13 +7,23 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const port = parseInt(process.env.PORT || '3001');
+const hostname = '0.0.0.0';
 
-console.log(`Server starting on port ${port}`);
+console.log(`[startup] Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`[startup] Starting server on ${hostname}:${port}`);
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port,
-  hostname: '0.0.0.0',
+  hostname,
 });
 
-console.log(`Server running at http://localhost:${port}`);
+server.on('listening', () => {
+  console.log(`[startup] Server is now listening on ${hostname}:${port}`);
+});
+
+server.on('error', (err) => {
+  console.error(`[startup] Server error:`, err);
+});
+
+console.log(`[startup] Server initialized`);
