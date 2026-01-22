@@ -3,7 +3,7 @@ import { SignIn } from '@clerk/nextjs';
 export default function SignInPage() {
   return (
     <div className="flex flex-col items-center">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Welcome Back
         </h1>
@@ -15,19 +15,20 @@ export default function SignInPage() {
         appearance={{
           elements: {
             rootBox: 'w-full',
-            card: 'shadow-none p-0 bg-transparent',
+            card: 'shadow-none border-0 bg-white dark:bg-gray-800',
             headerTitle: 'hidden',
             headerSubtitle: 'hidden',
             socialButtonsBlockButton:
-              'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800',
+              'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
             formFieldInput:
-              'border-gray-300 dark:border-gray-600 focus:ring-pickle-500 focus:border-pickle-500',
+              'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white',
             formButtonPrimary:
-              'bg-pickle-500 hover:bg-pickle-600 text-white',
+              'bg-green-600 hover:bg-green-700 text-white',
             footerActionLink:
-              'text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300',
+              'text-green-600 hover:text-green-700 dark:text-green-400',
             identityPreviewEditButton:
-              'text-pickle-600 hover:text-pickle-700',
+              'text-green-600 hover:text-green-700',
+            footer: 'bg-white dark:bg-gray-800',
           },
         }}
         routing="path"
