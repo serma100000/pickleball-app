@@ -28,10 +28,12 @@ import { LocationAutocomplete } from '@/components/location-autocomplete';
 
 type LeagueType = 'ladder' | 'doubles' | 'king_of_court' | 'pool_play' | 'hybrid' | '';
 type PlayoffFormat = 'single_elimination' | 'double_elimination' | 'best_of_3';
+type GameFormat = 'singles' | 'doubles';
 
 interface LeagueFormState {
   step: number;
   leagueType: LeagueType;
+  gameFormat: GameFormat;
   name: string;
   description: string;
   location: string;
@@ -498,18 +500,61 @@ function LeagueDetailsStep({ state, setState }: StepProps) {
 }
 
 function PlayerSettingsStep({ state, setState }: StepProps) {
+  // Doubles league type is always doubles format, others can choose
+  const showFormatSelector = state.leagueType !== 'doubles';
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         Player Settings
       </h2>
 
+      {/* Game Format Selector */}
+      {showFormatSelector && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Game Format
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setState((prev) => ({ ...prev, gameFormat: 'singles' }))}
+              className={cn(
+                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                state.gameFormat === 'singles'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              )}
+            >
+              Singles (1v1)
+            </button>
+            <button
+              type="button"
+              onClick={() => setState((prev) => ({ ...prev, gameFormat: 'doubles' }))}
+              className={cn(
+                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                state.gameFormat === 'doubles'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              )}
+            >
+              Doubles (2v2)
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            {state.gameFormat === 'singles'
+              ? 'Individual players compete against each other'
+              : 'Teams of two compete against other teams'}
+          </p>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
         <div className="grid md:grid-cols-2 gap-6">
           <NumberStepper
             value={state.minPlayers}
             onChange={(val) => setState((prev) => ({ ...prev, minPlayers: val }))}
-            label="Minimum Players"
+            label={state.gameFormat === 'singles' ? 'Minimum Players' : 'Minimum Teams'}
             min={3}
             max={24}
             helpText="(3-24)"
@@ -517,7 +562,7 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
           <NumberStepper
             value={state.maxPlayers}
             onChange={(val) => setState((prev) => ({ ...prev, maxPlayers: val }))}
-            label="Maximum Players"
+            label={state.gameFormat === 'singles' ? 'Maximum Players' : 'Maximum Teams'}
             min={4}
             max={128}
             helpText="(4-128)"
@@ -526,7 +571,8 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
 
         {state.minPlayers > state.maxPlayers && (
           <p className="mt-4 text-sm text-red-500">
-            Minimum players cannot exceed maximum players
+            {state.gameFormat === 'singles' ? 'Minimum players' : 'Minimum teams'} cannot exceed{' '}
+            {state.gameFormat === 'singles' ? 'maximum players' : 'maximum teams'}
           </p>
         )}
       </div>
@@ -699,9 +745,12 @@ function ReviewStep({ state }: { state: LeagueFormState }) {
         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
           League Type
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="px-3 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-full text-sm font-medium">
             {leagueTypeLabel}
+          </span>
+          <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium">
+            {state.gameFormat === 'singles' ? 'Singles (1v1)' : 'Doubles (2v2)'}
           </span>
           {state.reportToDupr && (
             <span className="px-3 py-1 bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400 rounded-full text-sm font-medium">
@@ -761,11 +810,13 @@ function ReviewStep({ state }: { state: LeagueFormState }) {
       {/* Player Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-          Player Settings
+          {state.gameFormat === 'singles' ? 'Player Settings' : 'Team Settings'}
         </h3>
         <dl className="space-y-3">
           <div className="flex justify-between">
-            <dt className="text-gray-600 dark:text-gray-400">Players</dt>
+            <dt className="text-gray-600 dark:text-gray-400">
+              {state.gameFormat === 'singles' ? 'Players' : 'Teams'}
+            </dt>
             <dd className="font-medium text-gray-900 dark:text-white">
               {state.minPlayers} - {state.maxPlayers}
             </dd>
@@ -823,6 +874,7 @@ export default function NewLeaguePage() {
   const [state, setState] = useState<LeagueFormState>({
     step: 0,
     leagueType: '',
+    gameFormat: 'doubles',
     name: '',
     description: '',
     location: '',
