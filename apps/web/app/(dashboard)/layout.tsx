@@ -17,6 +17,7 @@ import {
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo } from '@/components/logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -59,11 +60,8 @@ export default function DashboardLayout({
         <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
           {/* Logo */}
           <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
-                <span className="text-white font-bold">P</span>
-              </div>
-              <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
+            <Link href="/dashboard">
+              <Logo size="sm" />
             </Link>
           </div>
 
@@ -108,11 +106,8 @@ export default function DashboardLayout({
         }`}
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
-              <span className="text-white font-bold">P</span>
-            </div>
-            <span className="text-lg font-bold text-brand-600 dark:text-brand-400">PaddleUp</span>
+          <Link href="/dashboard">
+            <Logo size="sm" />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}

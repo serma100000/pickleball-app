@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Logo } from '@/components/logo';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -9,11 +10,8 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
-                <span className="text-white font-bold">P</span>
-              </div>
-              <span className="text-white font-semibold">PaddleUp</span>
+            <div className="mb-4">
+              <Logo size="sm" variant="white" />
             </div>
             <p className="text-sm">
               The ultimate companion app for pickleball enthusiasts. Find courts, track games,

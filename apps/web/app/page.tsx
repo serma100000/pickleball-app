@@ -10,6 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo, LogoIcon } from '@/components/logo';
 
 export default function LandingPage() {
   return (
@@ -17,12 +18,7 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-brand-500 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">P</span>
-            </div>
-            <span className="text-xl font-bold text-brand-gradient">PaddleUp</span>
-          </div>
+          <Logo size="md" />
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link
@@ -187,12 +183,7 @@ export default function LandingPage() {
       <footer className="py-12 px-4 bg-gray-900 text-gray-400">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center">
-                <span className="text-white font-bold">P</span>
-              </div>
-              <span className="text-white font-semibold">PaddleUp</span>
-            </div>
+            <Logo size="sm" variant="white" />
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">
                 Privacy
