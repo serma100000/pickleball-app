@@ -1,14 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUser, useAuth as useClerkAuthHook, useClerk } from '@clerk/nextjs';
 
 import { apiEndpoints } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { initSocket, connectSocket, disconnectSocket } from '@/lib/socket';
-
-// Check if Clerk is configured
-const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 interface UserProfile {
   id: string;
@@ -43,72 +41,8 @@ interface UseAuthReturn {
   syncError: Error | null;
 }
 
-// Mock auth state for development without Clerk
-function useMockAuth(): UseAuthReturn {
-  return {
-    user: null,
-    isSignedIn: false,
-    isLoaded: true,
-    profile: undefined,
-    isProfileLoading: false,
-    profileError: null,
-    fullName: 'Demo User',
-    initials: 'DU',
-    avatarUrl: undefined,
-    email: undefined,
-    signOut: async () => {},
-    openSignIn: () => console.log('Sign in not available - Clerk not configured'),
-    openSignUp: () => console.log('Sign up not available - Clerk not configured'),
-    getToken: async () => null,
-    isSyncing: false,
-    syncError: null,
-  };
-}
-
-// Clerk-based auth hook
-function useClerkAuth(): UseAuthReturn {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [clerkHooks, setClerkHooks] = useState<any>(null);
+export function useAuth(): UseAuthReturn {
   const queryClient = useQueryClient();
-
-  // Dynamically load Clerk hooks
-  useEffect(() => {
-    if (isClerkConfigured) {
-      import('@clerk/nextjs').then((clerk) => {
-        setClerkHooks(clerk);
-      });
-    }
-  }, []);
-
-  // If Clerk hooks aren't loaded yet, return loading state
-  if (!clerkHooks) {
-    return {
-      user: null,
-      isSignedIn: undefined,
-      isLoaded: false,
-      profile: undefined,
-      isProfileLoading: true,
-      profileError: null,
-      fullName: null,
-      initials: null,
-      avatarUrl: undefined,
-      email: undefined,
-      signOut: async () => {},
-      openSignIn: () => {},
-      openSignUp: () => {},
-      getToken: async () => null,
-      isSyncing: false,
-      syncError: null,
-    };
-  }
-
-  // This will be called after hooks are loaded
-  return useClerkAuthInternal(clerkHooks, queryClient);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function useClerkAuthInternal(clerkHooks: any, queryClient: any): UseAuthReturn {
-  const { useUser, useAuth: useClerkAuthHook, useClerk } = clerkHooks;
   const { user: clerkUser, isLoaded: isClerkLoaded, isSignedIn } = useUser();
   const { getToken, signOut: clerkSignOut } = useClerkAuthHook();
   const { openSignIn, openSignUp } = useClerk();
@@ -153,6 +87,7 @@ function useClerkAuthInternal(clerkHooks: any, queryClient: any): UseAuthReturn 
         disconnectSocket();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, isClerkLoaded, clerkUser?.id]);
 
   const signOut = useCallback(async () => {
@@ -194,13 +129,6 @@ function useClerkAuthInternal(clerkHooks: any, queryClient: any): UseAuthReturn 
     isSyncing: syncUserMutation.isPending,
     syncError: syncUserMutation.error,
   };
-}
-
-export function useAuth(): UseAuthReturn {
-  if (!isClerkConfigured) {
-    return useMockAuth();
-  }
-  return useClerkAuth();
 }
 
 // Hook for checking specific permissions

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 
 import { Providers } from './providers';
 import './globals.css';
@@ -9,9 +10,6 @@ const inter = Inter({
   variable: '--font-geist-sans',
   display: 'swap',
 });
-
-// Check if Clerk is configured
-const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export const metadata: Metadata = {
   title: {
@@ -92,47 +90,34 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-// Wrapper component that conditionally includes ClerkProvider
-async function AuthWrapper({ children }: { children: React.ReactNode }) {
-  if (isClerkConfigured) {
-    const { ClerkProvider } = await import('@clerk/nextjs');
-    return (
-      <ClerkProvider
-        appearance={{
-          variables: {
-            colorPrimary: '#22c55e',
-            colorText: '#1f2937',
-            colorTextSecondary: '#6b7280',
-            colorBackground: '#ffffff',
-            colorInputBackground: '#f9fafb',
-            colorInputText: '#1f2937',
-            borderRadius: '0.5rem',
-          },
-          elements: {
-            formButtonPrimary: 'bg-pickle-500 hover:bg-pickle-600',
-            footerActionLink: 'text-pickle-600 hover:text-pickle-700',
-          },
-        }}
-      >
-        {children}
-      </ClerkProvider>
-    );
-  }
-  return <>{children}</>;
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthWrapper>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: '#22c55e',
+          colorText: '#1f2937',
+          colorTextSecondary: '#6b7280',
+          colorBackground: '#ffffff',
+          colorInputBackground: '#f9fafb',
+          colorInputText: '#1f2937',
+          borderRadius: '0.5rem',
+        },
+        elements: {
+          formButtonPrimary: 'bg-pickle-500 hover:bg-pickle-600',
+          footerActionLink: 'text-pickle-600 hover:text-pickle-700',
+        },
+      }}
+    >
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.variable} font-sans antialiased`}>
           <Providers>{children}</Providers>
-        </AuthWrapper>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

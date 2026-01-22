@@ -42,10 +42,19 @@ const syncSchema = z.object({
  * POST /auth/sync
  * Sync user from Clerk to database (upsert)
  * Called when user signs up or updates their profile in Clerk
+ * Requires authentication to ensure the clerkId matches the authenticated user
  */
-auth.post('/sync', validateBody(syncSchema), async (c) => {
+auth.post('/sync', authMiddleware, validateBody(syncSchema), async (c) => {
   try {
     const data = c.req.valid('json');
+    const { userId: authenticatedClerkId } = c.get('user');
+
+    // Verify the clerkId in the request matches the authenticated user
+    if (data.clerkId !== authenticatedClerkId) {
+      throw new HTTPException(403, {
+        message: 'Cannot sync data for another user',
+      });
+    }
 
     // Check if user exists to determine if this is new or update
     const existingUser = await userService.getByClerkId(data.clerkId);
@@ -85,6 +94,10 @@ auth.post('/sync', validateBody(syncSchema), async (c) => {
       isNewUser,
     });
   } catch (error) {
+    // Re-throw HTTPExceptions as-is (e.g., 403 for wrong user)
+    if (error instanceof HTTPException) {
+      throw error;
+    }
     console.error('Error syncing user:', error);
     throw new HTTPException(500, {
       message: 'Failed to sync user',
@@ -95,9 +108,18 @@ auth.post('/sync', validateBody(syncSchema), async (c) => {
 /**
  * POST /auth/register
  * Register a new user (called after Clerk signup)
+ * Requires authentication to ensure the clerkId matches the authenticated user
  */
-auth.post('/register', validateBody(registerSchema), async (c) => {
+auth.post('/register', authMiddleware, validateBody(registerSchema), async (c) => {
   const data = c.req.valid('json');
+  const { userId: authenticatedClerkId } = c.get('user');
+
+  // Verify the clerkId in the request matches the authenticated user
+  if (data.clerkId !== authenticatedClerkId) {
+    throw new HTTPException(403, {
+      message: 'Cannot register as another user',
+    });
+  }
 
   // Check if user already exists
   const existing = await userService.getByClerkId(data.clerkId);
@@ -148,9 +170,18 @@ auth.post('/register', validateBody(registerSchema), async (c) => {
 /**
  * POST /auth/login
  * Sync user data on login (called after Clerk login)
+ * Requires authentication to ensure the clerkId matches the authenticated user
  */
-auth.post('/login', validateBody(loginSchema), async (c) => {
+auth.post('/login', authMiddleware, validateBody(loginSchema), async (c) => {
   const { clerkId } = c.req.valid('json');
+  const { userId: authenticatedClerkId } = c.get('user');
+
+  // Verify the clerkId in the request matches the authenticated user
+  if (clerkId !== authenticatedClerkId) {
+    throw new HTTPException(403, {
+      message: 'Cannot login as another user',
+    });
+  }
 
   // Get user from database
   const user = await userService.getByClerkId(clerkId);

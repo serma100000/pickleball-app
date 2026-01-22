@@ -14,10 +14,8 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-
-// Check if Clerk is configured
-const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+import { useState } from 'react';
+import { UserButton } from '@clerk/nextjs';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -36,40 +34,6 @@ const mobileNavigation = [
   { name: 'Games', href: '/games', icon: Trophy },
   { name: 'Profile', href: '/profile', icon: User },
 ];
-
-// User button component that conditionally renders Clerk or a placeholder
-function UserAvatar() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [ClerkComponent, setClerkComponent] = useState<any>(null);
-
-  useEffect(() => {
-    if (isClerkConfigured) {
-      import('@clerk/nextjs').then((clerk) => {
-        setClerkComponent(() => clerk.UserButton);
-      });
-    }
-  }, []);
-
-  if (!isClerkConfigured || !ClerkComponent) {
-    // Fallback avatar for demo mode
-    return (
-      <div className="w-9 h-9 rounded-full bg-pickle-500 flex items-center justify-center">
-        <span className="text-white text-sm font-medium">DU</span>
-      </div>
-    );
-  }
-
-  return (
-    <ClerkComponent
-      appearance={{
-        elements: {
-          avatarBox: 'w-9 h-9',
-        },
-      }}
-      afterSignOutUrl="/"
-    />
-  );
-}
 
 export default function DashboardLayout({
   children,
@@ -221,7 +185,14 @@ export default function DashboardLayout({
               <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <UserAvatar />
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: 'w-9 h-9',
+                },
+              }}
+              afterSignOutUrl="/"
+            />
           </div>
         </header>
 

@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="userGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="vercelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#333333;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="railwayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0B0D0E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1C1F23;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E599;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00B377;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clerkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C47FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5035E1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="githubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#24292e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1b1f23;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f8fafc"/>
+
+  <!-- Title -->
+  <text x="600" y="45" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#1e293b">Pickle Play - Production Architecture</text>
+  <text x="600" y="72" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#64748b">Full-Stack Pickleball Web Application</text>
+
+  <!-- User/Browser -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="320" width="140" height="100" rx="12" fill="url(#userGrad)"/>
+    <text x="150" y="360" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="white">Users</text>
+    <text x="150" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">Web Browser</text>
+    <text x="150" y="400" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">Mobile App</text>
+    <!-- User icon -->
+    <circle cx="150" cy="330" r="12" fill="none" stroke="white" stroke-width="2"/>
+    <circle cx="150" cy="326" r="4" fill="white"/>
+    <path d="M 140 338 Q 150 345 160 338" fill="none" stroke="white" stroke-width="2"/>
+  </g>
+
+  <!-- Vercel (Frontend) -->
+  <g filter="url(#shadow)">
+    <rect x="320" y="280" width="200" height="180" rx="12" fill="url(#vercelGrad)"/>
+    <text x="420" y="315" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="white">Vercel</text>
+    <text x="420" y="335" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">Frontend Hosting</text>
+    <line x1="340" y1="350" x2="500" y2="350" stroke="#444" stroke-width="1"/>
+    <text x="420" y="375" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#ccc">Next.js 14 App</text>
+    <text x="420" y="395" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Server Components</text>
+    <text x="420" y="412" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• React UI</text>
+    <text x="420" y="429" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Tailwind CSS</text>
+    <text x="420" y="446" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Global CDN</text>
+    <!-- Vercel triangle logo -->
+    <polygon points="420,295 410,308 430,308" fill="white"/>
+  </g>
+
+  <!-- Railway (API) -->
+  <g filter="url(#shadow)">
+    <rect x="620" y="280" width="200" height="180" rx="12" fill="url(#railwayGrad)"/>
+    <rect x="620" y="280" width="200" height="180" rx="12" fill="none" stroke="#C049DE" stroke-width="2"/>
+    <text x="720" y="315" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="white">Railway</text>
+    <text x="720" y="335" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">API Hosting</text>
+    <line x1="640" y1="350" x2="800" y2="350" stroke="#444" stroke-width="1"/>
+    <text x="720" y="375" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#ccc">Hono API Server</text>
+    <text x="720" y="395" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• REST Endpoints</text>
+    <text x="720" y="412" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Auth Middleware</text>
+    <text x="720" y="429" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Rate Limiting</text>
+    <text x="720" y="446" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Drizzle ORM</text>
+    <!-- Railway icon (train track) -->
+    <rect x="710" y="293" width="20" height="4" rx="1" fill="#C049DE"/>
+    <rect x="707" y="299" width="26" height="2" fill="#C049DE"/>
+  </g>
+
+  <!-- Neon (Database) -->
+  <g filter="url(#shadow)">
+    <rect x="920" y="280" width="200" height="180" rx="12" fill="#0A0A0A"/>
+    <rect x="920" y="280" width="200" height="180" rx="12" fill="none" stroke="#00E599" stroke-width="2"/>
+    <text x="1020" y="315" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#00E599">Neon</text>
+    <text x="1020" y="335" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">Serverless PostgreSQL</text>
+    <line x1="940" y1="350" x2="1100" y2="350" stroke="#333" stroke-width="1"/>
+    <text x="1020" y="375" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#ccc">32 Tables</text>
+    <text x="1020" y="395" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Users &amp; Profiles</text>
+    <text x="1020" y="412" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Courts &amp; Games</text>
+    <text x="1020" y="429" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Tournaments</text>
+    <text x="1020" y="446" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#888">• Clubs &amp; Leagues</text>
+    <!-- Database icon -->
+    <ellipse cx="1020" cy="292" rx="12" ry="5" fill="none" stroke="#00E599" stroke-width="1.5"/>
+    <path d="M 1008 292 L 1008 300 Q 1020 308 1032 300 L 1032 292" fill="none" stroke="#00E599" stroke-width="1.5"/>
+  </g>
+
+  <!-- Clerk (Auth) -->
+  <g filter="url(#shadow)">
+    <rect x="470" y="550" width="200" height="140" rx="12" fill="url(#clerkGrad)"/>
+    <text x="570" y="585" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="white">Clerk</text>
+    <text x="570" y="605" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="rgba(255,255,255,0.7)">Authentication Service</text>
+    <line x1="490" y1="620" x2="650" y2="620" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="570" y="642" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">• User Sign-up/Login</text>
+    <text x="570" y="659" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">• OAuth (Google, Apple)</text>
+    <text x="570" y="676" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">• Session Management</text>
+    <!-- Key icon -->
+    <circle cx="570" cy="565" r="6" fill="none" stroke="white" stroke-width="1.5"/>
+    <line x1="576" y1="565" x2="586" y2="565" stroke="white" stroke-width="1.5"/>
+    <line x1="583" y1="565" x2="583" y2="570" stroke="white" stroke-width="1.5"/>
+  </g>
+
+  <!-- GitHub (CI/CD) -->
+  <g filter="url(#shadow)">
+    <rect x="470" y="100" width="200" height="120" rx="12" fill="url(#githubGrad)"/>
+    <text x="570" y="135" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="white">GitHub</text>
+    <text x="570" y="155" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">Source Control &amp; CI/CD</text>
+    <line x1="490" y1="168" x2="650" y2="168" stroke="#444" stroke-width="1"/>
+    <text x="570" y="188" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#aaa">• Code Repository</text>
+    <text x="570" y="205" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#aaa">• GitHub Actions CI</text>
+    <!-- GitHub logo (simplified) -->
+    <circle cx="570" cy="118" r="10" fill="white"/>
+    <circle cx="570" cy="116" r="4" fill="#24292e"/>
+  </g>
+
+  <!-- Connection Arrows -->
+  <!-- User to Vercel -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#00E599"/>
+    </marker>
+    <marker id="arrowheadPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6C47FF"/>
+    </marker>
+  </defs>
+
+  <!-- User → Vercel -->
+  <line x1="220" y1="370" x2="310" y2="370" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="265" y="360" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">HTTPS</text>
+
+  <!-- Vercel → Railway -->
+  <line x1="520" y1="370" x2="610" y2="370" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="565" y="360" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">REST API</text>
+
+  <!-- Railway → Neon -->
+  <line x1="820" y1="370" x2="910" y2="370" stroke="#00E599" stroke-width="2" marker-end="url(#arrowheadGreen)"/>
+  <text x="865" y="360" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#00E599">PostgreSQL</text>
+
+  <!-- Vercel ↔ Clerk -->
+  <path d="M 420 460 L 420 520 L 480 540" fill="none" stroke="#6C47FF" stroke-width="2" marker-end="url(#arrowheadPurple)"/>
+  <text x="400" y="510" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#6C47FF">JWT</text>
+
+  <!-- Railway ↔ Clerk -->
+  <path d="M 720 460 L 720 520 L 660 540" fill="none" stroke="#6C47FF" stroke-width="2" marker-end="url(#arrowheadPurple)"/>
+  <text x="740" y="510" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#6C47FF">Verify</text>
+
+  <!-- GitHub → Vercel -->
+  <path d="M 490 180 L 420 180 L 420 270" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+  <text x="430" y="230" text-anchor="start" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Deploy</text>
+
+  <!-- GitHub → Railway -->
+  <path d="M 650 180 L 720 180 L 720 270" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+  <text x="680" y="230" text-anchor="start" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Deploy</text>
+
+  <!-- URLs Box -->
+  <g>
+    <rect x="80" y="680" width="400" height="100" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="100" y="705" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#334155">Production URLs</text>
+    <text x="100" y="728" font-family="monospace" font-size="11" fill="#0369a1">Frontend: pickleplay-theta.vercel.app</text>
+    <text x="100" y="748" font-family="monospace" font-size="11" fill="#7c3aed">API: pickleball-app-production-9cc2.up.railway.app</text>
+    <text x="100" y="768" font-family="monospace" font-size="11" fill="#059669">Database: Neon (3 branches: prod/staging/dev)</text>
+  </g>
+
+  <!-- Tech Stack Box -->
+  <g>
+    <rect x="520" y="680" width="600" height="100" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="540" y="705" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#334155">Technology Stack</text>
+    <text x="540" y="728" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Frontend: Next.js 14 • React 18 • TypeScript • Tailwind CSS • Clerk Components</text>
+    <text x="540" y="748" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Backend: Hono • Node.js • Drizzle ORM • Zod Validation • Rate Limiting</text>
+    <text x="540" y="768" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Infrastructure: Turborepo Monorepo • GitHub Actions CI • Branch Protection</text>
+  </g>
+
+</svg>

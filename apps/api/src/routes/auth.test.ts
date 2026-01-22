@@ -53,6 +53,13 @@ vi.mock('../lib/clerk.js', () => ({
   revokeAllSessions: vi.fn(),
 }));
 
+// Mock Clerk's verifyToken for authentication
+vi.mock('@clerk/backend', () => ({
+  verifyToken: vi.fn(),
+}));
+
+import { verifyToken } from '@clerk/backend';
+
 vi.mock('../lib/redis.js', () => ({
   cache: {
     get: vi.fn(),
@@ -96,6 +103,19 @@ function createMockUser(overrides = {}) {
   };
 }
 
+// Helper to setup authenticated mock for a given clerkId
+function setupAuthMock(clerkId: string) {
+  vi.mocked(verifyToken).mockResolvedValue({
+    sub: clerkId,
+    sid: 'session_123',
+    iat: Date.now() / 1000,
+    exp: Date.now() / 1000 + 3600,
+    nbf: Date.now() / 1000,
+    iss: 'https://clerk.test',
+    azp: 'test_client',
+  } as any);
+}
+
 describe('Auth Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,9 +126,56 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /auth/sync', () => {
+    it('should return 401 when no authorization header is provided', async () => {
+      const app = createTestApp();
+
+      const response = await app.request('/auth/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+        }),
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 403 when trying to sync for a different user', async () => {
+      const app = createTestApp();
+
+      // Authenticated as clerk_other123
+      setupAuthMock('clerk_other123');
+
+      const response = await app.request('/auth/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123', // Different from authenticated user
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+        }),
+      });
+
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data.message).toBe('Cannot sync data for another user');
+    });
+
     it('should create a new user when user does not exist', async () => {
       const app = createTestApp();
       const mockUser = createMockUser();
+
+      // Setup auth mock with matching clerkId
+      setupAuthMock('clerk_abc123');
 
       // User doesn't exist yet
       vi.mocked(userService.getByClerkId).mockResolvedValue(null);
@@ -118,6 +185,7 @@ describe('Auth Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -145,6 +213,9 @@ describe('Auth Routes', () => {
         avatarUrl: 'https://example.com/new-avatar.jpg',
       });
 
+      // Setup auth mock with matching clerkId
+      setupAuthMock('clerk_abc123');
+
       // User already exists
       vi.mocked(userService.getByClerkId).mockResolvedValue(existingUser);
       vi.mocked(userService.syncFromClerk).mockResolvedValue(updatedUser);
@@ -153,6 +224,7 @@ describe('Auth Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -173,10 +245,13 @@ describe('Auth Routes', () => {
     it('should return 400 for missing required fields', async () => {
       const app = createTestApp();
 
+      setupAuthMock('clerk_abc123');
+
       const response = await app.request('/auth/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -190,10 +265,13 @@ describe('Auth Routes', () => {
     it('should return 400 for invalid email format', async () => {
       const app = createTestApp();
 
+      setupAuthMock('clerk_abc123');
+
       const response = await app.request('/auth/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -209,12 +287,14 @@ describe('Auth Routes', () => {
     it('should handle database errors gracefully', async () => {
       const app = createTestApp();
 
+      setupAuthMock('clerk_abc123');
       vi.mocked(userService.getByClerkId).mockRejectedValue(new Error('Database error'));
 
       const response = await app.request('/auth/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -308,10 +388,55 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /auth/register', () => {
+    it('should return 401 when no authorization header is provided', async () => {
+      const app = createTestApp();
+
+      const response = await app.request('/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123',
+          email: 'test@example.com',
+          username: 'testuser',
+          displayName: 'Test User',
+        }),
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 403 when trying to register as a different user', async () => {
+      const app = createTestApp();
+
+      // Authenticated as clerk_other123
+      setupAuthMock('clerk_other123');
+
+      const response = await app.request('/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123', // Different from authenticated user
+          email: 'test@example.com',
+          username: 'testuser',
+          displayName: 'Test User',
+        }),
+      });
+
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data.message).toBe('Cannot register as another user');
+    });
+
     it('should register a new user successfully', async () => {
       const app = createTestApp();
       const mockUser = createMockUser();
 
+      setupAuthMock('clerk_abc123');
       vi.mocked(userService.getByClerkId).mockResolvedValue(null);
       vi.mocked(userService.getByUsername).mockResolvedValue(null);
       vi.mocked(userService.create).mockResolvedValue(mockUser);
@@ -321,6 +446,7 @@ describe('Auth Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -341,12 +467,14 @@ describe('Auth Routes', () => {
       const app = createTestApp();
       const existingUser = createMockUser();
 
+      setupAuthMock('clerk_abc123');
       vi.mocked(userService.getByClerkId).mockResolvedValue(existingUser);
 
       const response = await app.request('/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -365,6 +493,7 @@ describe('Auth Routes', () => {
       const app = createTestApp();
       const existingUser = createMockUser({ clerkId: 'different_clerk_id' });
 
+      setupAuthMock('clerk_abc123');
       vi.mocked(userService.getByClerkId).mockResolvedValue(null);
       vi.mocked(userService.getByUsername).mockResolvedValue(existingUser);
 
@@ -372,6 +501,7 @@ describe('Auth Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -389,10 +519,13 @@ describe('Auth Routes', () => {
     it('should return 400 for invalid username format', async () => {
       const app = createTestApp();
 
+      setupAuthMock('clerk_abc123');
+
       const response = await app.request('/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -407,10 +540,49 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /auth/login', () => {
+    it('should return 401 when no authorization header is provided', async () => {
+      const app = createTestApp();
+
+      const response = await app.request('/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123',
+        }),
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 403 when trying to login as a different user', async () => {
+      const app = createTestApp();
+
+      // Authenticated as clerk_other123
+      setupAuthMock('clerk_other123');
+
+      const response = await app.request('/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
+        },
+        body: JSON.stringify({
+          clerkId: 'clerk_abc123', // Different from authenticated user
+        }),
+      });
+
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data.message).toBe('Cannot login as another user');
+    });
+
     it('should login existing user successfully', async () => {
       const app = createTestApp();
       const mockUser = createMockUser();
 
+      setupAuthMock('clerk_abc123');
       vi.mocked(userService.getByClerkId).mockResolvedValue(mockUser);
       vi.mocked(userService.updateLastActive).mockResolvedValue(undefined);
       vi.mocked(userService.logActivity).mockResolvedValue(undefined);
@@ -419,6 +591,7 @@ describe('Auth Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_abc123',
@@ -434,12 +607,14 @@ describe('Auth Routes', () => {
     it('should return 404 when user is not registered', async () => {
       const app = createTestApp();
 
+      setupAuthMock('clerk_nonexistent');
       vi.mocked(userService.getByClerkId).mockResolvedValue(null);
 
       const response = await app.request('/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer valid_token',
         },
         body: JSON.stringify({
           clerkId: 'clerk_nonexistent',

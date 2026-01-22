@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   Trophy,
   TrendingUp,
@@ -11,33 +10,12 @@ import {
   Edit2,
   ChevronRight,
 } from 'lucide-react';
-
-// Check if Clerk is configured
-const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+import { UserButton, useUser } from '@clerk/nextjs';
 
 // Dynamic user avatar component
 function ProfileAvatar() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [ClerkComponent, setClerkComponent] = useState<any>(null);
-
-  useEffect(() => {
-    if (isClerkConfigured) {
-      import('@clerk/nextjs').then((clerk) => {
-        setClerkComponent(() => clerk.UserButton);
-      });
-    }
-  }, []);
-
-  if (!isClerkConfigured || !ClerkComponent) {
-    return (
-      <div className="w-20 h-20 rounded-full bg-pickle-500 flex items-center justify-center">
-        <span className="text-white text-2xl font-medium">DU</span>
-      </div>
-    );
-  }
-
   return (
-    <ClerkComponent
+    <UserButton
       appearance={{
         elements: {
           avatarBox: 'w-20 h-20',
@@ -48,6 +26,13 @@ function ProfileAvatar() {
 }
 
 export default function ProfilePage() {
+  const { user, isLoaded } = useUser();
+
+  // Get display name from Clerk user
+  const displayName = isLoaded && user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'User'
+    : 'Loading...';
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Profile Header */}
@@ -63,7 +48,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 md:pb-2">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {isClerkConfigured ? 'Your Name' : 'Demo User'}
+                {displayName}
               </h1>
               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mt-1">
                 <MapPin className="w-4 h-4" />
