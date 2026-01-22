@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   ChevronLeft,
   ChevronRight,
-  MapPin,
   Users,
   Trophy,
   Plus,
@@ -32,6 +31,7 @@ import {
   type Match,
 } from '@/lib/round-robin';
 import { cn } from '@/lib/utils';
+import { LocationAutocomplete } from '@/components/location-autocomplete';
 
 type SingleMatchType = 'singles' | 'doubles';
 type ScoreEntry = { team1: number; team2: number };
@@ -81,6 +81,7 @@ interface WizardState {
   teamRoundRobinMatches: Match[];
   // Common fields
   location: string;
+  locationCoordinates?: { lat: number; lng: number };
   notes: string;
 }
 
@@ -106,6 +107,7 @@ export default function NewGamePage() {
     teams: [],
     teamRoundRobinMatches: [],
     location: '',
+    locationCoordinates: undefined,
     notes: '',
   });
 
@@ -203,6 +205,7 @@ export default function NewGamePage() {
       gameMode: state.gameMode,
       reportToDupr: state.duprEnabled,
       location: state.location,
+      locationCoordinates: state.locationCoordinates,
       notes: state.notes,
       timestamp: new Date().toISOString(),
       ...(state.gameMode === 'single-match' && {
@@ -236,7 +239,7 @@ export default function NewGamePage() {
 
   // Single match helpers
   const addGame = () => {
-    if (state.singleMatchScores.length < 3) {
+    if (state.singleMatchScores.length < 20) {
       setState((prev) => ({
         ...prev,
         singleMatchScores: [...prev.singleMatchScores, { team1: 0, team2: 0 }],
@@ -512,16 +515,18 @@ export default function NewGamePage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 Location (Optional)
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search for a court..."
-                  value={state.location}
-                  onChange={(e) => setState((prev) => ({ ...prev, location: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-                />
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
+              <LocationAutocomplete
+                value={state.location}
+                onChange={(value, coordinates) =>
+                  setState((prev) => ({
+                    ...prev,
+                    location: value,
+                    locationCoordinates: coordinates,
+                  }))
+                }
+                placeholder="Search for a court or location..."
+                className="w-full"
+              />
             </div>
 
             {/* Notes */}
@@ -715,7 +720,7 @@ function SingleMatchStep({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Score
           </label>
-          {scores.length < 3 && (
+          {scores.length < 20 && (
             <button
               type="button"
               onClick={addGame}
@@ -726,32 +731,83 @@ function SingleMatchStep({
             </button>
           )}
         </div>
-        <div className="space-y-4">
+
+        {/* Team Headers */}
+        <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center mb-3 px-1">
+          <div className="w-16" /> {/* Spacer for game number */}
+          <div className="text-center">
+            <span className="text-sm font-semibold text-pickle-600 dark:text-pickle-400">
+              Your Team
+            </span>
+            {matchType === 'doubles' && partner && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                You & {partner}
+              </p>
+            )}
+          </div>
+          <div className="w-8" /> {/* Spacer for vs */}
+          <div className="text-center">
+            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+              Opponent
+            </span>
+            {opponents.filter(Boolean).length > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {opponents.filter(Boolean).join(' & ')}
+              </p>
+            )}
+          </div>
+          <div className="w-6" /> {/* Spacer for remove button */}
+        </div>
+
+        <div className="space-y-3">
           {scores.map((score, index) => (
-            <div key={index} className="flex items-center gap-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Game {index + 1}</span>
-              <div className="flex items-center gap-2">
-                <ScoreInput
-                  value={score.team1}
-                  onChange={(val) => updateScore(index, 'team1', val)}
-                  label="Your score"
-                />
-                <span className="text-gray-400">-</span>
-                <ScoreInput
-                  value={score.team2}
-                  onChange={(val) => updateScore(index, 'team2', val)}
-                  label="Opponent score"
-                />
+            <div
+              key={index}
+              className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center"
+            >
+              <span className="text-sm text-gray-500 dark:text-gray-400 w-16">
+                Game {index + 1}
+              </span>
+
+              {/* Your Team Score */}
+              <div className="flex justify-center">
+                <div className="bg-pickle-50 dark:bg-pickle-900/20 rounded-lg p-1 border border-pickle-200 dark:border-pickle-800">
+                  <ScoreInput
+                    value={score.team1}
+                    onChange={(val) => updateScore(index, 'team1', val)}
+                    label="Your score"
+                  />
+                </div>
               </div>
-              {scores.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeGame(index)}
-                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+
+              {/* VS Divider */}
+              <div className="flex items-center justify-center w-8">
+                <span className="text-sm font-bold text-gray-400 dark:text-gray-500">vs</span>
+              </div>
+
+              {/* Opponent Score */}
+              <div className="flex justify-center">
+                <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
+                  <ScoreInput
+                    value={score.team2}
+                    onChange={(val) => updateScore(index, 'team2', val)}
+                    label="Opponent score"
+                  />
+                </div>
+              </div>
+
+              {/* Remove Button */}
+              <div className="w-6 flex justify-center">
+                {scores.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeGame(index)}
+                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -982,38 +1038,59 @@ function EnterScoresStep({
                 key={match.id}
                 className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  {/* Team 1 */}
-                  <div className="flex-1 text-center sm:text-right">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {match.team1
-                        ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                        : 'Team 1'}
+                <div className="flex flex-col gap-3">
+                  {/* Team Labels Row */}
+                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide">
+                    <span className="text-pickle-600 dark:text-pickle-400 flex-1 text-center sm:text-right sm:pr-4">
+                      Team A
+                    </span>
+                    <div className="w-[180px]" /> {/* Spacer for score inputs */}
+                    <span className="text-gray-500 dark:text-gray-400 flex-1 text-center sm:text-left sm:pl-4">
+                      Team B
                     </span>
                   </div>
 
-                  {/* Score Input */}
-                  <div className="flex items-center justify-center gap-2">
-                    <ScoreInput
-                      value={match.score.team1}
-                      onChange={(val) => updateMatchScore(match.id, 'team1', val)}
-                      label="Team 1 score"
-                    />
-                    <span className="text-gray-400 font-medium">vs</span>
-                    <ScoreInput
-                      value={match.score.team2}
-                      onChange={(val) => updateMatchScore(match.id, 'team2', val)}
-                      label="Team 2 score"
-                    />
-                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    {/* Team 1 */}
+                    <div className="flex-1 text-center sm:text-right">
+                      <div className="inline-block sm:block bg-pickle-50 dark:bg-pickle-900/20 rounded-lg px-3 py-2 border border-pickle-200 dark:border-pickle-800">
+                        <span className="text-sm font-medium text-pickle-700 dark:text-pickle-300">
+                          {match.team1
+                            ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                            : 'Team 1'}
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Team 2 */}
-                  <div className="flex-1 text-center sm:text-left">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {match.team2
-                        ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                        : 'Team 2'}
-                    </span>
+                    {/* Score Input */}
+                    <div className="flex items-center justify-center gap-2 flex-shrink-0">
+                      <div className="bg-pickle-50 dark:bg-pickle-900/20 rounded-lg p-1 border border-pickle-200 dark:border-pickle-800">
+                        <ScoreInput
+                          value={match.score.team1}
+                          onChange={(val) => updateMatchScore(match.id, 'team1', val)}
+                          label="Team 1 score"
+                        />
+                      </div>
+                      <span className="text-gray-400 font-bold text-sm px-1">vs</span>
+                      <div className="bg-gray-100 dark:bg-gray-600/50 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
+                        <ScoreInput
+                          value={match.score.team2}
+                          onChange={(val) => updateMatchScore(match.id, 'team2', val)}
+                          label="Team 2 score"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Team 2 */}
+                    <div className="flex-1 text-center sm:text-left">
+                      <div className="inline-block sm:block bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {match.team2
+                            ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                            : 'Team 2'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
