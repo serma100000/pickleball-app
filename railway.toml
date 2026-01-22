@@ -3,4 +3,4 @@ builder = "nixpacks"
 buildCommand = "pnpm install && pnpm turbo build --filter=@pickle-play/api"
 
 [deploy]
-startCommand = "cd apps/api && node dist/index.js"
+startCommand = "cd apps/api && NODE_ENV=production node dist/index.js"

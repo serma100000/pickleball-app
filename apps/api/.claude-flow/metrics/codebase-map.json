@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-22T05:47:52.675Z",
+  "timestamp": "2026-01-22T06:17:52.719Z",
   "projectRoot": "/mnt/c/Users/mschiaramonte/AI Projects/ClaudeCode/pickleball_app/apps/api",
   "structure": {
     "hasPackageJson": true,
@@ -7,5 +7,5 @@
     "hasClaudeConfig": false,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1769060872677
+  "scannedAt": 1769062672721
 }
