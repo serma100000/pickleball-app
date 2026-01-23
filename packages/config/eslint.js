@@ -23,14 +23,11 @@ module.exports = {
     'import/resolver': {
       typescript: {
         alwaysTryTypes: true,
-        project: [
-          './tsconfig.json',
-          './packages/*/tsconfig.json',
-          './apps/*/tsconfig.json',
-        ],
+        project: true,
       },
     },
     'import/core-modules': ['vitest'],
+    'import/ignore': ['node_modules'],
   },
   rules: {
     // TypeScript
