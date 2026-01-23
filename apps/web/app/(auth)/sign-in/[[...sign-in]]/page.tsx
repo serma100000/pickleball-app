@@ -1,4 +1,21 @@
 import { SignIn } from '@clerk/nextjs';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Sign In',
+  description: 'Sign in to your PaddleUp account to find courts, track games, and connect with the pickleball community.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    title: 'Sign In | PaddleUp',
+    description: 'Sign in to your PaddleUp account to find courts, track games, and connect with the pickleball community.',
+  },
+  alternates: {
+    canonical: 'https://www.paddle-up.app/sign-in',
+  },
+};
 
 export default function SignInPage() {
   return (
@@ -20,15 +37,17 @@ export default function SignInPage() {
             headerTitle: 'hidden',
             headerSubtitle: 'hidden',
             socialButtonsBlockButton:
-              'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
+              'min-h-[44px] border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
             formFieldInput:
-              'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white',
+              'min-h-[44px] border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white',
             formButtonPrimary:
-              'bg-brand-600 hover:bg-brand-700 text-white',
+              'min-h-[44px] bg-brand-600 hover:bg-brand-700 text-white',
             footerActionLink:
-              'text-brand-600 hover:text-brand-700 dark:text-brand-400',
+              'min-h-[44px] inline-flex items-center text-brand-600 hover:text-brand-700 dark:text-brand-400',
             identityPreviewEditButton:
-              'text-brand-600 hover:text-brand-700',
+              'min-h-[44px] min-w-[44px] text-brand-600 hover:text-brand-700',
+            formFieldInputShowPasswordButton:
+              'min-h-[44px] min-w-[44px]',
             footer: 'bg-white dark:bg-gray-800',
           },
         }}

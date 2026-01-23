@@ -7,10 +7,8 @@ import {
   Users,
   Calendar,
   TrendingUp,
-  Clock,
   ChevronRight,
   Activity,
-  Loader2,
   Plus,
 } from 'lucide-react';
 

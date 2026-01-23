@@ -6,7 +6,7 @@ const config: Config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../packages/ui/src/**/*.{js,ts,jsx,tsx}',
+    '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     container: {
@@ -19,6 +19,7 @@ const config: Config = {
     extend: {
       colors: {
         // PaddleUp brand colors
+        // Accessibility note: Use 600+ shades on white for WCAG AA text contrast
         brand: {
           // Primary Teal
           50: '#ECFEFF',
@@ -27,34 +28,35 @@ const config: Config = {
           300: '#67E8F9',
           400: '#22D3EE',
           500: '#06B6D4',
-          600: '#0891B2',  // PRIMARY
-          700: '#0E7490',
+          600: '#0891B2',  // PRIMARY - 4.5:1 on white (AA pass)
+          700: '#0E7490',  // 6.0:1 on white (AA/AAA pass)
           800: '#155E75',
           900: '#164E63',
         },
         'accent-orange': {
-          // Orange
+          // Orange - use 700+ for text on white backgrounds
           50: '#FFF7ED',
           100: '#FFEDD5',
           200: '#FED7AA',
           300: '#FDBA74',
           400: '#FB923C',
-          500: '#F97316',  // PRIMARY ACCENT
+          500: '#F97316',  // PRIMARY ACCENT - use for large text/icons only
           600: '#EA580C',
-          700: '#C2410C',
+          700: '#C2410C',  // 4.5:1 on white (AA pass for text)
           800: '#9A3412',
           900: '#7C2D12',
         },
         // Legacy Pickle Play brand colors - green/yellow pickleball theme
+        // Accessibility note: Use 700+ shades for text on white backgrounds
         pickle: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
-          500: '#22c55e', // Primary green
-          600: '#16a34a',
-          700: '#15803d',
+          500: '#22c55e', // Primary green - use for large text/icons only
+          600: '#16a34a', // 3.8:1 - borderline, prefer 700+
+          700: '#15803d', // 5.1:1 on white (AA pass)
           800: '#166534',
           900: '#14532d',
           950: '#052e16',

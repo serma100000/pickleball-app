@@ -39,12 +39,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.paddle-up.app'
+  ),
   openGraph: {
     title: 'PaddleUp - Find Courts, Book Games, Level Up',
     description:
       'The ultimate pickleball companion app. Find nearby courts, book games, track your progress, join clubs, and compete in leagues and tournaments.',
-    url: '/',
+    url: 'https://www.paddle-up.app',
     siteName: 'PaddleUp',
     locale: 'en_US',
     type: 'website',
@@ -54,6 +56,9 @@ export const metadata: Metadata = {
     title: 'PaddleUp - Find Courts, Book Games, Level Up',
     description:
       'The ultimate pickleball companion app. Find nearby courts, book games, track your progress, join clubs, and compete in leagues and tournaments.',
+  },
+  alternates: {
+    canonical: 'https://www.paddle-up.app',
   },
   robots: {
     index: true,
@@ -147,6 +152,13 @@ export default function RootLayout({
     >
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
+          {/* Skip to main content link for keyboard accessibility */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+          >
+            Skip to main content
+          </a>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <Providers>{children}</Providers>
           </ThemeProvider>

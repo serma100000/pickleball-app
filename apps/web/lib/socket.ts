@@ -71,11 +71,15 @@ export function initSocket(authToken?: string): Socket {
 
   // Connection event handlers
   socket.on('connect', () => {
-    console.log('Socket connected:', socket?.id);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Socket connected:', socket?.id);
+    }
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Socket disconnected:', reason);
+    }
   });
 
   socket.on('connect_error', (error) => {

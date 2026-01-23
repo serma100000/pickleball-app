@@ -56,7 +56,7 @@ export default function DashboardLayout({
         <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
           {/* Logo */}
           <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
               <Logo size="sm" />
             </Link>
           </div>
@@ -69,7 +69,7 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
                     isActive
                       ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -86,7 +86,7 @@ export default function DashboardLayout({
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <Link
               href="/games/new"
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               <Plus className="w-5 h-5" />
               Log Game
@@ -107,7 +107,8 @@ export default function DashboardLayout({
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Close menu"
           >
             <X className="w-5 h-5" />
           </button>
@@ -140,7 +141,8 @@ export default function DashboardLayout({
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 lg:px-6">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="lg:hidden p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -151,10 +153,10 @@ export default function DashboardLayout({
               <input
                 type="search"
                 placeholder="Search courts, players, games..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -174,9 +176,12 @@ export default function DashboardLayout({
           {/* Right side */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button
+              className="relative p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Notifications"
+            >
               <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
             </button>
             <UserButton
               appearance={{
@@ -212,14 +217,14 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex flex-col items-center gap-1 px-3 py-2 ${
+                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] px-2 ${
                     isActive
                       ? 'text-brand-600 dark:text-brand-400'
                       : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
-                  <span className="text-xs">{item.name}</span>
+                  <span className="text-[11px] leading-tight">{item.name}</span>
                 </Link>
               );
             })}

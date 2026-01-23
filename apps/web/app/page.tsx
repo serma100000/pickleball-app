@@ -10,7 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Logo, LogoIcon } from '@/components/logo';
+import { Logo } from '@/components/logo';
 
 export default function LandingPage() {
   return (
@@ -18,18 +18,20 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo size="md" />
-          <div className="flex items-center gap-4">
+          <Link href="/" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
+            <Logo size="md" />
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />
             <Link
               href="/sign-in"
-              className="text-gray-600 hover:text-brand-600 dark:text-gray-300 dark:hover:text-brand-400 transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 text-gray-600 hover:text-brand-600 dark:text-gray-300 dark:hover:text-brand-400 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Sign In
             </Link>
             <Link
               href="/sign-up"
-              className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-medium transition-colors"
+              className="min-h-[44px] px-4 flex items-center justify-center bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Get Started
             </Link>
@@ -55,13 +57,13 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/sign-up"
-              className="w-full sm:w-auto px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Start Playing Free
             </Link>
             <Link
               href="#features"
-              className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 text-gray-900 dark:text-white rounded-xl font-semibold text-lg transition-all"
+              className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 text-gray-900 dark:text-white rounded-xl font-semibold text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Explore Features
             </Link>
@@ -172,7 +174,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/sign-up"
-            className="inline-block px-8 py-4 bg-white text-brand-600 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            className="inline-block px-8 py-4 bg-white text-brand-600 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-600"
           >
             Create Free Account
           </Link>
@@ -184,14 +186,14 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <Logo size="sm" variant="white" />
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/privacy" className="hover:text-white transition-colors">
+            <div className="flex items-center gap-2 text-sm">
+              <Link href="/privacy" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                 Privacy
               </Link>
-              <Link href="/terms" className="hover:text-white transition-colors">
+              <Link href="/terms" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                 Terms
               </Link>
-              <Link href="/contact" className="hover:text-white transition-colors">
+              <Link href="/contact" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                 Contact
               </Link>
             </div>

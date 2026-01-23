@@ -181,7 +181,7 @@ export default function ProfilePage() {
                     setDuprError('');
                   }}
                   placeholder="Enter your DUPR ID (e.g., 12345678)"
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 />
                 {duprError && (
                   <p className="mt-1 text-sm text-red-500">{duprError}</p>
@@ -226,7 +226,7 @@ export default function ProfilePage() {
         </h2>
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <TrendingUp className="w-8 h-8 text-gray-400" />
+            <TrendingUp className="w-8 h-8 text-gray-400 dark:text-gray-500" />
           </div>
           <p className="text-gray-500 dark:text-gray-400">
             No games played yet
@@ -293,7 +293,7 @@ function SettingsLink({
           </p>
         </div>
       </div>
-      <ChevronRight className="w-5 h-5 text-gray-400" />
+      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
     </a>
   );
 }

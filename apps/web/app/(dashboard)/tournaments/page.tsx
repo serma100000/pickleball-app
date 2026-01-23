@@ -200,11 +200,11 @@ function TournamentCard({
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <MapPin className="w-4 h-4 text-gray-400" />
+          <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           {location}
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <Trophy className="w-4 h-4 text-gray-400" />
+          <Trophy className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           {events.join(', ')}
         </div>
       </div>
@@ -256,19 +256,19 @@ function TournamentListItem({
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+              <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <span className="text-gray-600 dark:text-gray-300">{date}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gray-400" />
+              <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <span className="text-gray-600 dark:text-gray-300">{location}</span>
             </div>
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-gray-400" />
+              <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <span className="text-gray-600 dark:text-gray-300">{entryFee}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-400" />
+              <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <span className="text-gray-600 dark:text-gray-300">
                 {totalSpots - spotsLeft}/{totalSpots} registered
               </span>

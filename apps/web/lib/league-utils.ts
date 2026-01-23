@@ -7,7 +7,7 @@
  * - King of the Court
  */
 
-import { generateTeamRoundRobin, type Team, type Match as RoundRobinMatch } from './round-robin';
+import { generateTeamRoundRobin, type Team } from './round-robin';
 
 // =============================================================================
 // Types
@@ -276,7 +276,7 @@ export function processLadderChallenge(
  */
 export function getValidChallengeTargets(
   playerRank: number,
-  totalPlayers: number,
+  _totalPlayers: number,
   maxChallengeRange: number = 3
 ): number[] {
   if (playerRank <= 1) {
@@ -632,9 +632,6 @@ export function generateSingleEliminationBracket(
   const rounds: BracketRound[] = [];
   const numberOfRounds = Math.log2(bracketSize);
 
-  // Calculate byes needed
-  const byesNeeded = bracketSize - teams.length;
-
   // Create seeding order (1 vs last, 2 vs second-to-last, etc.)
   const seededTeams: (LeaguePlayer | LeagueTeam | null)[] = new Array(bracketSize).fill(null);
 
@@ -739,7 +736,7 @@ function generateBracketSeeding(size: number): number[] {
   const smaller = generateBracketSeeding(size / 2);
   const result: number[] = [];
 
-  smaller.forEach((pos, index) => {
+  smaller.forEach((pos) => {
     result.push(pos * 2);
     result.push(size - 1 - pos * 2);
   });
@@ -772,7 +769,6 @@ export function generateDoubleEliminationBracket(
   // Then alternates between dropdowns from winners and losers bracket matches
 
   let losersRoundNumber = 1;
-  let matchNumber = 1;
 
   // For each winners round (except final), losers drop down
   for (let wr = 1; wr <= winnersRounds; wr++) {
@@ -909,12 +905,11 @@ export function generateDoubleEliminationBracket(
 export function getNextPlayoffMatch(
   bracket: Bracket,
   completedMatchId: string,
-  winnerId: string,
+  _winnerId: string,
   loserId?: string
 ): { winnerNextMatch?: BracketMatch; loserNextMatch?: BracketMatch } {
   // Find the completed match
   let completedMatch: BracketMatch | undefined;
-  let isLosersMatch = false;
 
   for (const round of bracket.rounds) {
     const match = round.matches.find((m) => m.id === completedMatchId);
@@ -929,7 +924,6 @@ export function getNextPlayoffMatch(
       const match = round.matches.find((m) => m.id === completedMatchId);
       if (match) {
         completedMatch = match;
-        isLosersMatch = true;
         break;
       }
     }

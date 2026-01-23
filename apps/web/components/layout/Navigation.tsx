@@ -55,6 +55,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={onClose}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              onClose?.();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
         />
       )}
 
@@ -63,7 +71,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
           {/* Logo */}
           <div className="flex h-16 flex-shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
               <Logo size="sm" />
             </Link>
           </div>
@@ -77,7 +85,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
                     isActive
                       ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -94,7 +102,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <Link
               href="/games/new"
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               <Plus className="w-5 h-5" />
               Log Game
@@ -111,12 +119,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
-          <Link href="/dashboard">
+          <Link href="/dashboard" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
             <Logo size="sm" />
           </Link>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            aria-label="Close sidebar"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,7 +139,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
                   isActive
                     ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -162,9 +171,10 @@ export function BottomNavigation() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="flex items-center justify-center w-14 h-14 -mt-5 bg-brand-600 rounded-full shadow-lg"
+                className="flex items-center justify-center w-14 h-14 -mt-5 bg-brand-600 rounded-full shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                aria-label={item.name}
               >
-                <Icon className="w-6 h-6 text-white" />
+                <Icon className="w-6 h-6 text-white" aria-hidden="true" />
               </Link>
             );
           }
@@ -174,7 +184,7 @@ export function BottomNavigation() {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex flex-col items-center gap-1 px-3 py-2',
+                'flex flex-col items-center gap-1 px-3 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
                 isActive
                   ? 'text-brand-600 dark:text-brand-400'
                   : 'text-gray-500 dark:text-gray-400'

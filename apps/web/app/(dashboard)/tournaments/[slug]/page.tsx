@@ -182,7 +182,7 @@ export default function TournamentDetailPage() {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-gray-400" />
+                    <Award className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     <span className="font-medium text-gray-900 dark:text-white">2nd Place</span>
                   </div>
                   <span className="text-gray-600 dark:text-gray-400 font-medium">TBD</span>

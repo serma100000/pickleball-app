@@ -398,9 +398,9 @@ export function LocationAutocomplete({
       <div className="relative">
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
           {isLoading || isRetrieving ? (
-            <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+            <Loader2 className="h-5 w-5 text-gray-400 dark:text-gray-500 animate-spin" />
           ) : (
-            <MapPin className="h-5 w-5 text-gray-400" />
+            <MapPin className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           )}
         </div>
         <input
@@ -412,7 +412,8 @@ export function LocationAutocomplete({
           onFocus={handleFocus}
           placeholder={placeholder}
           className={cn(
-            'flex h-12 w-full rounded-lg border bg-white pl-10 pr-10 py-2 text-sm',
+            'flex h-12 w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-base',
+            'text-gray-900 dark:text-white',
             'placeholder:text-gray-500 dark:placeholder:text-gray-400',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
             'disabled:cursor-not-allowed disabled:opacity-50',

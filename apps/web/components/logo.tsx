@@ -13,7 +13,6 @@ export function Logo({ size = 'md', showText = true, className = '', variant = '
   const id = useId();
   const paddleGradId = `paddleGrad-${id}`;
   const ballGradId = `ballGrad-${id}`;
-  const textGradId = `textGrad-${id}`;
 
   const sizes = {
     sm: { icon: 32, text: 'text-lg', gap: 'gap-2' },
@@ -34,6 +33,8 @@ export function Logo({ size = 'md', showText = true, className = '', variant = '
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="flex-shrink-0"
+        role="img"
+        aria-label="PaddleUp logo"
       >
         <defs>
           <linearGradient id={paddleGradId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -93,6 +94,8 @@ export function LogoIcon({ size = 40, className = '' }: { size?: number; classNa
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role="img"
+      aria-label="PaddleUp logo"
     >
       <defs>
         <linearGradient id={paddleGradId} x1="0%" y1="0%" x2="100%" y2="100%">

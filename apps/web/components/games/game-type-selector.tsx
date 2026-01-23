@@ -165,7 +165,7 @@ function CountInput({ value, onChange, label, min = MIN_PLAYERS, max = MAX_COUNT
           onClick={() => value > min && onChange(value - 1)}
           disabled={value <= min}
           className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
+            'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
             'border border-gray-300 dark:border-gray-600',
             value <= min
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
@@ -186,14 +186,14 @@ function CountInput({ value, onChange, label, min = MIN_PLAYERS, max = MAX_COUNT
           }}
           min={min}
           max={max}
-          className="w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-20 min-h-[44px] text-center text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
           type="button"
           onClick={() => value < max && onChange(value + 1)}
           disabled={value >= max}
           className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
+            'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
             'border border-gray-300 dark:border-gray-600',
             value >= max
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
@@ -305,7 +305,7 @@ function GameTypeCard({
                   type="button"
                   onClick={() => onGameFormatChange('singles')}
                   className={cn(
-                    'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors',
+                    'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium text-sm transition-colors',
                     gameFormat === 'singles'
                       ? 'bg-brand-500 text-white'
                       : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -317,7 +317,7 @@ function GameTypeCard({
                   type="button"
                   onClick={() => onGameFormatChange('doubles')}
                   className={cn(
-                    'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors',
+                    'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium text-sm transition-colors',
                     gameFormat === 'doubles'
                       ? 'bg-brand-500 text-white'
                       : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'

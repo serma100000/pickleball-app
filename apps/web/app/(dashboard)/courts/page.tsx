@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Filter, List, Map as MapIcon, Star, Clock, Plus, Loader2 } from 'lucide-react';
+import { MapPin, Filter, List, Map as MapIcon, Star, Plus, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
@@ -98,9 +98,9 @@ export default function CourtsPage() {
           <input
             type="search"
             placeholder="Search by location, court name, or zip code..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
           />
-          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
         </div>
       </div>
 

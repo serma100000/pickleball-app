@@ -22,29 +22,29 @@ export function Footer() {
           {/* Features */}
           <div>
             <h3 className="text-white font-semibold mb-4">Features</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
-                <Link href="/courts" className="hover:text-white transition-colors">
+                <Link href="/courts" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Court Finder
                 </Link>
               </li>
               <li>
-                <Link href="/games" className="hover:text-white transition-colors">
+                <Link href="/games" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Game Tracking
                 </Link>
               </li>
               <li>
-                <Link href="/clubs" className="hover:text-white transition-colors">
+                <Link href="/clubs" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Clubs
                 </Link>
               </li>
               <li>
-                <Link href="/leagues" className="hover:text-white transition-colors">
+                <Link href="/leagues" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Leagues
                 </Link>
               </li>
               <li>
-                <Link href="/tournaments" className="hover:text-white transition-colors">
+                <Link href="/tournaments" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Tournaments
                 </Link>
               </li>
@@ -54,24 +54,24 @@ export function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-white font-semibold mb-4">Company</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
-                <Link href="/about" className="hover:text-white transition-colors">
+                <Link href="/about" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="hover:text-white transition-colors">
+                <Link href="/blog" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="/careers" className="hover:text-white transition-colors">
+                <Link href="/careers" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Careers
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-white transition-colors">
+                <Link href="/contact" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Contact
                 </Link>
               </li>
@@ -81,19 +81,19 @@ export function Footer() {
           {/* Legal */}
           <div>
             <h3 className="text-white font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">
+                <Link href="/privacy" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-white transition-colors">
+                <Link href="/terms" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/cookies" className="hover:text-white transition-colors">
+                <Link href="/cookies" className="min-h-[44px] flex items-center hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   Cookie Policy
                 </Link>
               </li>
@@ -106,12 +106,12 @@ export function Footer() {
           <p className="text-sm">
             &copy; {currentYear} PaddleUp. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
             <a
               href="https://twitter.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               aria-label="Twitter"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -122,7 +122,7 @@ export function Footer() {
               href="https://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               aria-label="Instagram"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export function Footer() {
               href="https://facebook.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-white transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               aria-label="Facebook"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

@@ -233,7 +233,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
           onClick={handleDecrement}
           disabled={value <= min}
           className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
+            'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
             'border border-gray-300 dark:border-gray-600',
             value <= min
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
@@ -256,7 +256,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
           onClick={handleIncrement}
           disabled={value >= max}
           className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
+            'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center font-bold text-lg transition-colors',
             'border border-gray-300 dark:border-gray-600',
             value >= max
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
@@ -302,7 +302,7 @@ function DaySelector({ selected, onChange }: DaySelectorProps) {
             type="button"
             onClick={() => toggleDay(day.value)}
             className={cn(
-              'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'min-h-[44px] px-4 py-3 rounded-lg text-sm font-medium transition-colors',
               selected.includes(day.value)
                 ? 'bg-brand-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -520,7 +520,7 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
               type="button"
               onClick={() => setState((prev) => ({ ...prev, gameFormat: 'singles' }))}
               className={cn(
-                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
                 state.gameFormat === 'singles'
                   ? 'bg-brand-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -532,7 +532,7 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
               type="button"
               onClick={() => setState((prev) => ({ ...prev, gameFormat: 'doubles' }))}
               className={cn(
-                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
                 state.gameFormat === 'doubles'
                   ? 'bg-brand-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -643,7 +643,7 @@ function PlayoffSettingsStep({ state, setState }: StepProps) {
                   type="button"
                   onClick={() => setState((prev) => ({ ...prev, playoffTeams: num }))}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'min-h-[44px] min-w-[44px] px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                     state.playoffTeams === num
                       ? 'bg-brand-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -667,7 +667,7 @@ function PlayoffSettingsStep({ state, setState }: StepProps) {
                   type="button"
                   onClick={() => setState((prev) => ({ ...prev, playoffFormat: option.value }))}
                   className={cn(
-                    'w-full text-left px-4 py-3 rounded-lg border transition-colors',
+                    'w-full text-left min-h-[44px] px-4 py-3 rounded-lg border transition-colors',
                     state.playoffFormat === option.value
                       ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
@@ -932,8 +932,11 @@ export default function NewLeaguePage() {
       createdAt: new Date().toISOString(),
     };
 
-    console.log('Creating league:', submitData);
-    alert('League data logged to console!');
+    // TODO: Implement actual API submission
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Creating league:', submitData);
+    }
+    alert('League creation not yet implemented');
   };
 
   const canProceed = () => {

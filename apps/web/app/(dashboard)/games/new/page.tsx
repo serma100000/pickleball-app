@@ -244,8 +244,11 @@ export default function NewGamePage() {
       }),
     };
 
-    console.log('Submitting game data:', submitData);
-    alert('Game data logged to console!');
+    // TODO: Implement actual API submission
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Submitting game data:', submitData);
+    }
+    alert('Game submission not yet implemented');
   };
 
   // Single match helpers
@@ -555,7 +558,7 @@ export default function NewGamePage() {
                 placeholder="Any notes about this game..."
                 value={state.notes}
                 onChange={(e) => setState((prev) => ({ ...prev, notes: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent resize-none"
               />
             </div>
           </>
@@ -697,7 +700,7 @@ function SingleMatchStep({
                   placeholder="Partner's name"
                   value={partner}
                   onChange={(e) => setPartner(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
                 />
               )}
             </div>
@@ -714,7 +717,7 @@ function SingleMatchStep({
                 placeholder="Opponent's name"
                 value={opponents[0]}
                 onChange={(e) => setOpponents([e.target.value, opponents[1] || ''])}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
               />
               {matchType === 'doubles' && (
                 <input
@@ -722,7 +725,7 @@ function SingleMatchStep({
                   placeholder="Opponent's partner"
                   value={opponents[1]}
                   onChange={(e) => setOpponents([opponents[0] ?? '', e.target.value])}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
                 />
               )}
             </div>
@@ -740,9 +743,9 @@ function SingleMatchStep({
             <button
               type="button"
               onClick={addGame}
-              className="flex items-center gap-1 text-sm text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300"
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] text-sm font-medium text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300 hover:bg-pickle-50 dark:hover:bg-pickle-900/20 rounded-lg transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Add Game
             </button>
           )}
@@ -772,7 +775,7 @@ function SingleMatchStep({
               </p>
             )}
           </div>
-          <div className="w-6" /> {/* Spacer for remove button */}
+          <div className="w-11" /> {/* Spacer for remove button */}
         </div>
 
         <div className="space-y-3">
@@ -813,14 +816,15 @@ function SingleMatchStep({
               </div>
 
               {/* Remove Button */}
-              <div className="w-6 flex justify-center">
+              <div className="w-11 flex justify-center">
                 {scores.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeGame(index)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    className="min-w-[44px] min-h-[44px] p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center"
+                    aria-label={`Remove game ${index + 1}`}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 )}
               </div>
@@ -870,18 +874,19 @@ function AddPlayersStep({
           value={newPlayerName}
           onChange={(e) => setNewPlayerName(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addPlayer())}
-          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
         />
         <button
           type="button"
           onClick={addPlayer}
           disabled={!newPlayerName.trim()}
           className={cn(
-            'px-4 py-3 rounded-lg font-medium transition-colors',
+            'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center',
             newPlayerName.trim()
               ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
           )}
+          aria-label="Add player"
         >
           <UserPlus className="w-5 h-5" />
         </button>
@@ -903,9 +908,10 @@ function AddPlayersStep({
             <button
               type="button"
               onClick={() => removePlayer(player.id)}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              className="min-w-[44px] min-h-[44px] p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center"
+              aria-label={`Remove ${player.name}`}
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         ))}
@@ -954,13 +960,13 @@ function AddTeamsStep({
       </p>
 
       {/* Add Team Input */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           placeholder="Player 1"
           value={newTeamPlayer1}
           onChange={(e) => setNewTeamPlayer1(e.target.value)}
-          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
         />
         <input
           type="text"
@@ -968,18 +974,19 @@ function AddTeamsStep({
           value={newTeamPlayer2}
           onChange={(e) => setNewTeamPlayer2(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTeam())}
-          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
+          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
         />
         <button
           type="button"
           onClick={addTeam}
           disabled={!newTeamPlayer1.trim() || !newTeamPlayer2.trim()}
           className={cn(
-            'px-4 py-3 rounded-lg font-medium transition-colors',
+            'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center',
             newTeamPlayer1.trim() && newTeamPlayer2.trim()
               ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
           )}
+          aria-label="Add team"
         >
           <UserPlus className="w-5 h-5" />
         </button>
@@ -1003,9 +1010,10 @@ function AddTeamsStep({
             <button
               type="button"
               onClick={() => removeTeam(team.id)}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              className="min-w-[44px] min-h-[44px] p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center"
+              aria-label={`Remove team ${team.player1.name} & ${team.player2.name}`}
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         ))}
@@ -1375,10 +1383,10 @@ function ScoreInput({
       <button
         type="button"
         onClick={() => onChange(value - 1)}
-        className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600"
+        className="min-w-[44px] min-h-[44px] p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600 flex items-center justify-center"
         aria-label={`Decrease ${label}`}
       >
-        <Minus className="w-4 h-4" />
+        <Minus className="w-5 h-5" />
       </button>
       <input
         type="number"
@@ -1386,16 +1394,16 @@ function ScoreInput({
         max="21"
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-        className="w-14 py-3 text-center border-y border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pickle-500"
+        className="w-14 min-h-[44px] py-3 text-center text-lg font-medium border-y border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pickle-500"
         aria-label={label}
       />
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600"
+        className="min-w-[44px] min-h-[44px] p-3 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600 flex items-center justify-center"
         aria-label={`Increase ${label}`}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
       </button>
     </div>
   );

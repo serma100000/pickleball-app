@@ -19,11 +19,11 @@ const buttonVariants = cva(
         link: 'text-pickle-600 dark:text-pickle-400 underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-8 px-3 text-xs',
+        default: 'h-11 px-4 py-2.5',
+        sm: 'h-9 px-3 text-sm',
         lg: 'h-12 px-6 text-base',
         xl: 'h-14 px-8 text-lg',
-        icon: 'h-10 w-10',
+        icon: 'h-11 w-11',
       },
     },
     defaultVariants: {

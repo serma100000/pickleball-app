@@ -33,7 +33,7 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
       {onMenuClick && (
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           aria-label="Toggle menu"
         >
           <Menu className="w-5 h-5" />
@@ -52,9 +52,10 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
             <input
               type="search"
               placeholder="Search courts, players, games..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
+              aria-label="Search courts, players, games"
+              className="w-full pl-10 pr-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
           </div>
         </div>
       )}
@@ -66,8 +67,11 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
       <div className="flex items-center gap-2 md:gap-4">
         {/* Search - mobile */}
         {showSearch && !isDesktop && (
-          <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <Search className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <button
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            aria-label="Search"
+          >
+            <Search className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
           </button>
         )}
 
@@ -76,9 +80,12 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
 
         {/* Notifications */}
         {isSignedIn && (
-          <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+          <button
+            className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            aria-label="Notifications"
+          >
+            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
           </button>
         )}
 
@@ -96,13 +103,13 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
           <div className="flex items-center gap-2">
             <Link
               href="/sign-in"
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Sign In
             </Link>
             <Link
               href="/sign-up"
-              className="px-4 py-2 text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               Sign Up
             </Link>

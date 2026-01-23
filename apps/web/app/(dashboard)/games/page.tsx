@@ -48,16 +48,10 @@ interface GamesResponse {
   total: number;
 }
 
-interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
 
 export default function GamesPage() {
   const [page, setPage] = useState(1);
-  const [gameTypeFilter, setGameTypeFilter] = useState<string | undefined>(undefined);
+  const [gameTypeFilter] = useState<string | undefined>(undefined);
   const limit = 10;
 
   const { data, isLoading, isError, error } = useGames({ page, limit, type: gameTypeFilter });
@@ -69,15 +63,10 @@ export default function GamesPage() {
   const totalPages = Math.ceil(total / limit);
 
   // Calculate stats from games data
-  const completedGames = games.filter(g => g.status === 'completed');
   const totalGames = total;
 
   // Note: These stats would ideally come from a dedicated user stats endpoint
   // For now, we'll show placeholder values or compute from available data
-  const wins = completedGames.filter(g => {
-    // This is a simplified check - in real app, would need current user ID
-    return g.winningTeam !== null;
-  }).length;
 
   return (
     <div className="space-y-6">
@@ -215,15 +204,15 @@ export default function GamesPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 order-2 sm:order-1">
               Showing {((page - 1) * limit) + 1}-{Math.min(page * limit, total)} of {total} games
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className={`px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg ${
+                className={`px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg text-sm ${
                   page === 1
                     ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -231,26 +220,31 @@ export default function GamesPage() {
               >
                 Previous
               </button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`px-3 py-1 rounded-lg ${
-                      page === pageNum
-                        ? 'bg-pickle-500 text-white'
-                        : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
+              <div className="hidden sm:flex items-center gap-2">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`px-3 py-2 min-h-[44px] min-w-[44px] rounded-lg text-sm ${
+                        page === pageNum
+                          ? 'bg-pickle-500 text-white'
+                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="sm:hidden text-sm text-gray-600 dark:text-gray-400 px-2">
+                {page} / {totalPages}
+              </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className={`px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg ${
+                className={`px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg text-sm ${
                   page >= totalPages
                     ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -269,7 +263,6 @@ export default function GamesPage() {
 function GameRow({ game }: { game: Game }) {
   // Determine if user won (simplified - would need current user context)
   const isWin = game.winningTeam === 1; // Placeholder logic
-  const result = game.status === 'completed' ? (isWin ? 'Won' : 'Lost') : game.status;
 
   // Format date
   const formatDate = (dateStr: string | null) => {

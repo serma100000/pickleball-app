@@ -157,15 +157,15 @@ function ClubCard({
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <Users className="w-4 h-4 text-gray-400" />
+          <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           {members} members
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <MapPin className="w-4 h-4 text-gray-400" />
+          <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           {location}
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <Calendar className="w-4 h-4 text-gray-400" />
+          <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           {nextEvent}
         </div>
       </div>
