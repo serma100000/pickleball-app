@@ -23,11 +23,9 @@ module.exports = {
     'import/resolver': {
       typescript: {
         alwaysTryTypes: true,
-        project: true,
       },
     },
     'import/core-modules': ['vitest'],
-    'import/ignore': ['node_modules'],
   },
   rules: {
     // TypeScript
