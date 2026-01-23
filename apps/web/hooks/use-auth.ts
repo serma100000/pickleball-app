@@ -96,10 +96,13 @@ export function useAuth(): UseAuthReturn {
     await clerkSignOut();
   }, [clerkSignOut, queryClient]);
 
+  // Build display name with better fallbacks
   const fullName = clerkUser
     ? `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() ||
       clerkUser.username ||
-      'User'
+      // Use email username as fallback (part before @)
+      clerkUser.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+      'Player'
     : null;
 
   const initials = fullName

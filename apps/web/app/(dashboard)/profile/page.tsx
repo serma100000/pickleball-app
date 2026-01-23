@@ -32,12 +32,14 @@ export default function ProfilePage() {
   const [duprLinked, setDuprLinked] = useState(false);
   const [duprError, setDuprError] = useState('');
 
-  // Get display name from Clerk user
+  // Get display name from Clerk user with better fallbacks
   const displayName =
     isLoaded && user
       ? `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
         user.username ||
-        'User'
+        // Use email username as fallback (part before @)
+        user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+        'Player'
       : 'Loading...';
 
   const handleLinkDupr = async () => {
