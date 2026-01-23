@@ -192,13 +192,26 @@ export const apiEndpoints = {
 
   // Tournaments
   tournaments: {
-    list: (params?: { page?: number; limit?: number; upcoming?: boolean }) =>
+    list: (params?: { page?: number; limit?: number; upcoming?: boolean; managed?: boolean; status?: string }) =>
       api.get('/tournaments', params),
     get: (id: string) => api.get(`/tournaments/${id}`),
     create: (data: unknown) => api.post('/tournaments', data),
+    update: (id: string, data: unknown) => api.patch(`/tournaments/${id}`, data),
+    delete: (id: string) => api.delete(`/tournaments/${id}`),
     register: (id: string, data: unknown) =>
       api.post(`/tournaments/${id}/register`, data),
+    unregister: (id: string, registrationId: string) =>
+      api.delete(`/tournaments/${id}/registrations/${registrationId}`),
     getBracket: (id: string) => api.get(`/tournaments/${id}/bracket`),
+    getEvents: (id: string) => api.get(`/tournaments/${id}/events`),
+    getRegistrations: (id: string) => api.get(`/tournaments/${id}/registrations`),
+    getSchedule: (id: string) => api.get(`/tournaments/${id}/schedule`),
+    publishTournament: (id: string) => api.post(`/tournaments/${id}/publish`),
+    closeRegistration: (id: string) => api.post(`/tournaments/${id}/close-registration`),
+    checkIn: (id: string, registrationId: string) =>
+      api.post(`/tournaments/${id}/registrations/${registrationId}/check-in`),
+    updateSchedule: (id: string, data: unknown) =>
+      api.patch(`/tournaments/${id}/schedule`, data),
   },
 
   // Players (for searching opponents/partners)

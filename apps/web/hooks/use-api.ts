@@ -265,6 +265,114 @@ export function useRegisterForTournament() {
   });
 }
 
+// My Tournaments (tournaments the user is directing/managing)
+export function useMyTournaments(params?: { page?: number; limit?: number; status?: string }) {
+  return useQuery({
+    queryKey: queryKeys.tournaments.myTournaments(),
+    queryFn: () => apiEndpoints.tournaments.list({ ...params, managed: true }),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDeleteTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiEndpoints.tournaments.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
+    },
+  });
+}
+
+export function useUpdateTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: unknown }) =>
+      apiEndpoints.tournaments.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.myTournaments() });
+    },
+  });
+}
+
+export function useTournamentEvents(tournamentId: string) {
+  return useQuery({
+    queryKey: queryKeys.tournaments.events(tournamentId),
+    queryFn: () => apiEndpoints.tournaments.getEvents(tournamentId),
+    enabled: Boolean(tournamentId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useTournamentRegistrations(tournamentId: string) {
+  return useQuery({
+    queryKey: queryKeys.tournaments.registrations(tournamentId),
+    queryFn: () => apiEndpoints.tournaments.getRegistrations(tournamentId),
+    enabled: Boolean(tournamentId),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useTournamentSchedule(tournamentId: string) {
+  return useQuery({
+    queryKey: queryKeys.tournaments.schedule(tournamentId),
+    queryFn: () => apiEndpoints.tournaments.getSchedule(tournamentId),
+    enabled: Boolean(tournamentId),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useUnregisterFromTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentId, registrationId }: { tournamentId: string; registrationId: string }) =>
+      apiEndpoints.tournaments.unregister(tournamentId, registrationId),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.registrations(tournamentId) });
+    },
+  });
+}
+
+export function useCheckInRegistration() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentId, registrationId }: { tournamentId: string; registrationId: string }) =>
+      apiEndpoints.tournaments.checkIn(tournamentId, registrationId),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.registrations(tournamentId) });
+    },
+  });
+}
+
+export function usePublishTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (tournamentId: string) => apiEndpoints.tournaments.publishTournament(tournamentId),
+    onSuccess: (_, tournamentId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
+    },
+  });
+}
+
+export function useUpdateTournamentSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentId, data }: { tournamentId: string; data: unknown }) =>
+      apiEndpoints.tournaments.updateSchedule(tournamentId, data),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.schedule(tournamentId) });
+    },
+  });
+}
+
 // Players hooks
 export function usePlayerSearch(query: string, filters?: { skillMin?: number; skillMax?: number }) {
   return useQuery({
