@@ -14,8 +14,9 @@ export default function SignUpPage() {
       <SignUp
         appearance={{
           elements: {
-            rootBox: 'w-full',
-            card: 'shadow-none border-0 bg-white dark:bg-gray-800',
+            rootBox: 'w-full max-w-full',
+            cardBox: 'w-full max-w-full',
+            card: 'shadow-none border-0 bg-white dark:bg-gray-800 w-full max-w-full',
             headerTitle: 'hidden',
             headerSubtitle: 'hidden',
             socialButtonsBlockButton:
