@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  MapPin,
   Trophy,
   Users,
   Calendar,
@@ -10,9 +9,10 @@ import {
   ChevronRight,
   Activity,
   Plus,
+  Gamepad2,
 } from 'lucide-react';
 
-import { useAuth, useRecentGames, useUserStats, useNearbyCourts, useGeolocation } from '@/hooks';
+import { useAuth, useRecentGames, useUserStats, useLeagues } from '@/hooks';
 
 // Types for API responses
 interface UserStats {
@@ -36,15 +36,6 @@ interface Game {
   playedAt: string;
 }
 
-interface Court {
-  id: string;
-  name: string;
-  distance?: number;
-  numberOfCourts: number;
-  averageRating?: number;
-  currentStatus?: 'open' | 'busy' | 'closed';
-}
-
 interface GamesResponse {
   data: Game[];
   pagination?: {
@@ -54,18 +45,26 @@ interface GamesResponse {
   };
 }
 
-interface CourtsResponse {
-  data: Court[];
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-  };
+interface League {
+  id: string;
+  name: string;
+  leagueType: string;
+  status: string;
+  currentWeek: number | null;
+  totalWeeks: number;
+  currentTeams: number;
+  maxTeams: number;
+  startDate: string;
+  isUserRegistered?: boolean;
+}
+
+interface LeaguesResponse {
+  leagues: League[];
+  total: number;
 }
 
 export default function DashboardPage() {
   const { profile, fullName, isLoaded: isAuthLoaded } = useAuth();
-  const { latitude, longitude, error: geoError } = useGeolocation();
 
   // Fetch user stats
   const {
@@ -81,20 +80,20 @@ export default function DashboardPage() {
     error: gamesError,
   } = useRecentGames();
 
-  // Fetch nearby courts (only if we have location)
+  // Fetch leagues
   const {
-    data: courtsResponse,
-    isLoading: isCourtsLoading,
-    error: courtsError,
-  } = useNearbyCourts(latitude || 0, longitude || 0, 10);
+    data: leaguesResponse,
+    isLoading: isLeaguesLoading,
+    error: leaguesError,
+  } = useLeagues({ limit: 5 });
 
   // Type the responses
   const typedStats = stats as UserStats | undefined;
   const typedGamesResponse = gamesResponse as GamesResponse | undefined;
-  const typedCourtsResponse = courtsResponse as CourtsResponse | undefined;
+  const typedLeaguesResponse = leaguesResponse as LeaguesResponse | undefined;
 
   const games = typedGamesResponse?.data || [];
-  const courts = typedCourtsResponse?.data || [];
+  const leagues = typedLeaguesResponse?.leagues || [];
 
   // Format relative date
   const formatRelativeDate = (dateString: string): string => {
@@ -124,13 +123,6 @@ export default function DashboardPage() {
       return `vs. ${game.opponents.join(' & ')}`;
     }
     return 'vs. Unknown';
-  };
-
-  // Format distance
-  const formatDistance = (distance?: number): string => {
-    if (!distance) return 'Unknown distance';
-    if (distance < 1) return `${Math.round(distance * 5280)} ft`;
-    return `${distance.toFixed(1)} mi`;
   };
 
   // Get greeting based on time of day
@@ -256,31 +248,31 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <QuickActionCard
-          href="/courts"
-          icon={<MapPin className="w-6 h-6" />}
-          title="Find Courts"
-          description="Discover nearby courts"
-          color="pickle"
-        />
-        <QuickActionCard
           href="/games/new"
           icon={<Trophy className="w-6 h-6" />}
           title="Log Game"
           description="Record your latest match"
+          color="pickle"
+        />
+        <QuickActionCard
+          href="/games"
+          icon={<Gamepad2 className="w-6 h-6" />}
+          title="Game History"
+          description="View past matches"
           color="ball"
         />
         <QuickActionCard
-          href="/clubs"
+          href="/leagues"
           icon={<Users className="w-6 h-6" />}
-          title="Join Club"
-          description="Find your community"
+          title="Leagues"
+          description="Join organized play"
           color="court"
         />
         <QuickActionCard
-          href="/tournaments"
+          href="/leagues/new"
           icon={<Calendar className="w-6 h-6" />}
-          title="Tournaments"
-          description="Browse upcoming events"
+          title="Create League"
+          description="Start your own league"
           color="pickle"
         />
       </div>
@@ -353,11 +345,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Upcoming Events - Keep static for now */}
+        {/* My Leagues */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-white">
-              Upcoming
+              My Leagues
             </h2>
             <Link
               href="/leagues"
@@ -367,88 +359,48 @@ export default function DashboardPage() {
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <EmptyState
-            icon={<Calendar className="w-12 h-12" />}
-            title="No upcoming events"
-            description="Join a league or register for a tournament to see your schedule."
-            action={
-              <Link
-                href="/tournaments"
-                className="text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 font-medium"
-              >
-                Browse Tournaments
-              </Link>
-            }
-          />
-        </div>
-      </div>
 
-      {/* Nearby Courts Preview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="font-semibold text-gray-900 dark:text-white">
-            Nearby Courts
-          </h2>
-          <Link
-            href="/courts"
-            className="text-sm text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300 flex items-center gap-1"
-          >
-            View map
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          {isLeaguesLoading ? (
+            <div className="p-4 space-y-3">
+              <LeagueRowSkeleton />
+              <LeagueRowSkeleton />
+            </div>
+          ) : leaguesError ? (
+            <EmptyState
+              icon={<Users className="w-12 h-12" />}
+              title="Couldn't load leagues"
+              description="There was an error loading leagues."
+              action={
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 font-medium"
+                >
+                  Try again
+                </button>
+              }
+            />
+          ) : leagues.length === 0 ? (
+            <EmptyState
+              icon={<Users className="w-12 h-12" />}
+              title="No leagues yet"
+              description="Join a league to compete against other players in organized play."
+              action={
+                <Link
+                  href="/leagues"
+                  className="text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 font-medium"
+                >
+                  Browse Leagues
+                </Link>
+              }
+            />
+          ) : (
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {leagues.slice(0, 3).map((league) => (
+                <LeagueRow key={league.id} league={league} />
+              ))}
+            </div>
+          )}
         </div>
-
-        {isCourtsLoading ? (
-          <div className="grid md:grid-cols-3 gap-4 p-4">
-            <CourtCardSkeleton />
-            <CourtCardSkeleton />
-            <CourtCardSkeleton />
-          </div>
-        ) : geoError || courtsError ? (
-          <EmptyState
-            icon={<MapPin className="w-12 h-12" />}
-            title={geoError ? "Location access needed" : "Couldn't load courts"}
-            description={geoError
-              ? "Enable location access to find courts near you."
-              : "There was an error loading nearby courts."}
-            action={
-              <Link
-                href="/courts"
-                className="text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 font-medium"
-              >
-                Browse All Courts
-              </Link>
-            }
-          />
-        ) : courts.length === 0 ? (
-          <EmptyState
-            icon={<MapPin className="w-12 h-12" />}
-            title="No courts nearby"
-            description="We couldn't find any courts in your area. Try expanding your search."
-            action={
-              <Link
-                href="/courts"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
-              >
-                <MapPin className="w-4 h-4" />
-                Find Courts
-              </Link>
-            }
-          />
-        ) : (
-          <div className="grid md:grid-cols-3 gap-4 p-4">
-            {courts.slice(0, 3).map((court) => (
-              <CourtCard
-                key={court.id}
-                name={court.name}
-                distance={formatDistance(court.distance)}
-                courts={court.numberOfCourts}
-                rating={court.averageRating || 0}
-                status={court.currentStatus || 'open'}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -624,68 +576,75 @@ function EmptyState({
   );
 }
 
-function CourtCard({
-  name,
-  distance,
-  courts,
-  rating,
-  status,
-}: {
-  name: string;
-  distance: string;
-  courts: number;
-  rating: number;
-  status: 'open' | 'busy' | 'closed';
-}) {
-  const statusColors = {
-    open: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    busy: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    closed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+function LeagueRow({ league }: { league: League }) {
+  const statusColors: Record<string, string> = {
+    registration: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    playoffs: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    completed: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
   };
 
-  const statusLabels = {
-    open: 'Open',
-    busy: 'Busy',
-    closed: 'Closed',
+  const statusLabels: Record<string, string> = {
+    registration: 'Registration',
+    active: 'Active',
+    playoffs: 'Playoffs',
+    completed: 'Completed',
+  };
+
+  const formatLeagueType = (type: string) => {
+    return type
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const getProgressText = () => {
+    if (league.status === 'active' && league.currentWeek && league.totalWeeks) {
+      return `Week ${league.currentWeek}/${league.totalWeeks}`;
+    }
+    if (league.status === 'registration') {
+      return `${league.currentTeams}/${league.maxTeams} teams`;
+    }
+    return `${league.currentTeams} teams`;
   };
 
   return (
-    <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="font-medium text-gray-900 dark:text-white">{name}</h3>
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[status]}`}
-        >
-          {statusLabels[status]}
-        </span>
-      </div>
-      <div className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
-        <p>{distance} away</p>
-        <p>{courts} court{courts !== 1 ? 's' : ''}</p>
-        {rating > 0 && (
-          <div className="flex items-center gap-1">
-            <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            {rating.toFixed(1)}
+    <Link href={`/leagues/${league.id}`}>
+      <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="font-medium text-gray-900 dark:text-white truncate">
+                {league.name}
+              </p>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[league.status] || statusColors.active}`}
+              >
+                {statusLabels[league.status] || league.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {formatLeagueType(league.leagueType)} &middot; {getProgressText()}
+            </p>
           </div>
-        )}
+          <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
-function CourtCardSkeleton() {
+function LeagueRowSkeleton() {
   return (
-    <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 animate-pulse">
-      <div className="flex items-start justify-between mb-2">
-        <div className="h-5 w-32 bg-gray-200 dark:bg-gray-600 rounded" />
-        <div className="h-5 w-12 bg-gray-200 dark:bg-gray-600 rounded-full" />
-      </div>
-      <div className="space-y-2">
-        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-600 rounded" />
-        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-600 rounded" />
-        <div className="h-4 w-12 bg-gray-200 dark:bg-gray-600 rounded" />
+    <div className="p-4 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          </div>
+          <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+        </div>
       </div>
     </div>
   );
