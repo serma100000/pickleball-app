@@ -44,7 +44,7 @@ import { BracketMatch, type Match } from '@/components/tournaments/bracket-match
 
 // Type definitions
 type TournamentStatus = 'draft' | 'registration' | 'in_progress' | 'completed' | 'cancelled';
-type EventFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play';
+type EventFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'pool_to_bracket';
 type EventCategory = 'singles' | 'doubles' | 'mixed_doubles';
 type RegistrationStatus = 'pending' | 'confirmed' | 'checked_in' | 'waitlist' | 'cancelled';
 
@@ -753,6 +753,7 @@ function EventsTab({
       double_elimination: 'Double Elimination',
       round_robin: 'Round Robin',
       pool_play: 'Pool Play',
+      pool_to_bracket: 'Pool Play → Bracket',
     };
     return labels[format];
   };

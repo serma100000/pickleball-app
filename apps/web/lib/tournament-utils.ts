@@ -492,6 +492,178 @@ export function generateDoubleEliminationBracket(
   return { winners, losers, grandFinals };
 }
 
+/**
+ * Generate a third place match for single elimination brackets
+ */
+export function generateThirdPlaceMatch(
+  winnersBracket: Bracket,
+  _options: {
+    eventId?: string;
+    bestOf?: number;
+  } = {}
+): BracketMatch | null {
+  // Options reserved for future use (e.g., custom bestOf for 3rd place match)
+
+  // Find semifinal matches (second to last round)
+  if (winnersBracket.totalRounds < 2) return null;
+
+  const semifinalRound = winnersBracket.rounds[winnersBracket.totalRounds - 2];
+  if (!semifinalRound || semifinalRound.matches.length !== 2) return null;
+
+  const bronzeMatchId = generateId();
+  const bronzeMatch: BracketMatch = {
+    id: bronzeMatchId,
+    bracketId: winnersBracket.id,
+    round: winnersBracket.totalRounds + 1, // After finals
+    position: 0,
+    matchIdentifier: '3RD',
+    participant1Source: {
+      type: 'match',
+      sourceId: semifinalRound.matches[0]!.id,
+      position: 'loser',
+    },
+    participant2Source: {
+      type: 'match',
+      sourceId: semifinalRound.matches[1]!.id,
+      position: 'loser',
+    },
+    status: MatchStatus.NOT_STARTED,
+    isBye: false,
+  };
+
+  // Set up loser destinations for semifinal matches
+  semifinalRound.matches[0]!.loserGoesTo = { matchId: bronzeMatchId, position: 1 };
+  semifinalRound.matches[1]!.loserGoesTo = { matchId: bronzeMatchId, position: 2 };
+
+  return bronzeMatch;
+}
+
+/**
+ * Generate consolation bracket for first-round losers
+ */
+export function generateConsolationBracket(
+  _participants: TournamentParticipant[],
+  mainBracket: Bracket,
+  options: {
+    eventId?: string;
+    bestOf?: number;
+  } = {}
+): Bracket {
+  // Note: participants arg kept for potential future use (manual consolation seeding)
+  const { eventId = '', bestOf = 1 } = options;
+  const consolationBracketId = generateId();
+
+  // Get first round losers from main bracket
+  const firstRoundMatches = mainBracket.rounds[0]?.matches ?? [];
+
+  // Create consolation bracket with half the participants
+  const consolationSize = Math.floor(firstRoundMatches.length);
+  const totalRounds = calculateBracketRounds(consolationSize);
+
+  const rounds: BracketRound[] = [];
+  const allMatches: BracketMatch[] = [];
+
+  for (let round = 1; round <= totalRounds; round++) {
+    const matchesInRound = Math.pow(2, totalRounds - round);
+    const roundMatches: BracketMatch[] = [];
+
+    for (let position = 0; position < matchesInRound; position++) {
+      const matchId = generateId();
+      const match: BracketMatch = {
+        id: matchId,
+        bracketId: consolationBracketId,
+        round,
+        position,
+        matchIdentifier: `C${round}-${position + 1}`,
+        status: MatchStatus.NOT_STARTED,
+        isBye: false,
+      };
+
+      // First round gets losers from main bracket
+      if (round === 1) {
+        const sourceMatch1 = firstRoundMatches[position * 2];
+        const sourceMatch2 = firstRoundMatches[position * 2 + 1];
+
+        if (sourceMatch1) {
+          match.participant1Source = {
+            type: 'match',
+            sourceId: sourceMatch1.id,
+            position: 'loser',
+          };
+          sourceMatch1.loserGoesTo = { matchId, position: 1 };
+        }
+
+        if (sourceMatch2) {
+          match.participant2Source = {
+            type: 'match',
+            sourceId: sourceMatch2.id,
+            position: 'loser',
+          };
+          sourceMatch2.loserGoesTo = { matchId, position: 2 };
+        }
+      } else {
+        // Subsequent rounds get winners from previous consolation round
+        const prevRoundMatches = rounds[round - 2]?.matches ?? [];
+        const source1 = prevRoundMatches[position * 2];
+        const source2 = prevRoundMatches[position * 2 + 1];
+
+        if (source1) {
+          match.participant1Source = {
+            type: 'match',
+            sourceId: source1.id,
+            position: 'winner',
+          };
+        }
+        if (source2) {
+          match.participant2Source = {
+            type: 'match',
+            sourceId: source2.id,
+            position: 'winner',
+          };
+        }
+      }
+
+      roundMatches.push(match);
+      allMatches.push(match);
+    }
+
+    // Set up winner destinations
+    if (round < totalRounds) {
+      roundMatches.forEach((match, idx) => {
+        const nextRoundPosition = Math.floor(idx / 2);
+        const nextMatch = allMatches.find(
+          m => m.round === round + 1 && m.position === nextRoundPosition
+        );
+        if (nextMatch) {
+          match.winnerGoesTo = {
+            matchId: nextMatch.id,
+            position: (idx % 2 === 0 ? 1 : 2) as 1 | 2,
+          };
+        }
+      });
+    }
+
+    rounds.push({
+      roundNumber: round,
+      name: round === totalRounds ? 'Consolation Finals' : `Consolation Round ${round}`,
+      matches: roundMatches,
+      isComplete: false,
+      bestOf,
+    });
+  }
+
+  return {
+    id: consolationBracketId,
+    eventId,
+    type: BracketType.CONSOLATION,
+    name: 'Consolation Bracket',
+    totalRounds,
+    rounds,
+    matches: allMatches,
+    isComplete: false,
+  };
+}
+
 // =============================================================================
 // POOL GENERATION
 // =============================================================================
@@ -801,6 +973,216 @@ function applyTiebreaker(
 // =============================================================================
 
 /**
+ * Cross-pool seeding methods for pool-to-bracket transitions
+ */
+export type CrossPoolSeedingMethod = 'standard' | 'reverse' | 'snake';
+
+/**
+ * Cross-pool seeding options configuration
+ */
+export interface CrossPoolSeedingOptions {
+  method: CrossPoolSeedingMethod;
+  /** If true, 1st seeds from different pools won't meet until later rounds */
+  separateTopSeeds?: boolean;
+}
+
+/**
+ * Apply cross-pool seeding to arrange participants for bracket
+ */
+export function applyCrossPoolSeeding(
+  advancingParticipants: Array<{
+    participant: TournamentParticipant;
+    poolRank: number;
+    poolNumber: number;
+  }>,
+  advancementCount: number,
+  poolCount: number,
+  options: CrossPoolSeedingOptions = { method: 'standard' }
+): TournamentParticipant[] {
+  const { method, separateTopSeeds = true } = options;
+
+  switch (method) {
+    case 'standard':
+      // Standard: 1st from Pool A vs 2nd from Pool B, etc.
+      // This ensures top seeds from each pool are on opposite sides of bracket
+      return applyStandardCrossPoolSeeding(advancingParticipants, advancementCount, poolCount, separateTopSeeds);
+
+    case 'reverse':
+      // Reverse: Structure so 1st seeds meet in later rounds
+      // Seeds are arranged so top performers have easier early matchups
+      return applyReverseCrossPoolSeeding(advancingParticipants, advancementCount, poolCount);
+
+    case 'snake':
+      // Snake: Alternating pattern for balanced distribution
+      // Provides most balanced distribution across the bracket
+      return applySnakeCrossPoolSeeding(advancingParticipants, advancementCount);
+
+    default:
+      return applyStandardCrossPoolSeeding(advancingParticipants, advancementCount, poolCount, separateTopSeeds);
+  }
+}
+
+/**
+ * Standard cross-pool seeding: 1st vs 2nd from different pools
+ */
+function applyStandardCrossPoolSeeding(
+  participants: Array<{ participant: TournamentParticipant; poolRank: number; poolNumber: number }>,
+  advancementCount: number,
+  poolCount: number,
+  separateTopSeeds: boolean
+): TournamentParticipant[] {
+  const seededParticipants: TournamentParticipant[] = [];
+
+  // Create matchups: 1st from Pool A vs 2nd from Pool B (for 2-pool case)
+  // For more pools, arrange so 1st seeds are on opposite halves of bracket
+  if (separateTopSeeds && poolCount === 2 && advancementCount >= 2) {
+    // Special handling for 2 pools with cross-seeding
+    const pool1Participants = participants.filter(p => p.poolNumber === 1).sort((a, b) => a.poolRank - b.poolRank);
+    const pool2Participants = participants.filter(p => p.poolNumber === 2).sort((a, b) => a.poolRank - b.poolRank);
+
+    // Arrange so: A1 vs B2 and B1 vs A2 (if both advance to finals)
+    // Bracket positions: [A1, B4, B2, A3, B1, A4, A2, B3] for 4 from each pool
+    for (let i = 0; i < advancementCount; i++) {
+      const p1 = pool1Participants[i];
+      const p2 = pool2Participants[advancementCount - 1 - i];
+      if (p1) seededParticipants.push(p1.participant);
+      if (p2) seededParticipants.push(p2.participant);
+    }
+  } else {
+    // Multi-pool standard seeding
+    for (let rank = 1; rank <= advancementCount; rank++) {
+      const rankParticipants = participants
+        .filter(p => p.poolRank === rank)
+        .sort((a, b) => a.poolNumber - b.poolNumber);
+
+      // Alternate direction for each rank to distribute fairly
+      if (rank % 2 === 0) {
+        rankParticipants.reverse();
+      }
+
+      seededParticipants.push(...rankParticipants.map(p => p.participant));
+    }
+  }
+
+  return seededParticipants;
+}
+
+/**
+ * Reverse cross-pool seeding: Top seeds get easier early matchups
+ */
+function applyReverseCrossPoolSeeding(
+  participants: Array<{ participant: TournamentParticipant; poolRank: number; poolNumber: number }>,
+  advancementCount: number,
+  poolCount: number
+): TournamentParticipant[] {
+  // Reverse seeding: 1st seeds get byes or face lowest seeds
+  // Arrange bracket so 1st seeds are spread maximally apart
+  const allSorted = [...participants].sort((a, b) => {
+    // Primary sort by rank
+    if (a.poolRank !== b.poolRank) return a.poolRank - b.poolRank;
+    // Secondary sort by pool (reversed)
+    return b.poolNumber - a.poolNumber;
+  });
+
+  // Create bracket positions using standard seeding algorithm
+  const bracketSize = Math.pow(2, Math.ceil(Math.log2(poolCount * advancementCount)));
+  const positions = generateBracketSeedPositions(bracketSize);
+
+  // Place participants according to seed positions
+  const result: (TournamentParticipant | undefined)[] = new Array(allSorted.length);
+  for (let i = 0; i < allSorted.length && i < positions.length; i++) {
+    const pos = positions[i];
+    if (pos !== undefined && pos < allSorted.length && allSorted[i]) {
+      result[pos] = allSorted[i]!.participant;
+    }
+  }
+
+  // Filter out undefined and return
+  return result.filter((p): p is TournamentParticipant => p !== undefined);
+}
+
+/**
+ * Snake cross-pool seeding: Alternating pattern for balance
+ */
+function applySnakeCrossPoolSeeding(
+  participants: Array<{ participant: TournamentParticipant; poolRank: number; poolNumber: number }>,
+  _advancementCount: number // Reserved for potential future validation
+): TournamentParticipant[] {
+  const seededParticipants: TournamentParticipant[] = [];
+
+  // Sort by rank first, then pool number
+  const sorted = [...participants].sort((a, b) => {
+    if (a.poolRank !== b.poolRank) return a.poolRank - b.poolRank;
+    return a.poolNumber - b.poolNumber;
+  });
+
+  // Apply snake pattern
+  let direction = 1;
+  let currentRank = 0;
+
+  for (const p of sorted) {
+    if (p.poolRank !== currentRank) {
+      // New rank, potentially reverse direction
+      if (currentRank > 0) {
+        direction *= -1;
+      }
+      currentRank = p.poolRank;
+    }
+
+    if (direction === 1) {
+      seededParticipants.push(p.participant);
+    } else {
+      // Find insertion point for reverse
+      let insertIdx = seededParticipants.length;
+      for (let i = seededParticipants.length - 1; i >= 0; i--) {
+        const existing = participants.find(ep => ep.participant === seededParticipants[i]);
+        if (existing && existing.poolRank < p.poolRank) {
+          insertIdx = i + 1;
+          break;
+        }
+      }
+      seededParticipants.splice(insertIdx, 0, p.participant);
+    }
+  }
+
+  return seededParticipants;
+}
+
+/**
+ * Generate standard bracket seed positions for power-of-2 bracket
+ */
+function generateBracketSeedPositions(bracketSize: number): number[] {
+  const positions: number[] = new Array(bracketSize);
+
+  function fillPositions(seeds: number[], start: number, end: number): void {
+    if (seeds.length === 1) {
+      positions[seeds[0]!] = start;
+      return;
+    }
+
+    const mid = Math.floor((start + end) / 2);
+    const top: number[] = [];
+    const bottom: number[] = [];
+
+    for (let i = 0; i < seeds.length; i++) {
+      if (i % 2 === 0) {
+        top.push(seeds[i]!);
+      } else {
+        bottom.push(seeds[i]!);
+      }
+    }
+
+    fillPositions(top, start, mid);
+    fillPositions(bottom, mid + 1, end);
+  }
+
+  const seeds = Array.from({ length: bracketSize }, (_, i) => i);
+  fillPositions(seeds, 0, bracketSize - 1);
+
+  return positions;
+}
+
+/**
  * Advance top participants from pools to bracket
  */
 export function advanceToPlayoffs(
@@ -812,6 +1194,7 @@ export function advanceToPlayoffs(
     eventId?: string;
     bestOf?: number;
     finalsBestOf?: number;
+    crossPoolSeeding?: CrossPoolSeedingOptions;
   } = {}
 ): Bracket | { winners: Bracket; losers: Bracket; grandFinals: Bracket } {
   // Collect advancing participants from each pool
@@ -832,32 +1215,28 @@ export function advanceToPlayoffs(
     }
   }
 
-  // Sort by pool rank first, then cross-seed across pools
-  // This ensures 1st place from each pool doesn't meet early
-  const seededParticipants: TournamentParticipant[] = [];
-
-  for (let rank = 1; rank <= advancementCount; rank++) {
-    const rankParticipants = advancingParticipants
-      .filter((p) => p.poolRank === rank)
-      .sort((a, b) => a.poolNumber - b.poolNumber);
-
-    // Alternate direction for snake seeding
-    if (rank % 2 === 0) {
-      rankParticipants.reverse();
-    }
-
-    seededParticipants.push(...rankParticipants.map((p) => p.participant));
-  }
+  // Apply cross-pool seeding based on options
+  const crossPoolOptions = options.crossPoolSeeding ?? { method: 'standard' };
+  const seededParticipants = applyCrossPoolSeeding(
+    advancingParticipants,
+    advancementCount,
+    pools.length,
+    crossPoolOptions
+  );
 
   if (bracketFormat === TournamentFormat.DOUBLE_ELIMINATION) {
     return generateDoubleEliminationBracket(seededParticipants, {
-      ...options,
+      eventId: options.eventId,
+      bestOf: options.bestOf,
+      finalsBestOf: options.finalsBestOf,
       seedingMethod: SeedingMethod.MANUAL, // Already seeded
     });
   }
 
   return generateSingleEliminationBracket(seededParticipants, {
-    ...options,
+    eventId: options.eventId,
+    bestOf: options.bestOf,
+    finalsBestOf: options.finalsBestOf,
     seedingMethod: SeedingMethod.MANUAL, // Already seeded
   });
 }

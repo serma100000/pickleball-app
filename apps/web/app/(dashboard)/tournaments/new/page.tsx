@@ -35,6 +35,28 @@ type EventFormat = 'single_elimination' | 'double_elimination' | 'round_robin' |
 type SeedingMethod = 'random' | 'skill_based' | 'manual';
 type ScoringFormat = 'best_of_1' | 'best_of_3';
 type PointsTo = 11 | 15 | 21;
+type BracketFormat = 'single_elimination' | 'double_elimination';
+type PoolCalculationMethod = 'auto' | 'manual';
+type CrossPoolSeedingMethod = 'standard' | 'reverse' | 'snake';
+
+interface PoolPlayConfig {
+  enabled: boolean;
+  calculationMethod: PoolCalculationMethod;
+  numberOfPools: number;
+  gamesPerMatch: 1 | 3;
+  advancementCount: number;
+}
+
+interface SeedingConfig {
+  method: SeedingMethod;
+  crossPoolSeeding: CrossPoolSeedingMethod;
+}
+
+interface BracketConfig {
+  format: BracketFormat;
+  thirdPlaceMatch: boolean;
+  consolationBracket: boolean;
+}
 
 interface TournamentEvent {
   id: string;
@@ -54,6 +76,10 @@ interface TournamentEvent {
   advanceFromPool?: number;
   scoringFormat: ScoringFormat;
   pointsTo: PointsTo;
+  // Enhanced configuration
+  poolPlayConfig: PoolPlayConfig;
+  seedingConfig: SeedingConfig;
+  bracketConfig: BracketConfig;
 }
 
 interface TournamentFormState {
@@ -127,6 +153,22 @@ const SCORING_OPTIONS: { value: ScoringFormat; label: string }[] = [
 
 const POINTS_TO_OPTIONS: PointsTo[] = [11, 15, 21];
 
+const BRACKET_FORMAT_OPTIONS: { value: BracketFormat; label: string; description: string }[] = [
+  { value: 'single_elimination', label: 'Single Elimination', description: 'One loss eliminates' },
+  { value: 'double_elimination', label: 'Double Elimination', description: 'Two losses to eliminate' },
+];
+
+const POOL_CALCULATION_OPTIONS: { value: PoolCalculationMethod; label: string }[] = [
+  { value: 'auto', label: 'Auto-calculate' },
+  { value: 'manual', label: 'Manual' },
+];
+
+const CROSS_POOL_SEEDING_OPTIONS: { value: CrossPoolSeedingMethod; label: string; description: string }[] = [
+  { value: 'standard', label: 'Standard', description: '1st from Pool A vs 2nd from Pool B' },
+  { value: 'reverse', label: 'Reverse', description: '1st seeds meet later rounds' },
+  { value: 'snake', label: 'Snake', description: 'Alternating pattern for fairness' },
+];
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -153,7 +195,32 @@ function createDefaultEvent(): TournamentEvent {
     advanceFromPool: 2,
     scoringFormat: 'best_of_1',
     pointsTo: 11,
+    // Enhanced configuration defaults
+    poolPlayConfig: {
+      enabled: false,
+      calculationMethod: 'auto',
+      numberOfPools: 4,
+      gamesPerMatch: 1,
+      advancementCount: 2,
+    },
+    seedingConfig: {
+      method: 'skill_based',
+      crossPoolSeeding: 'standard',
+    },
+    bracketConfig: {
+      format: 'double_elimination',
+      thirdPlaceMatch: false,
+      consolationBracket: false,
+    },
   };
+}
+
+/**
+ * Calculate optimal number of pools based on participant count
+ */
+function calculateOptimalPools(participantCount: number, targetPoolSize: number = 4): number {
+  if (participantCount < 6) return 2;
+  return Math.max(2, Math.ceil(participantCount / targetPoolSize));
 }
 
 function getEventDisplayName(event: TournamentEvent): string {
@@ -277,6 +344,100 @@ function SelectField<T extends string>({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+interface ToggleSwitchProps {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}
+
+function ToggleSwitch({ label, description, checked, onChange, disabled }: ToggleSwitchProps) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
+        {description && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-pickle-500 focus:ring-offset-2',
+          checked ? 'bg-pickle-500' : 'bg-gray-200 dark:bg-gray-600',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+            checked ? 'translate-x-5' : 'translate-x-0'
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
+interface RadioCardGroupProps<T extends string> {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string; description?: string }[];
+}
+
+function RadioCardGroup<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: RadioCardGroupProps<T>) {
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'flex flex-col items-start p-4 rounded-lg border-2 text-left transition-all',
+              value === option.value
+                ? 'border-pickle-500 bg-pickle-50 dark:bg-pickle-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            )}
+          >
+            <span className={cn(
+              'font-medium',
+              value === option.value
+                ? 'text-pickle-700 dark:text-pickle-300'
+                : 'text-gray-900 dark:text-white'
+            )}>
+              {option.label}
+            </span>
+            {option.description && (
+              <span className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {option.description}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -656,6 +817,39 @@ function FormatSettingsStep({ state, setState }: StepProps) {
     }));
   };
 
+  const updatePoolPlayConfig = (eventId: string, updates: Partial<PoolPlayConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      events: prev.events.map((e) =>
+        e.id === eventId
+          ? { ...e, poolPlayConfig: { ...e.poolPlayConfig, ...updates } }
+          : e
+      ),
+    }));
+  };
+
+  const updateSeedingConfig = (eventId: string, updates: Partial<SeedingConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      events: prev.events.map((e) =>
+        e.id === eventId
+          ? { ...e, seedingConfig: { ...e.seedingConfig, ...updates } }
+          : e
+      ),
+    }));
+  };
+
+  const updateBracketConfig = (eventId: string, updates: Partial<BracketConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      events: prev.events.map((e) =>
+        e.id === eventId
+          ? { ...e, bracketConfig: { ...e.bracketConfig, ...updates } }
+          : e
+      ),
+    }));
+  };
+
   if (state.events.length === 0) {
     return (
       <div className="space-y-6">
@@ -690,6 +884,8 @@ function FormatSettingsStep({ state, setState }: StepProps) {
           event.format === 'single_elimination' ||
           event.format === 'double_elimination' ||
           event.format === 'pool_to_bracket';
+        const showPoolPlayToggle = event.format !== 'round_robin';
+        const calculatedPools = calculateOptimalPools(event.maxParticipants);
 
         return (
           <Card key={event.id} className="p-6">
@@ -707,88 +903,216 @@ function FormatSettingsStep({ state, setState }: StepProps) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Pool Play Settings */}
-              {needsPoolSettings && (
-                <>
-                  <NumberStepper
-                    value={event.numberOfPools || 4}
-                    onChange={(val) => updateEvent(event.id, { numberOfPools: val })}
-                    label="Number of Pools"
-                    min={2}
-                    max={16}
-                    helpText="pools"
-                  />
-                  <NumberStepper
-                    value={event.teamsPerPool || 4}
-                    onChange={(val) => updateEvent(event.id, { teamsPerPool: val })}
-                    label="Teams per Pool"
-                    min={3}
-                    max={8}
-                    helpText="teams"
-                  />
-                  <NumberStepper
-                    value={event.gamesPerPoolMatch || 1}
-                    onChange={(val) => updateEvent(event.id, { gamesPerPoolMatch: val })}
-                    label="Games per Pool Match"
-                    min={1}
-                    max={3}
-                    helpText="games"
-                  />
-                </>
-              )}
+            {/* Pool Play Configuration Section */}
+            {showPoolPlayToggle && (
+              <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Pool Play Configuration
+                </h4>
 
-              {/* Pool to Bracket: Advance Settings */}
-              {event.format === 'pool_to_bracket' && (
-                <NumberStepper
-                  value={event.advanceFromPool || 2}
-                  onChange={(val) => updateEvent(event.id, { advanceFromPool: val })}
-                  label="Advance from Each Pool"
-                  min={1}
-                  max={4}
-                  helpText="teams"
-                />
-              )}
+                <div className="space-y-4">
+                  <ToggleSwitch
+                    label="Enable Pool Play"
+                    description="Play round robin in pools before bracket stage"
+                    checked={event.poolPlayConfig.enabled || needsPoolSettings}
+                    onChange={(checked) => {
+                      updatePoolPlayConfig(event.id, { enabled: checked });
+                      if (checked) {
+                        updateEvent(event.id, { format: 'pool_to_bracket' });
+                      } else if (event.format === 'pool_to_bracket' || event.format === 'pool_play') {
+                        updateEvent(event.id, { format: event.bracketConfig.format });
+                      }
+                    }}
+                    disabled={event.format === 'pool_play' || event.format === 'pool_to_bracket'}
+                  />
 
-              {/* Bracket Settings */}
-              {needsBracketSettings && (
-                <SelectField
+                  {(event.poolPlayConfig.enabled || needsPoolSettings) && (
+                    <div className="pl-4 border-l-2 border-pickle-200 dark:border-pickle-800 space-y-4 mt-4">
+                      {/* Pool Calculation Method */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <SelectField
+                          label="Pool Calculation"
+                          value={event.poolPlayConfig.calculationMethod}
+                          onChange={(val) => updatePoolPlayConfig(event.id, { calculationMethod: val })}
+                          options={POOL_CALCULATION_OPTIONS}
+                        />
+                        {event.poolPlayConfig.calculationMethod === 'manual' ? (
+                          <NumberStepper
+                            value={event.poolPlayConfig.numberOfPools}
+                            onChange={(val) => updatePoolPlayConfig(event.id, { numberOfPools: val })}
+                            label="Number of Pools"
+                            min={2}
+                            max={16}
+                            helpText="pools"
+                          />
+                        ) : (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Calculated Pools
+                            </label>
+                            <div className="flex items-center h-11 px-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              <span className="text-gray-900 dark:text-white font-medium">
+                                {calculatedPools} pools
+                              </span>
+                              <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
+                                (~{Math.ceil(event.maxParticipants / calculatedPools)} per pool)
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Games per Pool Match */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Games per Pool Match
+                        </label>
+                        <div className="flex gap-2">
+                          {([1, 3] as const).map((games) => (
+                            <button
+                              key={games}
+                              type="button"
+                              onClick={() => updatePoolPlayConfig(event.id, { gamesPerMatch: games })}
+                              className={cn(
+                                'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
+                                event.poolPlayConfig.gamesPerMatch === games
+                                  ? 'bg-pickle-500 text-white'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                              )}
+                            >
+                              {games === 1 ? 'Best of 1' : 'Best of 3'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Advancement Count */}
+                      <NumberStepper
+                        value={event.poolPlayConfig.advancementCount}
+                        onChange={(val) => updatePoolPlayConfig(event.id, { advancementCount: val })}
+                        label="Advance from Each Pool"
+                        min={1}
+                        max={4}
+                        helpText="teams advance to bracket"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Seeding Configuration Section */}
+            <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Seeding Configuration
+              </h4>
+
+              <div className="space-y-4">
+                <RadioCardGroup
                   label="Seeding Method"
-                  value={event.seedingMethod}
-                  onChange={(val) => updateEvent(event.id, { seedingMethod: val })}
-                  options={SEEDING_OPTIONS}
+                  value={event.seedingConfig.method}
+                  onChange={(val) => updateSeedingConfig(event.id, { method: val })}
+                  options={[
+                    { value: 'random', label: 'Random', description: 'Randomly assign seeds' },
+                    { value: 'skill_based', label: 'Skill-Based (DUPR)', description: 'Use player ratings for seeding' },
+                    { value: 'manual', label: 'Manual', description: 'Manually assign all seeds' },
+                  ]}
                 />
-              )}
 
-              {/* Scoring Format (All formats) */}
-              <SelectField
-                label="Scoring Format"
-                value={event.scoringFormat}
-                onChange={(val) => updateEvent(event.id, { scoringFormat: val })}
-                options={SCORING_OPTIONS}
-              />
+                {(event.poolPlayConfig.enabled || needsPoolSettings) && (
+                  <SelectField
+                    label="Cross-Pool Seeding"
+                    value={event.seedingConfig.crossPoolSeeding}
+                    onChange={(val) => updateSeedingConfig(event.id, { crossPoolSeeding: val })}
+                    options={CROSS_POOL_SEEDING_OPTIONS.map((o) => ({ value: o.value, label: `${o.label} - ${o.description}` }))}
+                  />
+                )}
+              </div>
+            </div>
 
-              {/* Points To */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Games to
-                </label>
-                <div className="flex gap-2">
-                  {POINTS_TO_OPTIONS.map((points) => (
-                    <button
-                      key={points}
-                      type="button"
-                      onClick={() => updateEvent(event.id, { pointsTo: points })}
-                      className={cn(
-                        'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
-                        event.pointsTo === points
-                          ? 'bg-pickle-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      )}
-                    >
-                      {points}
-                    </button>
-                  ))}
+            {/* Bracket Configuration Section */}
+            {needsBracketSettings && (
+              <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  Bracket Configuration
+                </h4>
+
+                <div className="space-y-4">
+                  <RadioCardGroup
+                    label="Bracket Format"
+                    value={event.bracketConfig.format}
+                    onChange={(val) => {
+                      updateBracketConfig(event.id, { format: val });
+                      // Update main format if not using pool play
+                      if (!event.poolPlayConfig.enabled && event.format !== 'pool_to_bracket' && event.format !== 'pool_play') {
+                        updateEvent(event.id, { format: val });
+                      }
+                    }}
+                    options={BRACKET_FORMAT_OPTIONS}
+                  />
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <ToggleSwitch
+                      label="Third Place Match"
+                      description="Play a match to determine 3rd place"
+                      checked={event.bracketConfig.thirdPlaceMatch}
+                      onChange={(checked) => updateBracketConfig(event.id, { thirdPlaceMatch: checked })}
+                    />
+
+                    {event.bracketConfig.format === 'single_elimination' && (
+                      <ToggleSwitch
+                        label="Consolation Bracket"
+                        description="Second chance for first-round losers"
+                        checked={event.bracketConfig.consolationBracket}
+                        onChange={(checked) => updateBracketConfig(event.id, { consolationBracket: checked })}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Scoring Settings Section */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Scoring Settings
+              </h4>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Scoring Format (All formats) */}
+                <SelectField
+                  label="Bracket Scoring Format"
+                  value={event.scoringFormat}
+                  onChange={(val) => updateEvent(event.id, { scoringFormat: val })}
+                  options={SCORING_OPTIONS}
+                />
+
+                {/* Points To */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Games to
+                  </label>
+                  <div className="flex gap-2">
+                    {POINTS_TO_OPTIONS.map((points) => (
+                      <button
+                        key={points}
+                        type="button"
+                        onClick={() => updateEvent(event.id, { pointsTo: points })}
+                        className={cn(
+                          'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
+                          event.pointsTo === points
+                            ? 'bg-pickle-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        )}
+                      >
+                        {points}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -931,6 +1255,30 @@ function ReviewStep({ state }: { state: TournamentFormState }) {
                       {formatCurrency(event.prizeMoney)}
                     </div>
                   )}
+                </div>
+                {/* Enhanced Configuration Summary */}
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className={cn(
+                      'w-2 h-2 rounded-full',
+                      event.poolPlayConfig.enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    )} />
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Pool Play: {event.poolPlayConfig.enabled ? `${event.poolPlayConfig.calculationMethod === 'auto' ? calculateOptimalPools(event.maxParticipants) : event.poolPlayConfig.numberOfPools} pools, top ${event.poolPlayConfig.advancementCount} advance` : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Seeding: {SEEDING_OPTIONS.find((s) => s.value === event.seedingConfig.method)?.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Bracket: {event.bracketConfig.format === 'double_elimination' ? 'Double Elim' : 'Single Elim'}
+                      {event.bracketConfig.thirdPlaceMatch && ' + 3rd Place'}
+                      {event.bracketConfig.consolationBracket && ' + Consolation'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
