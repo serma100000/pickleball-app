@@ -1013,6 +1013,89 @@ export const tournamentBrackets = pgTable(
   })
 );
 
+// Pool calculation method enum
+export const poolCalculationMethodEnum = pgEnum('pool_calculation_method', [
+  'auto',
+  'manual',
+]);
+
+// Cross-pool seeding method enum
+export const crossPoolSeedingMethodEnum = pgEnum('cross_pool_seeding_method', [
+  'standard',
+  'reverse',
+  'snake',
+]);
+
+// Seeding method enum for tournaments
+export const seedingMethodEnum = pgEnum('seeding_method', [
+  'random',
+  'skill_based',
+  'manual',
+]);
+
+// Tournament events table - stores individual events within a tournament
+export const tournamentEvents = pgTable(
+  'tournament_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tournamentId: uuid('tournament_id')
+      .notNull()
+      .references(() => tournaments.id, { onDelete: 'cascade' }),
+
+    // Basic event info
+    name: varchar('name', { length: 200 }),
+    category: varchar('category', { length: 50 }).notNull(), // 'singles', 'doubles', 'mixed'
+    skillLevel: varchar('skill_level', { length: 20 }).notNull(), // '2.5', '3.0', etc.
+    ageGroup: varchar('age_group', { length: 50 }).notNull().default('open'), // 'open', 'junior', 'senior_50', etc.
+    format: tournamentFormatEnum('format').notNull(),
+    maxParticipants: integer('max_participants').notNull().default(32),
+    currentParticipants: integer('current_participants').default(0),
+    entryFee: decimal('entry_fee', { precision: 8, scale: 2 }).default('0'),
+    prizeMoney: decimal('prize_money', { precision: 10, scale: 2 }).default('0'),
+
+    // Scoring settings
+    scoringFormat: varchar('scoring_format', { length: 20 }).default('best_of_1'), // 'best_of_1', 'best_of_3'
+    pointsTo: integer('points_to').default(11), // 11, 15, 21
+    winBy: integer('win_by').default(2),
+
+    // Pool play configuration (stored as JSONB for flexibility)
+    poolPlayConfig: jsonb('pool_play_config').notNull().default({
+      enabled: false,
+      calculationMethod: 'auto',
+      numberOfPools: 4,
+      gamesPerMatch: 1,
+      advancementCount: 2,
+    }),
+
+    // Seeding configuration (stored as JSONB)
+    seedingConfig: jsonb('seeding_config').notNull().default({
+      method: 'skill_based',
+      crossPoolSeeding: 'standard',
+    }),
+
+    // Bracket configuration (stored as JSONB)
+    bracketConfig: jsonb('bracket_config').notNull().default({
+      format: 'double_elimination',
+      thirdPlaceMatch: false,
+      consolationBracket: false,
+    }),
+
+    // Status and ordering
+    status: varchar('status', { length: 50 }).notNull().default('pending'),
+    sortOrder: integer('sort_order').default(0),
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tournamentIdIdx: index('tournament_events_tournament_id_idx').on(table.tournamentId),
+    categoryIdx: index('tournament_events_category_idx').on(table.category),
+    skillLevelIdx: index('tournament_events_skill_level_idx').on(table.skillLevel),
+    sortOrderIdx: index('tournament_events_sort_order_idx').on(table.tournamentId, table.sortOrder),
+  })
+);
+
 // Tournament matches table
 export const tournamentMatches = pgTable(
   'tournament_matches',
@@ -1953,6 +2036,15 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   registrations: many(tournamentRegistrations),
   brackets: many(tournamentBrackets),
   matches: many(tournamentMatches),
+  events: many(tournamentEvents),
+}));
+
+// Tournament events relations
+export const tournamentEventsRelations = relations(tournamentEvents, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [tournamentEvents.tournamentId],
+    references: [tournaments.id],
+  }),
 }));
 
 // Tournament divisions relations
@@ -2362,6 +2454,9 @@ export type NewTournamentBracket = typeof tournamentBrackets.$inferInsert;
 
 export type TournamentMatch = typeof tournamentMatches.$inferSelect;
 export type NewTournamentMatch = typeof tournamentMatches.$inferInsert;
+
+export type TournamentEventRecord = typeof tournamentEvents.$inferSelect;
+export type NewTournamentEventRecord = typeof tournamentEvents.$inferInsert;
 
 export type League = typeof leagues.$inferSelect;
 export type NewLeague = typeof leagues.$inferInsert;

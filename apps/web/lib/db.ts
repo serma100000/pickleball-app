@@ -39,7 +39,7 @@ interface OfflinePlayer {
 
 interface SyncQueue {
   id: string;
-  type: 'game' | 'court_review' | 'club_join' | 'tournament_register';
+  type: 'game' | 'court_review' | 'club_join' | 'tournament_register' | 'tournament' | 'tournament_event';
   action: 'create' | 'update' | 'delete';
   data: unknown;
   retries: number;

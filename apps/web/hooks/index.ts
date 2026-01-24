@@ -39,10 +39,15 @@ export {
   useUnregisterFromTournament,
   useCheckInRegistration,
   usePublishTournament,
+  useCreateTournament,
   useDeleteTournament,
   useUpdateTournament,
   useUpdateTournamentSchedule,
   useMyTournaments,
+  // Tournament Events
+  useCreateTournamentEvent,
+  useUpdateTournamentEvent,
+  useDeleteTournamentEvent,
   // Players
   usePlayerSearch,
   usePlayer,

@@ -6,6 +6,11 @@ import { apiEndpoints } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { addToSyncQueue } from '@/lib/db';
 import { useOnlineStatus } from './use-online-status';
+import type {
+  CreateTournamentInput,
+  UpdateTournamentInput,
+  TournamentResponse,
+} from '@/lib/tournament-api-types';
 
 // Courts hooks
 export function useCourts(params?: {
@@ -285,12 +290,36 @@ export function useDeleteTournament() {
   });
 }
 
+export function useCreateTournament() {
+  const queryClient = useQueryClient();
+  const { isOnline } = useOnlineStatus();
+
+  return useMutation({
+    mutationFn: async (data: CreateTournamentInput) => {
+      if (!isOnline) {
+        // Queue for later sync
+        await addToSyncQueue({
+          type: 'tournament',
+          action: 'create',
+          data,
+        });
+        return { offline: true, data };
+      }
+      return apiEndpoints.tournaments.create(data) as Promise<TournamentResponse>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.myTournaments() });
+    },
+  });
+}
+
 export function useUpdateTournament() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: unknown }) =>
-      apiEndpoints.tournaments.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateTournamentInput }) =>
+      apiEndpoints.tournaments.update(id, data) as Promise<TournamentResponse>,
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.myTournaments() });
@@ -369,6 +398,112 @@ export function useUpdateTournamentSchedule() {
       apiEndpoints.tournaments.updateSchedule(tournamentId, data),
     onSuccess: (_, { tournamentId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.schedule(tournamentId) });
+    },
+  });
+}
+
+// Tournament Event Hooks
+export function useCreateTournamentEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      tournamentId,
+      data,
+    }: {
+      tournamentId: string;
+      data: {
+        name?: string;
+        category: string;
+        skillLevel: string;
+        ageGroup: string;
+        format: string;
+        maxParticipants: number;
+        entryFee: number;
+        prizeMoney: number;
+        scoringFormat: string;
+        pointsTo: number;
+        poolPlayConfig: {
+          enabled: boolean;
+          calculationMethod: string;
+          numberOfPools: number;
+          gamesPerMatch: number;
+          advancementCount: number;
+        };
+        seedingConfig: {
+          method: string;
+          crossPoolSeeding: string;
+        };
+        bracketConfig: {
+          format: string;
+          thirdPlaceMatch: boolean;
+          consolationBracket: boolean;
+        };
+      };
+    }) => apiEndpoints.tournaments.createEvent(tournamentId, data),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.events(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
+    },
+  });
+}
+
+export function useUpdateTournamentEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      tournamentId,
+      eventId,
+      data,
+    }: {
+      tournamentId: string;
+      eventId: string;
+      data: {
+        name?: string;
+        category?: string;
+        skillLevel?: string;
+        ageGroup?: string;
+        format?: string;
+        maxParticipants?: number;
+        entryFee?: number;
+        prizeMoney?: number;
+        scoringFormat?: string;
+        pointsTo?: number;
+        poolPlayConfig?: {
+          enabled: boolean;
+          calculationMethod: string;
+          numberOfPools: number;
+          gamesPerMatch: number;
+          advancementCount: number;
+        };
+        seedingConfig?: {
+          method: string;
+          crossPoolSeeding: string;
+        };
+        bracketConfig?: {
+          format: string;
+          thirdPlaceMatch: boolean;
+          consolationBracket: boolean;
+        };
+      };
+    }) => apiEndpoints.tournaments.updateEvent(tournamentId, eventId, data),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.events(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
+    },
+  });
+}
+
+export function useDeleteTournamentEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentId, eventId }: { tournamentId: string; eventId: string }) =>
+      apiEndpoints.tournaments.deleteEvent(tournamentId, eventId),
+    onSuccess: (_, { tournamentId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.events(tournamentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
     },
   });
 }

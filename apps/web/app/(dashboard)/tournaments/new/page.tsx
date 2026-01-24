@@ -223,6 +223,25 @@ function calculateOptimalPools(participantCount: number, targetPoolSize: number 
   return Math.max(2, Math.ceil(participantCount / targetPoolSize));
 }
 
+/**
+ * Get pool distribution text showing how teams are distributed across pools
+ * e.g., "3 pools of 4, 1 pool of 3" when 15 teams are split into 4 pools
+ */
+function getPoolDistributionText(participantCount: number, numberOfPools: number): string {
+  if (numberOfPools <= 0 || participantCount <= 0) return '';
+  const baseSize = Math.floor(participantCount / numberOfPools);
+  const remainder = participantCount % numberOfPools;
+  if (remainder === 0) {
+    return `${numberOfPools} pools of ${baseSize} teams`;
+  }
+  const poolsWithBase = numberOfPools - remainder;
+  const poolsWithExtra = remainder;
+  if (poolsWithBase === 0) {
+    return `${poolsWithExtra} pools of ${baseSize + 1} teams`;
+  }
+  return `${poolsWithBase} pool${poolsWithBase > 1 ? 's' : ''} of ${baseSize}, ${poolsWithExtra} pool${poolsWithExtra > 1 ? 's' : ''} of ${baseSize + 1}`;
+}
+
 function getEventDisplayName(event: TournamentEvent): string {
   if (event.name) return event.name;
 
@@ -951,12 +970,12 @@ function FormatSettingsStep({ state, setState }: StepProps) {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                               Calculated Pools
                             </label>
-                            <div className="flex items-center h-11 px-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <div className="flex flex-col h-auto min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg justify-center">
                               <span className="text-gray-900 dark:text-white font-medium">
                                 {calculatedPools} pools
                               </span>
-                              <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
-                                (~{Math.ceil(event.maxParticipants / calculatedPools)} per pool)
+                              <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                {getPoolDistributionText(event.maxParticipants, calculatedPools)}
                               </span>
                             </div>
                           </div>
@@ -974,6 +993,8 @@ function FormatSettingsStep({ state, setState }: StepProps) {
                               key={games}
                               type="button"
                               onClick={() => updatePoolPlayConfig(event.id, { gamesPerMatch: games })}
+                              aria-label={`Best of ${games} ${games === 1 ? 'game' : 'games'} per pool match`}
+                              aria-pressed={event.poolPlayConfig.gamesPerMatch === games}
                               className={cn(
                                 'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
                                 event.poolPlayConfig.gamesPerMatch === games
@@ -993,7 +1014,11 @@ function FormatSettingsStep({ state, setState }: StepProps) {
                         onChange={(val) => updatePoolPlayConfig(event.id, { advancementCount: val })}
                         label="Advance from Each Pool"
                         min={1}
-                        max={4}
+                        max={
+                          event.poolPlayConfig.calculationMethod === 'manual'
+                            ? Math.max(1, Math.floor(event.maxParticipants / event.poolPlayConfig.numberOfPools))
+                            : Math.max(1, Math.floor(event.maxParticipants / calculatedPools))
+                        }
                         helpText="teams advance to bracket"
                       />
                     </div>
@@ -1102,6 +1127,8 @@ function FormatSettingsStep({ state, setState }: StepProps) {
                         key={points}
                         type="button"
                         onClick={() => updateEvent(event.id, { pointsTo: points })}
+                        aria-label={`Play games to ${points} points`}
+                        aria-pressed={event.pointsTo === points}
                         className={cn(
                           'flex-1 min-h-[44px] py-3 px-4 rounded-lg font-medium transition-colors',
                           event.pointsTo === points

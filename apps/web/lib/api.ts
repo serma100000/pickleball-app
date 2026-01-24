@@ -195,8 +195,87 @@ export const apiEndpoints = {
     list: (params?: { page?: number; limit?: number; upcoming?: boolean; managed?: boolean; status?: string }) =>
       api.get('/tournaments', params),
     get: (id: string) => api.get(`/tournaments/${id}`),
-    create: (data: unknown) => api.post('/tournaments', data),
-    update: (id: string, data: unknown) => api.patch(`/tournaments/${id}`, data),
+    create: (data: {
+      name: string;
+      description?: string;
+      startDate: string;
+      endDate: string;
+      registrationDeadline: string;
+      venue: string;
+      venueCoordinates?: { lat: number; lng: number };
+      numberOfCourts: number;
+      director: { name: string; email: string; phone?: string };
+      events: Array<{
+        id?: string;
+        name?: string;
+        category: string;
+        skillLevel: string;
+        ageGroup: string;
+        format: string;
+        maxParticipants: number;
+        entryFee: number;
+        prizeMoney: number;
+        scoringFormat: string;
+        pointsTo: number;
+        poolPlayConfig: {
+          enabled: boolean;
+          calculationMethod: string;
+          numberOfPools: number;
+          gamesPerMatch: number;
+          advancementCount: number;
+        };
+        seedingConfig: {
+          method: string;
+          crossPoolSeeding: string;
+        };
+        bracketConfig: {
+          format: string;
+          thirdPlaceMatch: boolean;
+          consolationBracket: boolean;
+        };
+      }>;
+    }) => api.post('/tournaments', data),
+    update: (id: string, data: {
+      name?: string;
+      description?: string;
+      startDate?: string;
+      endDate?: string;
+      registrationDeadline?: string;
+      venue?: string;
+      venueCoordinates?: { lat: number; lng: number };
+      numberOfCourts?: number;
+      director?: { name: string; email: string; phone?: string };
+      events?: Array<{
+        id?: string;
+        name?: string;
+        category: string;
+        skillLevel: string;
+        ageGroup: string;
+        format: string;
+        maxParticipants: number;
+        entryFee: number;
+        prizeMoney: number;
+        scoringFormat: string;
+        pointsTo: number;
+        poolPlayConfig: {
+          enabled: boolean;
+          calculationMethod: string;
+          numberOfPools: number;
+          gamesPerMatch: number;
+          advancementCount: number;
+        };
+        seedingConfig: {
+          method: string;
+          crossPoolSeeding: string;
+        };
+        bracketConfig: {
+          format: string;
+          thirdPlaceMatch: boolean;
+          consolationBracket: boolean;
+        };
+      }>;
+      status?: string;
+    }) => api.patch(`/tournaments/${id}`, data),
     delete: (id: string) => api.delete(`/tournaments/${id}`),
     register: (id: string, data: unknown) =>
       api.post(`/tournaments/${id}/register`, data),
@@ -212,6 +291,64 @@ export const apiEndpoints = {
       api.post(`/tournaments/${id}/registrations/${registrationId}/check-in`),
     updateSchedule: (id: string, data: unknown) =>
       api.patch(`/tournaments/${id}/schedule`, data),
+    createEvent: (tournamentId: string, data: {
+      name?: string;
+      category: string;
+      skillLevel: string;
+      ageGroup: string;
+      format: string;
+      maxParticipants: number;
+      entryFee: number;
+      prizeMoney: number;
+      scoringFormat: string;
+      pointsTo: number;
+      poolPlayConfig: {
+        enabled: boolean;
+        calculationMethod: string;
+        numberOfPools: number;
+        gamesPerMatch: number;
+        advancementCount: number;
+      };
+      seedingConfig: {
+        method: string;
+        crossPoolSeeding: string;
+      };
+      bracketConfig: {
+        format: string;
+        thirdPlaceMatch: boolean;
+        consolationBracket: boolean;
+      };
+    }) => api.post(`/tournaments/${tournamentId}/events`, data),
+    updateEvent: (tournamentId: string, eventId: string, data: {
+      name?: string;
+      category?: string;
+      skillLevel?: string;
+      ageGroup?: string;
+      format?: string;
+      maxParticipants?: number;
+      entryFee?: number;
+      prizeMoney?: number;
+      scoringFormat?: string;
+      pointsTo?: number;
+      poolPlayConfig?: {
+        enabled: boolean;
+        calculationMethod: string;
+        numberOfPools: number;
+        gamesPerMatch: number;
+        advancementCount: number;
+      };
+      seedingConfig?: {
+        method: string;
+        crossPoolSeeding: string;
+      };
+      bracketConfig?: {
+        format: string;
+        thirdPlaceMatch: boolean;
+        consolationBracket: boolean;
+      };
+    }) => api.patch(`/tournaments/${tournamentId}/events/${eventId}`, data),
+    deleteEvent: (tournamentId: string, eventId: string) =>
+      api.delete(`/tournaments/${tournamentId}/events/${eventId}`),
   },
 
   // Players (for searching opponents/partners)
