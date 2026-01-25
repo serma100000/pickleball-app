@@ -217,9 +217,11 @@ export default function NewGamePage() {
         const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
         if (validPlayers.length >= minPlayers) {
           // Use singles or doubles generator based on format
+          // Pass maxRounds to limit the number of rounds generated
+          const options = { maxRounds: state.numberOfRounds };
           const result = state.gameFormat === 'singles'
-            ? generateSinglesRoundRobin(validPlayers)
-            : generateIndividualRoundRobin(validPlayers);
+            ? generateSinglesRoundRobin(validPlayers, options)
+            : generateIndividualRoundRobin(validPlayers, options);
           setState((prev) => ({ ...prev, roundRobinMatches: result.matches, roundRobinPlayers: validPlayers }));
         }
       }
@@ -227,7 +229,9 @@ export default function NewGamePage() {
         // Filter out incomplete teams
         const validTeams = state.teams.filter(t => t.player1.name.trim() && t.player2.name.trim());
         if (validTeams.length >= 2) {
-          const result = generateTeamRoundRobin(validTeams);
+          // Pass maxRounds to limit the number of rounds generated
+          const options = { maxRounds: state.numberOfRounds };
+          const result = generateTeamRoundRobin(validTeams, options);
           setState((prev) => ({ ...prev, teamRoundRobinMatches: result.matches, teams: validTeams }));
         }
       }

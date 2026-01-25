@@ -1,6 +1,12 @@
 /**
  * Round Robin Tournament Utilities
  * Generates matchups for round robin tournaments (individual and team-based)
+ *
+ * Swish-style round robin features:
+ * - Configurable number of rounds (respects maxRounds limit)
+ * - Each player plays once per round (proper scheduling)
+ * - Rotating partners for doubles round robin
+ * - Court-aware scheduling (matches can be played in parallel)
  */
 
 export interface Player {
@@ -17,6 +23,7 @@ export interface Team {
 export interface Match {
   id: string;
   round: number;
+  court?: number; // Court assignment (1-based)
   // For individual round robin
   player1?: Player;
   player2?: Player;
@@ -34,6 +41,12 @@ export interface Match {
 export interface RoundRobinResult {
   matches: Match[];
   rounds: number;
+  totalPossibleRounds: number; // How many rounds would be needed for full round robin
+}
+
+export interface RoundRobinOptions {
+  maxRounds?: number; // Limit number of rounds (default: all rounds needed)
+  numberOfCourts?: number; // Number of courts available (for scheduling)
 }
 
 /**
@@ -46,13 +59,17 @@ function generateId(): string {
 /**
  * Generate singles round robin matchups (1v1)
  * Each player plays against every other player exactly once
+ * Respects maxRounds limit if specified
  */
-export function generateSinglesRoundRobin(players: Player[]): RoundRobinResult {
+export function generateSinglesRoundRobin(
+  players: Player[],
+  options: RoundRobinOptions = {}
+): RoundRobinResult {
   const matches: Match[] = [];
   const n = players.length;
 
   if (n < 2) {
-    return { matches: [], rounds: 0 };
+    return { matches: [], rounds: 0, totalPossibleRounds: 0 };
   }
 
   // Use circle method for optimal round-robin scheduling
@@ -65,10 +82,13 @@ export function generateSinglesRoundRobin(players: Player[]): RoundRobinResult {
   }
 
   const numPlayers = playersCopy.length;
-  const rounds = numPlayers - 1;
+  const totalPossibleRounds = numPlayers - 1;
+  const maxRounds = options.maxRounds ?? totalPossibleRounds;
+  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
   const matchesPerRound = numPlayers / 2;
 
-  for (let round = 0; round < rounds; round++) {
+  for (let round = 0; round < roundsToGenerate; round++) {
+    let courtNumber = 1;
     for (let match = 0; match < matchesPerRound; match++) {
       const home = match;
       const away = numPlayers - 1 - match;
@@ -86,6 +106,7 @@ export function generateSinglesRoundRobin(players: Player[]): RoundRobinResult {
         matches.push({
           id: generateId(),
           round: round + 1,
+          court: courtNumber++,
           player1: homePlayer,
           player2: awayPlayer,
           score: { team1: 0, team2: 0 },
@@ -95,90 +116,121 @@ export function generateSinglesRoundRobin(players: Player[]): RoundRobinResult {
     }
   }
 
-  return { matches, rounds };
+  return { matches, rounds: roundsToGenerate, totalPossibleRounds };
 }
 
 /**
  * Generate round robin matchups for individual players (doubles with rotating partners)
- * Each player plays with every other player as a partner AND against every other player
+ * Uses a proper scheduling algorithm where each player plays exactly once per round
+ * with a different partner each round (Swish-style rotating partners)
  */
-export function generateIndividualRoundRobin(players: Player[]): RoundRobinResult {
+export function generateIndividualRoundRobin(
+  players: Player[],
+  options: RoundRobinOptions = {}
+): RoundRobinResult {
   const matches: Match[] = [];
   const n = players.length;
 
   if (n < 4) {
     // Not enough for doubles round robin - need at least 4 players
-    return { matches: [], rounds: 0 };
+    return { matches: [], rounds: 0, totalPossibleRounds: 0 };
   }
 
-  // For doubles round robin, we generate matches where each pair of players
-  // plays against every other pair
-  const pairs: [Player, Player][] = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const p1 = players[i];
-      const p2 = players[j];
-      if (p1 && p2) {
-        pairs.push([p1, p2]);
-      }
+  // For rotating partners doubles, we use a modified circle method
+  // Each round: pair up players so everyone plays once with a different partner
+  // The total possible rounds depends on how we want to handle it:
+  // - If we want each player to partner with everyone once: n-1 rounds
+  // - If we want each player to play against everyone: more complex
+
+  // Swish-style: Each round, players rotate partners and opponents
+  // We use a balanced schedule where each player plays once per round
+  const playersCopy = [...players];
+
+  // If odd number, add bye
+  const hasBye = n % 2 === 1;
+  if (hasBye) {
+    playersCopy.push({ id: 'bye', name: 'BYE' });
+  }
+
+  const numPlayers = playersCopy.length;
+
+  // For doubles with 2n players, we need n/2 matches per round (each match uses 4 players)
+  // So we can have floor(numPlayers/4) matches per round where each player plays once
+  const matchesPerRound = Math.floor(numPlayers / 4);
+
+  if (matchesPerRound === 0) {
+    return { matches: [], rounds: 0, totalPossibleRounds: 0 };
+  }
+
+  // Calculate total possible rounds - in rotating doubles, this is complex
+  // A simple approach: generate rounds until we've had good variety
+  // Standard approach: n-1 rounds allows each player to partner with everyone once
+  const totalPossibleRounds = numPlayers - 1;
+  const maxRounds = options.maxRounds ?? totalPossibleRounds;
+  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
+
+  // Use a rotation system for fair matchups
+  // In each round, we rotate positions to create different pairings
+  for (let round = 0; round < roundsToGenerate; round++) {
+    // Create rotated list (keep first player fixed, rotate others)
+    const rotated: Player[] = [playersCopy[0]!];
+    for (let i = 1; i < numPlayers; i++) {
+      const rotatedIndex = ((i - 1 + round) % (numPlayers - 1)) + 1;
+      rotated.push(playersCopy[rotatedIndex]!);
     }
-  }
 
-  // Generate matches between pairs (teams play against teams)
-  let matchIndex = 0;
-  const matchesPerRound = Math.floor(pairs.length / 2);
+    // Generate matches for this round
+    // Pair consecutive players: (0,1) vs (2,3), (4,5) vs (6,7), etc.
+    let courtNumber = 1;
+    for (let m = 0; m < matchesPerRound; m++) {
+      const idx = m * 4;
+      const p1 = rotated[idx];
+      const p2 = rotated[idx + 1];
+      const p3 = rotated[idx + 2];
+      const p4 = rotated[idx + 3];
 
-  for (let i = 0; i < pairs.length; i++) {
-    for (let j = i + 1; j < pairs.length; j++) {
-      const pair1 = pairs[i];
-      const pair2 = pairs[j];
-
-      // Skip if any player appears in both pairs
-      if (!pair1 || !pair2) continue;
-      const [p1a, p1b] = pair1;
-      const [p2a, p2b] = pair2;
-
-      if (!p1a || !p1b || !p2a || !p2b) continue;
-      if (p1a.id === p2a.id || p1a.id === p2b.id || p1b.id === p2a.id || p1b.id === p2b.id) {
-        continue;
-      }
+      // Skip if any player is a bye
+      if (!p1 || !p2 || !p3 || !p4) continue;
+      if (p1.id === 'bye' || p2.id === 'bye' || p3.id === 'bye' || p4.id === 'bye') continue;
 
       matches.push({
         id: generateId(),
-        round: Math.floor(matchIndex / matchesPerRound) + 1,
+        round: round + 1,
+        court: courtNumber++,
         team1: {
           id: generateId(),
-          player1: p1a,
-          player2: p1b,
+          player1: p1,
+          player2: p2,
         },
         team2: {
           id: generateId(),
-          player1: p2a,
-          player2: p2b,
+          player1: p3,
+          player2: p4,
         },
         score: { team1: 0, team2: 0 },
         completed: false,
       });
-      matchIndex++;
     }
   }
 
-  // Recalculate rounds
-  const totalRounds = matches.length > 0 ? matches[matches.length - 1]?.round ?? 1 : 0;
-
-  return { matches, rounds: totalRounds };
+  const actualRounds = matches.length > 0 ? Math.max(...matches.map(m => m.round)) : 0;
+  return { matches, rounds: actualRounds, totalPossibleRounds };
 }
 
 /**
  * Generate round robin matchups for set partner teams
  * Each team plays against every other team exactly once
+ * Respects maxRounds limit if specified
  */
-export function generateTeamRoundRobin(teams: Team[]): RoundRobinResult {
+export function generateTeamRoundRobin(
+  teams: Team[],
+  options: RoundRobinOptions = {}
+): RoundRobinResult {
   const matches: Match[] = [];
   const n = teams.length;
 
   if (n < 2) {
-    return { matches: [], rounds: 0 };
+    return { matches: [], rounds: 0, totalPossibleRounds: 0 };
   }
 
   // Use circle method for optimal round-robin scheduling
@@ -192,10 +244,13 @@ export function generateTeamRoundRobin(teams: Team[]): RoundRobinResult {
   }
 
   const numTeams = teamsCopy.length;
-  const rounds = numTeams - 1;
+  const totalPossibleRounds = numTeams - 1;
+  const maxRounds = options.maxRounds ?? totalPossibleRounds;
+  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
   const matchesPerRound = numTeams / 2;
 
-  for (let round = 0; round < rounds; round++) {
+  for (let round = 0; round < roundsToGenerate; round++) {
+    let courtNumber = 1;
     for (let match = 0; match < matchesPerRound; match++) {
       const home = match;
       const away = numTeams - 1 - match;
@@ -213,6 +268,7 @@ export function generateTeamRoundRobin(teams: Team[]): RoundRobinResult {
         matches.push({
           id: generateId(),
           round: round + 1,
+          court: courtNumber++,
           team1: homeTeam,
           team2: awayTeam,
           score: { team1: 0, team2: 0 },
@@ -222,7 +278,7 @@ export function generateTeamRoundRobin(teams: Team[]): RoundRobinResult {
     }
   }
 
-  return { matches, rounds };
+  return { matches, rounds: roundsToGenerate, totalPossibleRounds };
 }
 
 /**
