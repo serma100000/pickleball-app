@@ -72,6 +72,9 @@ prisma/migrations/.migration_lock.toml
 # Testing
 __snapshots__
 .vitest
+test-results/
+playwright-report/
+playwright/.cache/
 
 # Storybook
 storybook-static
