@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import {
-  MapPin,
   Trophy,
-  Users,
   Calendar,
   TrendingUp,
-  Shield,
-  Smartphone,
+  ClipboardList,
+  Bell,
   Zap,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -44,28 +42,28 @@ export default function LandingPage() {
         <div className="container mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-sm font-medium mb-6">
             <Zap className="w-4 h-4" />
-            The #1 Pickleball Community App
+            Your Pickleball Companion
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 max-w-4xl mx-auto leading-tight">
-            Find Courts, Track Games,{' '}
-            <span className="text-brand-gradient">Level Up Your Game</span>
+            Organize Tournaments,{' '}
+            <span className="text-brand-gradient">Track Your Progress</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            The ultimate companion app for pickleball enthusiasts. Discover nearby courts,
-            log your matches, join clubs, and compete in leagues and tournaments.
+            Paddle Up helps you manage tournaments, track your games, and organize
+            league play. Built by pickleball players, for pickleball players.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/sign-up"
               className="w-full sm:w-auto px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
-              Start Playing Free
+              Get Started Free
             </Link>
             <Link
               href="#features"
               className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 text-gray-900 dark:text-white rounded-xl font-semibold text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
-              Explore Features
+              See Features
             </Link>
           </div>
         </div>
@@ -76,88 +74,99 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Everything You Need to Play
+              What You Can Do Today
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              From finding courts to tracking your progress, PaddleUp has all the tools
-              to elevate your pickleball experience.
+              Paddle Up gives you the tools to organize competitive play and track your pickleball journey.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
-              icon={<MapPin className="w-6 h-6" />}
-              title="Court Finder"
-              description="Discover pickleball courts near you with real-time availability, ratings, and directions."
-            />
-            <FeatureCard
-              icon={<TrendingUp className="w-6 h-6" />}
-              title="Game Tracking"
-              description="Log your matches, track statistics, and watch your skill rating improve over time."
-            />
-            <FeatureCard
-              icon={<Users className="w-6 h-6" />}
-              title="Clubs & Community"
-              description="Join local clubs, meet players at your skill level, and build lasting friendships."
-            />
-            <FeatureCard
               icon={<Trophy className="w-6 h-6" />}
-              title="Tournaments"
-              description="Register for tournaments, view brackets, and track your competitive journey."
+              title="Tournament Management"
+              description="Create and manage tournaments with single/double elimination brackets, round robin, and pool play formats."
             />
             <FeatureCard
               icon={<Calendar className="w-6 h-6" />}
-              title="Leagues"
-              description="Participate in organized league play with automated scheduling and standings."
+              title="League Organization"
+              description="Set up leagues with divisions, track standings, and manage seasonal play."
             />
             <FeatureCard
-              icon={<Shield className="w-6 h-6" />}
-              title="Skill Rating"
-              description="Get an accurate DUPR-style rating based on your match history and competition level."
+              icon={<ClipboardList className="w-6 h-6" />}
+              title="Game Logging"
+              description="Record your matches with scores, track wins and losses, and build your game history."
+            />
+            <FeatureCard
+              icon={<TrendingUp className="w-6 h-6" />}
+              title="Player Profiles"
+              description="Create your profile, set your skill level, and showcase your pickleball journey."
+            />
+            <FeatureCard
+              icon={<Bell className="w-6 h-6" />}
+              title="Notifications"
+              description="Stay updated with game invites, tournament registrations, and match reminders."
+            />
+            <FeatureCard
+              icon={<Zap className="w-6 h-6" />}
+              title="Quick Setup"
+              description="Get started in minutes with an intuitive interface designed for players of all levels."
             />
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Why Paddle Up Section */}
       <section className="py-20 px-4 bg-brand-600">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <StatCard value="10,000+" label="Active Players" />
-            <StatCard value="5,000+" label="Courts Listed" />
-            <StatCard value="50,000+" label="Games Tracked" />
-            <StatCard value="500+" label="Clubs & Leagues" />
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            Built for the Pickleball Community
+          </h2>
+          <p className="text-xl text-brand-100 mb-8 max-w-2xl mx-auto">
+            We&apos;re building the tools that pickleball organizers and players actually need.
+            No fluff, just features that help you play more and organize better.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">Free</div>
+              <div className="text-brand-100">To get started</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">Simple</div>
+              <div className="text-brand-100">Easy to use interface</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">Growing</div>
+              <div className="text-brand-100">New features regularly</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile App Preview */}
+      {/* Coming Soon Section */}
       <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
         <div className="container mx-auto">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ball-100 dark:bg-ball-900/30 text-ball-700 dark:text-ball-300 text-sm font-medium mb-6">
-                <Smartphone className="w-4 h-4" />
-                Available on All Devices
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                Play Anywhere, Track Everywhere
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                PaddleUp works seamlessly on your phone, tablet, or computer. Our progressive
-                web app means you can install it like a native app and use it even offline.
-              </p>
-              <ul className="space-y-4">
-                <FeatureListItem text="Works offline with automatic sync" />
-                <FeatureListItem text="Real-time notifications for matches" />
-                <FeatureListItem text="GPS-powered court discovery" />
-                <FeatureListItem text="Quick game logging in seconds" />
-              </ul>
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+              More Features Coming Soon
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+              We&apos;re actively building new features based on community feedback.
+              Here&apos;s what&apos;s on our roadmap:
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4 text-left">
+              <RoadmapItem text="Court finder with maps and ratings" />
+              <RoadmapItem text="DUPR rating integration" />
+              <RoadmapItem text="Clubs and community features" />
+              <RoadmapItem text="Player matchmaking" />
+              <RoadmapItem text="Mobile app (iOS & Android)" />
+              <RoadmapItem text="Advanced statistics and analytics" />
             </div>
-            <div className="flex-1 flex justify-center">
-              <div className="w-72 h-[500px] bg-gray-200 dark:bg-gray-700 rounded-3xl shadow-2xl flex items-center justify-center">
-                <span className="text-gray-500 dark:text-gray-400">App Preview</span>
-              </div>
-            </div>
+            <p className="mt-8 text-gray-500 dark:text-gray-400">
+              Have a feature request?{' '}
+              <Link href="/contact" className="text-brand-600 dark:text-brand-400 hover:underline">
+                Let us know
+              </Link>
+            </p>
           </div>
         </div>
       </section>
@@ -166,11 +175,11 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-gradient-to-r from-brand-700 to-brand-600">
         <div className="container mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Level Up Your Game?
+            Ready to Get Started?
           </h2>
           <p className="text-xl text-brand-100 mb-8 max-w-2xl mx-auto">
-            Sign up for free and start discovering courts, tracking games, and connecting
-            with players today.
+            Create your free account and start organizing tournaments, tracking games,
+            and managing your pickleball league today.
           </p>
           <Link
             href="/sign-up"
@@ -227,24 +236,11 @@ function FeatureCard({
   );
 }
 
-function StatCard({ value, label }: { value: string; label: string }) {
+function RoadmapItem({ text }: { text: string }) {
   return (
-    <div>
-      <div className="text-4xl font-bold text-white mb-2">{value}</div>
-      <div className="text-brand-100">{label}</div>
-    </div>
-  );
-}
-
-function FeatureListItem({ text }: { text: string }) {
-  return (
-    <li className="flex items-center gap-3">
-      <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center">
-        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
+    <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 rounded-lg">
+      <div className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" />
       <span className="text-gray-700 dark:text-gray-300">{text}</span>
-    </li>
+    </div>
   );
 }
