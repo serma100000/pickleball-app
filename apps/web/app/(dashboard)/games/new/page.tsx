@@ -70,6 +70,10 @@ interface WizardState {
   duprEnabled: boolean;
   // Round robin format (singles 1v1 or doubles with rotating partners)
   gameFormat: GameFormat;
+  // Round robin configuration
+  playerCount?: number;
+  teamCount?: number;
+  numberOfRounds?: number;
   // Single match state
   singleMatchType: SingleMatchType;
   singleMatchScores: ScoreEntry[];
@@ -101,6 +105,9 @@ export default function NewGamePage() {
     gameMode: 'single-match',
     duprEnabled: false,
     gameFormat: 'doubles',
+    playerCount: 4,
+    teamCount: 3,
+    numberOfRounds: 1,
     singleMatchType: 'doubles',
     singleMatchScores: [{ team1: 0, team2: 0 }],
     partner: '',
@@ -438,6 +445,9 @@ export default function NewGamePage() {
               type: gameModeToEventType[state.gameMode],
               reportToDupr: state.duprEnabled,
               gameFormat: state.gameFormat,
+              playerCount: state.playerCount,
+              teamCount: state.teamCount,
+              numberOfRounds: state.numberOfRounds,
             }}
             onChange={(config: GameTypeConfig) => {
               setState((prev) => ({
@@ -445,6 +455,9 @@ export default function NewGamePage() {
                 gameMode: gameEventTypeToMode[config.type],
                 duprEnabled: config.reportToDupr,
                 gameFormat: config.gameFormat ?? 'doubles',
+                playerCount: config.playerCount,
+                teamCount: config.teamCount,
+                numberOfRounds: config.numberOfRounds,
               }));
             }}
           />

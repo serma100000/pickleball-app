@@ -335,7 +335,7 @@ function GameTypeCard({
               <CountInput
                 value={playerCount ?? MIN_PLAYERS}
                 onChange={onPlayerCountChange}
-                label={gameFormat === 'singles' ? 'Number of Players' : 'Number of Teams'}
+                label="Number of Players"
                 min={MIN_PLAYERS}
                 max={MAX_COUNT}
               />
