@@ -126,4 +126,12 @@ export const queryKeys = {
       [...queryKeys.players.all, 'search', query, filters] as const,
     detail: (id: string) => [...queryKeys.players.all, id] as const,
   },
+
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: (filters?: { page?: number; limit?: number; unreadOnly?: boolean }) =>
+      [...queryKeys.notifications.all, 'list', filters] as const,
+    unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
+  },
 };

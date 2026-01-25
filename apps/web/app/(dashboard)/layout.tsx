@@ -10,12 +10,13 @@ import {
   Plus,
   Menu,
   X,
-  Bell,
 } from 'lucide-react';
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
+import { useNotifications } from '@/hooks/use-notifications';
+import { NotificationDropdown } from '@/components/notifications';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -40,6 +41,14 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const {
+    notifications,
+    unreadCount,
+    isLoading: isLoadingNotifications,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -176,13 +185,16 @@ export default function DashboardLayout({
           {/* Right side */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <button
-              className="relative p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
-            </button>
+            <NotificationDropdown
+              notifications={notifications}
+              unreadCount={unreadCount}
+              isOpen={isNotificationOpen}
+              onToggle={() => setIsNotificationOpen(!isNotificationOpen)}
+              onClose={() => setIsNotificationOpen(false)}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              isLoading={isLoadingNotifications}
+            />
             <UserButton
               appearance={{
                 elements: {

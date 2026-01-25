@@ -75,3 +75,19 @@ export {
   useBreakpoint,
   useWindowSize,
 } from './use-media-query';
+
+// Notifications hooks
+export {
+  useNotifications,
+  useUnreadNotificationCount,
+  notificationKeys,
+} from './use-notifications';
+export type {
+  Notification,
+  NotificationType,
+  NotificationPagination,
+  NotificationsResponse,
+  UseNotificationsOptions,
+  UseNotificationsReturn,
+  UseUnreadCountReturn,
+} from './use-notifications';
