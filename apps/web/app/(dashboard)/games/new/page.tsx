@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -852,10 +852,22 @@ function AddPlayersStep({
   removePlayer: (id: string) => void;
   gameFormat: GameFormat;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const minPlayers = gameFormat === 'singles' ? 2 : 4;
+  const maxPlayers = 20; // Reasonable maximum for round robin
   const description = gameFormat === 'singles'
     ? `Add at least ${minPlayers} players for a singles round robin. Each player plays against every other player.`
     : `Add at least ${minPlayers} players for a doubles round robin. Players will rotate partners each match.`;
+
+  const handleAddPlayer = () => {
+    if (newPlayerName.trim() && players.length < maxPlayers) {
+      addPlayer();
+      // Auto-focus input after adding for quick entry of next player
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -867,30 +879,50 @@ function AddPlayersStep({
       </p>
 
       {/* Add Player Input */}
-      <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Player name"
-          value={newPlayerName}
-          onChange={(e) => setNewPlayerName(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addPlayer())}
-          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-        />
-        <button
-          type="button"
-          onClick={addPlayer}
-          disabled={!newPlayerName.trim()}
-          className={cn(
-            'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center',
-            newPlayerName.trim()
-              ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-          )}
-          aria-label="Add player"
-        >
-          <UserPlus className="w-5 h-5" />
-        </button>
-      </div>
+      {players.length < maxPlayers ? (
+        <div className="flex gap-2 mb-4">
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            autoCapitalize="words"
+            placeholder="Player name"
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAddPlayer();
+              }
+            }}
+            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddPlayer();
+            }}
+            disabled={!newPlayerName.trim()}
+            className={cn(
+              'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center touch-manipulation',
+              newPlayerName.trim()
+                ? 'bg-pickle-500 hover:bg-pickle-600 active:bg-pickle-700 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+            )}
+            aria-label="Add player"
+          >
+            <UserPlus className="w-5 h-5" />
+          </button>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-amber-600 dark:text-amber-400">
+          Maximum of {maxPlayers} players reached
+        </p>
+      )}
 
       {/* Players List */}
       <div className="space-y-2">
@@ -950,6 +982,19 @@ function AddTeamsStep({
   addTeam: () => void;
   removeTeam: (id: string) => void;
 }) {
+  const player1InputRef = useRef<HTMLInputElement>(null);
+  const maxTeams = 10; // Reasonable maximum for team round robin
+
+  const handleAddTeam = () => {
+    if (newTeamPlayer1.trim() && newTeamPlayer2.trim() && teams.length < maxTeams) {
+      addTeam();
+      // Auto-focus first input after adding for quick entry of next team
+      setTimeout(() => {
+        player1InputRef.current?.focus();
+      }, 50);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -960,37 +1005,60 @@ function AddTeamsStep({
       </p>
 
       {/* Add Team Input */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Player 1"
-          value={newTeamPlayer1}
-          onChange={(e) => setNewTeamPlayer1(e.target.value)}
-          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-        />
-        <input
-          type="text"
-          placeholder="Player 2"
-          value={newTeamPlayer2}
-          onChange={(e) => setNewTeamPlayer2(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTeam())}
-          className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent"
-        />
-        <button
-          type="button"
-          onClick={addTeam}
-          disabled={!newTeamPlayer1.trim() || !newTeamPlayer2.trim()}
-          className={cn(
-            'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center',
-            newTeamPlayer1.trim() && newTeamPlayer2.trim()
-              ? 'bg-pickle-500 hover:bg-pickle-600 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-          )}
-          aria-label="Add team"
-        >
-          <UserPlus className="w-5 h-5" />
-        </button>
-      </div>
+      {teams.length < maxTeams ? (
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <input
+            ref={player1InputRef}
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            autoCapitalize="words"
+            placeholder="Player 1"
+            value={newTeamPlayer1}
+            onChange={(e) => setNewTeamPlayer1(e.target.value)}
+            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+          />
+          <input
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            autoCapitalize="words"
+            placeholder="Player 2"
+            value={newTeamPlayer2}
+            onChange={(e) => setNewTeamPlayer2(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAddTeam();
+              }
+            }}
+            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddTeam();
+            }}
+            disabled={!newTeamPlayer1.trim() || !newTeamPlayer2.trim()}
+            className={cn(
+              'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center touch-manipulation',
+              newTeamPlayer1.trim() && newTeamPlayer2.trim()
+                ? 'bg-pickle-500 hover:bg-pickle-600 active:bg-pickle-700 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+            )}
+            aria-label="Add team"
+          >
+            <UserPlus className="w-5 h-5" />
+          </button>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-amber-600 dark:text-amber-400">
+          Maximum of {maxTeams} teams reached
+        </p>
+      )}
 
       {/* Teams List */}
       <div className="space-y-2">
