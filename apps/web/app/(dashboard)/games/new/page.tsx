@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -11,7 +11,6 @@ import {
   Minus,
   X,
   Check,
-  UserPlus,
   AlertTriangle,
   Shield,
   CheckCircle,
@@ -123,10 +122,6 @@ export default function NewGamePage() {
     notes: '',
   });
 
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newTeamPlayer1, setNewTeamPlayer1] = useState('');
-  const [newTeamPlayer2, setNewTeamPlayer2] = useState('');
-
   const steps = STEPS[state.gameMode] as string[];
   const isLastStep = state.step === steps.length - 1;
   const isFirstStep = state.step === 0;
@@ -192,21 +187,49 @@ export default function NewGamePage() {
   ]);
 
   const handleNext = () => {
+    // When moving from step 0 (game type) to step 1 (add players/teams), initialize arrays
+    if (state.step === 0) {
+      if (state.gameMode === 'round-robin' && state.playerCount) {
+        // Initialize empty players array based on playerCount
+        const emptyPlayers: PlayerWithDupr[] = Array.from({ length: state.playerCount }, (_, i) => ({
+          id: `player-${i}`,
+          name: '',
+          hasDuprLinked: false,
+        }));
+        setState((prev) => ({ ...prev, roundRobinPlayers: emptyPlayers }));
+      }
+      if (state.gameMode === 'set-partner-round-robin' && state.teamCount) {
+        // Initialize empty teams array based on teamCount
+        const emptyTeams: TeamWithDupr[] = Array.from({ length: state.teamCount }, (_, i) => ({
+          id: `team-${i}`,
+          player1: { id: `team-${i}-p1`, name: '', hasDuprLinked: false },
+          player2: { id: `team-${i}-p2`, name: '', hasDuprLinked: false },
+        }));
+        setState((prev) => ({ ...prev, teams: emptyTeams }));
+      }
+    }
+
     if (state.step === 1) {
       // Generate matchups when moving from player/team selection to scores
       if (state.gameMode === 'round-robin') {
+        // Filter out players with empty names
+        const validPlayers = state.roundRobinPlayers.filter(p => p.name.trim());
         const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
-        if (state.roundRobinPlayers.length >= minPlayers) {
+        if (validPlayers.length >= minPlayers) {
           // Use singles or doubles generator based on format
           const result = state.gameFormat === 'singles'
-            ? generateSinglesRoundRobin(state.roundRobinPlayers)
-            : generateIndividualRoundRobin(state.roundRobinPlayers);
-          setState((prev) => ({ ...prev, roundRobinMatches: result.matches }));
+            ? generateSinglesRoundRobin(validPlayers)
+            : generateIndividualRoundRobin(validPlayers);
+          setState((prev) => ({ ...prev, roundRobinMatches: result.matches, roundRobinPlayers: validPlayers }));
         }
       }
-      if (state.gameMode === 'set-partner-round-robin' && state.teams.length >= 2) {
-        const result = generateTeamRoundRobin(state.teams);
-        setState((prev) => ({ ...prev, teamRoundRobinMatches: result.matches }));
+      if (state.gameMode === 'set-partner-round-robin') {
+        // Filter out incomplete teams
+        const validTeams = state.teams.filter(t => t.player1.name.trim() && t.player2.name.trim());
+        if (validTeams.length >= 2) {
+          const result = generateTeamRoundRobin(validTeams);
+          setState((prev) => ({ ...prev, teamRoundRobinMatches: result.matches, teams: validTeams }));
+        }
       }
     }
     setState((prev) => ({ ...prev, step: Math.min(prev.step + 1, steps.length - 1) }));
@@ -288,59 +311,30 @@ export default function NewGamePage() {
     });
   };
 
-  // Round robin player helpers
-  const addPlayer = () => {
-    if (newPlayerName.trim()) {
-      const player: PlayerWithDupr = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: newPlayerName.trim(),
-        hasDuprLinked: false, // Default to false, would be checked via API in real implementation
-      };
-      setState((prev) => ({
-        ...prev,
-        roundRobinPlayers: [...prev.roundRobinPlayers, player],
-      }));
-      setNewPlayerName('');
-    }
+  // Update player name at a specific index (for fixed input fields)
+  const updatePlayer = (index: number, name: string) => {
+    setState((prev) => {
+      const newPlayers = [...prev.roundRobinPlayers];
+      if (newPlayers[index]) {
+        newPlayers[index] = { ...newPlayers[index], name };
+      }
+      return { ...prev, roundRobinPlayers: newPlayers };
+    });
   };
 
-  const removePlayer = (playerId: string) => {
-    setState((prev) => ({
-      ...prev,
-      roundRobinPlayers: prev.roundRobinPlayers.filter((p) => p.id !== playerId),
-    }));
-  };
-
-  // Team helpers
-  const addTeam = () => {
-    if (newTeamPlayer1.trim() && newTeamPlayer2.trim()) {
-      const team: TeamWithDupr = {
-        id: Math.random().toString(36).substring(2, 9),
-        player1: {
-          id: Math.random().toString(36).substring(2, 9),
-          name: newTeamPlayer1.trim(),
-          hasDuprLinked: false, // Default to false, would be checked via API
-        },
-        player2: {
-          id: Math.random().toString(36).substring(2, 9),
-          name: newTeamPlayer2.trim(),
-          hasDuprLinked: false, // Default to false, would be checked via API
-        },
-      };
-      setState((prev) => ({
-        ...prev,
-        teams: [...prev.teams, team],
-      }));
-      setNewTeamPlayer1('');
-      setNewTeamPlayer2('');
-    }
-  };
-
-  const removeTeam = (teamId: string) => {
-    setState((prev) => ({
-      ...prev,
-      teams: prev.teams.filter((t) => t.id !== teamId),
-    }));
+  // Update team at a specific index (for fixed input fields)
+  const updateTeam = (index: number, player1Name: string, player2Name: string) => {
+    setState((prev) => {
+      const newTeams = [...prev.teams];
+      if (newTeams[index]) {
+        newTeams[index] = {
+          ...newTeams[index],
+          player1: { ...newTeams[index].player1, name: player1Name },
+          player2: { ...newTeams[index].player2, name: player2Name },
+        };
+      }
+      return { ...prev, teams: newTeams };
+    });
   };
 
   // Match score update
@@ -371,12 +365,15 @@ export default function NewGamePage() {
           return true; // Match details
         }
         if (state.gameMode === 'round-robin') {
-          // Singles needs at least 2 players, doubles needs at least 4
+          // All players must have names filled in, and meet minimum count
+          const filledPlayers = state.roundRobinPlayers.filter(p => p.name.trim());
           const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
-          return state.roundRobinPlayers.length >= minPlayers;
+          return filledPlayers.length >= minPlayers;
         }
         if (state.gameMode === 'set-partner-round-robin') {
-          return state.teams.length >= 2;
+          // All teams must have both players named, and at least 2 complete teams
+          const completeTeams = state.teams.filter(t => t.player1.name.trim() && t.player2.name.trim());
+          return completeTeams.length >= 2;
         }
         return false;
       default:
@@ -482,10 +479,8 @@ export default function NewGamePage() {
         {state.step === 1 && state.gameMode === 'round-robin' && (
           <AddPlayersStep
             players={state.roundRobinPlayers}
-            newPlayerName={newPlayerName}
-            setNewPlayerName={setNewPlayerName}
-            addPlayer={addPlayer}
-            removePlayer={removePlayer}
+            playerCount={state.playerCount ?? 4}
+            onUpdatePlayer={updatePlayer}
             gameFormat={state.gameFormat}
           />
         )}
@@ -493,12 +488,8 @@ export default function NewGamePage() {
         {state.step === 1 && state.gameMode === 'set-partner-round-robin' && (
           <AddTeamsStep
             teams={state.teams}
-            newTeamPlayer1={newTeamPlayer1}
-            newTeamPlayer2={newTeamPlayer2}
-            setNewTeamPlayer1={setNewTeamPlayer1}
-            setNewTeamPlayer2={setNewTeamPlayer2}
-            addTeam={addTeam}
-            removeTeam={removeTeam}
+            teamCount={state.teamCount ?? 3}
+            onUpdateTeam={updateTeam}
           />
         )}
 
@@ -849,268 +840,144 @@ function SingleMatchStep({
   );
 }
 
-// Add Players Step Component
+// Add Players Step Component - Shows fixed number of input fields based on playerCount
 function AddPlayersStep({
   players,
-  newPlayerName,
-  setNewPlayerName,
-  addPlayer,
-  removePlayer,
+  playerCount,
+  onUpdatePlayer,
   gameFormat,
 }: {
-  players: Player[];
-  newPlayerName: string;
-  setNewPlayerName: (name: string) => void;
-  addPlayer: () => void;
-  removePlayer: (id: string) => void;
+  players: PlayerWithDupr[];
+  playerCount: number;
+  onUpdatePlayer: (index: number, name: string) => void;
   gameFormat: GameFormat;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const minPlayers = gameFormat === 'singles' ? 2 : 4;
-  const maxPlayers = 20; // Reasonable maximum for round robin
   const description = gameFormat === 'singles'
-    ? `Add at least ${minPlayers} players for a singles round robin. Each player plays against every other player.`
-    : `Add at least ${minPlayers} players for a doubles round robin. Players will rotate partners each match.`;
+    ? `Enter names for all ${playerCount} players. Each player plays against every other player.`
+    : `Enter names for all ${playerCount} players. Players will rotate partners each match.`;
 
-  const handleAddPlayer = () => {
-    if (newPlayerName.trim() && players.length < maxPlayers) {
-      addPlayer();
-      // Auto-focus input after adding for quick entry of next player
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-    }
-  };
+  // Count how many players have names filled in
+  const filledCount = players.filter(p => p.name.trim()).length;
+  const allFilled = filledCount === playerCount;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Add Players
+        Name Your Players
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {description}
       </p>
 
-      {/* Add Player Input */}
-      {players.length < maxPlayers ? (
-        <div className="flex gap-2 mb-4">
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            autoCapitalize="words"
-            placeholder="Player name"
-            value={newPlayerName}
-            onChange={(e) => setNewPlayerName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.stopPropagation();
-                handleAddPlayer();
-              }
-            }}
-            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
-          />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleAddPlayer();
-            }}
-            disabled={!newPlayerName.trim()}
-            className={cn(
-              'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center touch-manipulation',
-              newPlayerName.trim()
-                ? 'bg-pickle-500 hover:bg-pickle-600 active:bg-pickle-700 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-            )}
-            aria-label="Add player"
-          >
-            <UserPlus className="w-5 h-5" />
-          </button>
-        </div>
-      ) : (
-        <p className="mb-4 text-sm text-amber-600 dark:text-amber-400">
-          Maximum of {maxPlayers} players reached
-        </p>
-      )}
-
-      {/* Players List */}
-      <div className="space-y-2">
-        {players.map((player, index) => (
-          <div
-            key={player.id}
-            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium">
-                {index + 1}
-              </span>
-              <span className="text-gray-900 dark:text-white">{player.name}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => removePlayer(player.id)}
-              className="min-w-[44px] min-h-[44px] p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center"
-              aria-label={`Remove ${player.name}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* Player Input Fields */}
+      <div className="space-y-3">
+        {Array.from({ length: playerCount }, (_, index) => (
+          <div key={index} className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium flex-shrink-0">
+              {index + 1}
+            </span>
+            <input
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              autoCapitalize="words"
+              placeholder={`Player ${index + 1}`}
+              value={players[index]?.name || ''}
+              onChange={(e) => onUpdatePlayer(index, e.target.value)}
+              className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+            />
           </div>
         ))}
       </div>
 
-      {players.length > 0 && players.length < minPlayers && (
-        <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
-          Add {minPlayers - players.length} more player{minPlayers - players.length > 1 ? 's' : ''} to start the tournament
-        </p>
-      )}
-
-      {players.length >= minPlayers && (
-        <p className="mt-4 text-sm text-pickle-600 dark:text-pickle-400">
-          Ready to generate matchups with {players.length} players!
-        </p>
-      )}
+      {/* Progress indicator */}
+      <div className="mt-4">
+        {!allFilled ? (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            {filledCount} of {playerCount} players named
+          </p>
+        ) : (
+          <p className="text-sm text-pickle-600 dark:text-pickle-400">
+            All {playerCount} players named - ready to continue!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-// Add Teams Step Component
+// Add Teams Step Component - Shows fixed number of team input fields based on teamCount
 function AddTeamsStep({
   teams,
-  newTeamPlayer1,
-  newTeamPlayer2,
-  setNewTeamPlayer1,
-  setNewTeamPlayer2,
-  addTeam,
-  removeTeam,
+  teamCount,
+  onUpdateTeam,
 }: {
-  teams: Team[];
-  newTeamPlayer1: string;
-  newTeamPlayer2: string;
-  setNewTeamPlayer1: (name: string) => void;
-  setNewTeamPlayer2: (name: string) => void;
-  addTeam: () => void;
-  removeTeam: (id: string) => void;
+  teams: TeamWithDupr[];
+  teamCount: number;
+  onUpdateTeam: (index: number, player1: string, player2: string) => void;
 }) {
-  const player1InputRef = useRef<HTMLInputElement>(null);
-  const maxTeams = 10; // Reasonable maximum for team round robin
-
-  const handleAddTeam = () => {
-    if (newTeamPlayer1.trim() && newTeamPlayer2.trim() && teams.length < maxTeams) {
-      addTeam();
-      // Auto-focus first input after adding for quick entry of next team
-      setTimeout(() => {
-        player1InputRef.current?.focus();
-      }, 50);
-    }
-  };
+  // Count how many teams are complete (both players named)
+  const completeCount = teams.filter(t => t.player1.name.trim() && t.player2.name.trim()).length;
+  const allComplete = completeCount === teamCount;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Add Teams
+        Name Your Teams
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Add at least 2 teams. Each team will play against every other team.
+        Enter both player names for each of the {teamCount} teams. Each team will play against every other team.
       </p>
 
-      {/* Add Team Input */}
-      {teams.length < maxTeams ? (
-        <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <input
-            ref={player1InputRef}
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            autoCapitalize="words"
-            placeholder="Player 1"
-            value={newTeamPlayer1}
-            onChange={(e) => setNewTeamPlayer1(e.target.value)}
-            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
-          />
-          <input
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            autoCapitalize="words"
-            placeholder="Player 2"
-            value={newTeamPlayer2}
-            onChange={(e) => setNewTeamPlayer2(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.stopPropagation();
-                handleAddTeam();
-              }
-            }}
-            className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
-          />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleAddTeam();
-            }}
-            disabled={!newTeamPlayer1.trim() || !newTeamPlayer2.trim()}
-            className={cn(
-              'min-w-[44px] min-h-[44px] px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center touch-manipulation',
-              newTeamPlayer1.trim() && newTeamPlayer2.trim()
-                ? 'bg-pickle-500 hover:bg-pickle-600 active:bg-pickle-700 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-            )}
-            aria-label="Add team"
-          >
-            <UserPlus className="w-5 h-5" />
-          </button>
-        </div>
-      ) : (
-        <p className="mb-4 text-sm text-amber-600 dark:text-amber-400">
-          Maximum of {maxTeams} teams reached
-        </p>
-      )}
-
-      {/* Teams List */}
-      <div className="space-y-2">
-        {teams.map((team, index) => (
-          <div
-            key={team.id}
-            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium">
+      {/* Team Input Fields */}
+      <div className="space-y-4">
+        {Array.from({ length: teamCount }, (_, index) => (
+          <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-8 h-8 rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex items-center justify-center text-sm font-medium flex-shrink-0">
                 {index + 1}
               </span>
-              <span className="text-gray-900 dark:text-white">
-                {team.player1.name} & {team.player2.name}
-              </span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Team {index + 1}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => removeTeam(team.id)}
-              className="min-w-[44px] min-h-[44px] p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center"
-              aria-label={`Remove team ${team.player1.name} & ${team.player2.name}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="words"
+                placeholder="Player 1"
+                value={teams[index]?.player1.name || ''}
+                onChange={(e) => onUpdateTeam(index, e.target.value, teams[index]?.player2.name || '')}
+                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+              />
+              <span className="hidden sm:flex items-center text-gray-400 dark:text-gray-500">&</span>
+              <input
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="words"
+                placeholder="Player 2"
+                value={teams[index]?.player2.name || ''}
+                onChange={(e) => onUpdateTeam(index, teams[index]?.player1.name || '', e.target.value)}
+                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-pickle-500 focus:border-transparent touch-manipulation"
+              />
+            </div>
           </div>
         ))}
       </div>
 
-      {teams.length > 0 && teams.length < 2 && (
-        <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
-          Add {2 - teams.length} more team{2 - teams.length > 1 ? 's' : ''} to start the tournament
-        </p>
-      )}
-
-      {teams.length >= 2 && (
-        <p className="mt-4 text-sm text-pickle-600 dark:text-pickle-400">
-          Ready to generate matchups with {teams.length} teams!
-        </p>
-      )}
+      {/* Progress indicator */}
+      <div className="mt-4">
+        {!allComplete ? (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            {completeCount} of {teamCount} teams complete
+          </p>
+        ) : (
+          <p className="text-sm text-pickle-600 dark:text-pickle-400">
+            All {teamCount} teams complete - ready to continue!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
