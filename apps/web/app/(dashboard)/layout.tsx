@@ -17,6 +17,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { useNotifications } from '@/hooks/use-notifications';
 import { NotificationDropdown } from '@/components/notifications';
+import { InstallPrompt } from '@/components/pwa';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -208,6 +209,9 @@ export default function DashboardLayout({
 
         {/* Page content */}
         <main id="main-content" className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">{children}</main>
+
+        {/* PWA Install Prompt */}
+        <InstallPrompt />
 
         {/* Mobile Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-bottom">

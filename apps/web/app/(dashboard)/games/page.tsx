@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Filter, Calendar, Trophy, TrendingUp, ChevronDown, Loader2, AlertCircle, Gamepad2 } from 'lucide-react';
+import { Plus, Filter, Calendar, Trophy, TrendingUp, ChevronDown, AlertCircle, Loader2 } from 'lucide-react';
 import { useGames } from '@/hooks/use-api';
 import { useState } from 'react';
+import { NoGames } from '@/components/empty-states';
+import { GameListSkeleton } from '@/components/skeletons';
 
 // Type definitions for API response
 interface GameParticipant {
@@ -136,14 +138,7 @@ export default function GamesPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12">
-          <div className="flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 text-pickle-500 animate-spin mb-4" />
-            <p className="text-gray-600 dark:text-gray-300">Loading your games...</p>
-          </div>
-        </div>
-      )}
+      {isLoading && <GameListSkeleton />}
 
       {/* Error State */}
       {isError && (
@@ -169,28 +164,7 @@ export default function GamesPage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && !isError && games.length === 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12">
-          <div className="flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-pickle-100 dark:bg-pickle-900/30 flex items-center justify-center mb-4">
-              <Gamepad2 className="w-8 h-8 text-pickle-600 dark:text-pickle-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No games yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md">
-              Start tracking your pickleball journey! Log your first game to see your stats, track your progress, and improve your game.
-            </p>
-            <Link
-              href="/games/new"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Log Your First Game
-            </Link>
-          </div>
-        </div>
-      )}
+      {!isLoading && !isError && games.length === 0 && <NoGames />}
 
       {/* Games List */}
       {!isLoading && !isError && games.length > 0 && (

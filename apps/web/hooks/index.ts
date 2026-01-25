@@ -91,3 +91,6 @@ export type {
   UseNotificationsReturn,
   UseUnreadCountReturn,
 } from './use-notifications';
+
+// PWA hooks
+export { usePWAInstall, useIsStandalone } from './use-pwa-install';

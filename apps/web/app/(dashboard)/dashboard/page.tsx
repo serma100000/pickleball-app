@@ -10,20 +10,26 @@ import {
   Activity,
   Plus,
   Gamepad2,
+  MapPin,
+  Search,
 } from 'lucide-react';
 
-import { useAuth, useRecentGames, useUserStats, useLeagues } from '@/hooks';
+import { useAuth, useRecentGames, useUserStats, useLeagues, useUpcomingTournaments } from '@/hooks';
 
 // Types for API responses
 interface UserStats {
   gamesPlayed: number;
   gamesPlayedThisWeek?: number;
+  wins: number;
+  losses: number;
   winRate: number;
   winRateChange?: number;
   skillRating: number;
   skillRatingChange?: number;
   playingPartners: number;
   newPartnersThisMonth?: number;
+  tournamentsParticipated: number;
+  tournamentsThisYear?: number;
 }
 
 interface Game {
@@ -63,6 +69,27 @@ interface LeaguesResponse {
   total: number;
 }
 
+interface Tournament {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  location?: string;
+  venue?: string;
+  registrationDeadline?: string;
+  status: 'draft' | 'registration' | 'active' | 'completed' | 'cancelled';
+  currentParticipants: number;
+  maxParticipants: number;
+  entryFee?: number;
+  isUserRegistered?: boolean;
+}
+
+interface TournamentsResponse {
+  tournaments: Tournament[];
+  total: number;
+}
+
 export default function DashboardPage() {
   const { profile, fullName, isLoaded: isAuthLoaded } = useAuth();
 
@@ -87,13 +114,22 @@ export default function DashboardPage() {
     error: leaguesError,
   } = useLeagues({ limit: 5 });
 
+  // Fetch upcoming tournaments
+  const {
+    data: tournamentsResponse,
+    isLoading: isTournamentsLoading,
+    error: tournamentsError,
+  } = useUpcomingTournaments();
+
   // Type the responses
   const typedStats = stats as UserStats | undefined;
   const typedGamesResponse = gamesResponse as GamesResponse | undefined;
   const typedLeaguesResponse = leaguesResponse as LeaguesResponse | undefined;
+  const typedTournamentsResponse = tournamentsResponse as TournamentsResponse | undefined;
 
   const games = typedGamesResponse?.data || [];
   const leagues = typedLeaguesResponse?.leagues || [];
+  const tournaments = typedTournamentsResponse?.tournaments || [];
 
   // Format relative date
   const formatRelativeDate = (dateString: string): string => {
@@ -144,7 +180,7 @@ export default function DashboardPage() {
             {getGreeting()}, {displayName}!
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Here&apos;s what&apos;s happening in your pickleball world
+            Here&apos;s your Paddle Up dashboard
           </p>
         </div>
         <Link
@@ -170,7 +206,7 @@ export default function DashboardPage() {
           // Error state - show zeros
           <>
             <StatCard
-              icon={<Trophy className="w-5 h-5" />}
+              icon={<Gamepad2 className="w-5 h-5" />}
               label="Games Played"
               value="0"
               change="Start playing!"
@@ -178,8 +214,8 @@ export default function DashboardPage() {
             />
             <StatCard
               icon={<TrendingUp className="w-5 h-5" />}
-              label="Win Rate"
-              value="--"
+              label="Win/Loss"
+              value="0-0"
               change="Play a game"
               trend="neutral"
             />
@@ -191,10 +227,10 @@ export default function DashboardPage() {
               trend="neutral"
             />
             <StatCard
-              icon={<Users className="w-5 h-5" />}
-              label="Playing Partners"
+              icon={<Trophy className="w-5 h-5" />}
+              label="Tournaments"
               value="0"
-              change="Find partners"
+              change="Join a tournament"
               trend="neutral"
             />
           </>
@@ -202,7 +238,7 @@ export default function DashboardPage() {
           // Real data
           <>
             <StatCard
-              icon={<Trophy className="w-5 h-5" />}
+              icon={<Gamepad2 className="w-5 h-5" />}
               label="Games Played"
               value={String(typedStats?.gamesPlayed || 0)}
               change={typedStats?.gamesPlayedThisWeek
@@ -212,13 +248,13 @@ export default function DashboardPage() {
             />
             <StatCard
               icon={<TrendingUp className="w-5 h-5" />}
-              label="Win Rate"
+              label="Win/Loss"
               value={typedStats?.gamesPlayed && typedStats.gamesPlayed > 0
-                ? `${Math.round(typedStats.winRate * 100)}%`
-                : '--'}
-              change={typedStats?.winRateChange
-                ? `${typedStats.winRateChange > 0 ? '+' : ''}${Math.round(typedStats.winRateChange * 100)}% this month`
-                : 'Play more to track'}
+                ? `${typedStats.wins || 0}-${typedStats.losses || 0}`
+                : '0-0'}
+              change={typedStats?.gamesPlayed && typedStats.gamesPlayed > 0
+                ? `${Math.round((typedStats.winRate || 0) * 100)}% win rate`
+                : 'Play to track'}
               trend={typedStats?.winRateChange && typedStats.winRateChange > 0 ? 'up' :
                      typedStats?.winRateChange && typedStats.winRateChange < 0 ? 'down' : 'neutral'}
             />
@@ -233,54 +269,54 @@ export default function DashboardPage() {
                      typedStats?.skillRatingChange && typedStats.skillRatingChange < 0 ? 'down' : 'neutral'}
             />
             <StatCard
-              icon={<Users className="w-5 h-5" />}
-              label="Playing Partners"
-              value={String(typedStats?.playingPartners || 0)}
-              change={typedStats?.newPartnersThisMonth
-                ? `${typedStats.newPartnersThisMonth} new this month`
-                : 'Invite friends'}
-              trend={typedStats?.newPartnersThisMonth && typedStats.newPartnersThisMonth > 0 ? 'up' : 'neutral'}
+              icon={<Trophy className="w-5 h-5" />}
+              label="Tournaments"
+              value={String(typedStats?.tournamentsParticipated || 0)}
+              change={typedStats?.tournamentsThisYear
+                ? `${typedStats.tournamentsThisYear} this year`
+                : 'Join a tournament'}
+              trend={typedStats?.tournamentsThisYear && typedStats.tournamentsThisYear > 0 ? 'up' : 'neutral'}
             />
           </>
         )}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <QuickActionCard
           href="/games/new"
-          icon={<Trophy className="w-6 h-6" />}
+          icon={<Plus className="w-6 h-6" />}
           title="Log Game"
           description="Record your latest match"
           color="pickle"
         />
         <QuickActionCard
-          href="/games"
-          icon={<Gamepad2 className="w-6 h-6" />}
-          title="Game History"
-          description="View past matches"
+          href="/tournaments/new"
+          icon={<Trophy className="w-6 h-6" />}
+          title="Create Tournament"
+          description="Organize a competition"
           color="ball"
+        />
+        <QuickActionCard
+          href="/tournaments"
+          icon={<Search className="w-6 h-6" />}
+          title="Browse Tournaments"
+          description="Find events near you"
+          color="court"
         />
         <QuickActionCard
           href="/leagues"
           icon={<Users className="w-6 h-6" />}
-          title="Leagues"
-          description="Join organized play"
-          color="court"
-        />
-        <QuickActionCard
-          href="/leagues/new"
-          icon={<Calendar className="w-6 h-6" />}
-          title="Create League"
-          description="Start your own league"
+          title="Join League"
+          description="Weekly organized play"
           color="pickle"
         />
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Games */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-white">
               Recent Games
@@ -302,7 +338,7 @@ export default function DashboardPage() {
             </div>
           ) : gamesError ? (
             <EmptyState
-              icon={<Trophy className="w-12 h-12" />}
+              icon={<Gamepad2 className="w-12 h-12" />}
               title="Couldn't load games"
               description="There was an error loading your recent games."
               action={
@@ -316,7 +352,7 @@ export default function DashboardPage() {
             />
           ) : games.length === 0 ? (
             <EmptyState
-              icon={<Trophy className="w-12 h-12" />}
+              icon={<Gamepad2 className="w-12 h-12" />}
               title="No games yet"
               description="Log your first game to start tracking your progress!"
               action={
@@ -345,6 +381,68 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Upcoming Tournaments */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-gray-900 dark:text-white">
+              Upcoming Tournaments
+            </h2>
+            <Link
+              href="/tournaments"
+              className="text-sm text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 dark:hover:text-pickle-300 flex items-center gap-1"
+            >
+              View all
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {isTournamentsLoading ? (
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              <TournamentRowSkeleton />
+              <TournamentRowSkeleton />
+              <TournamentRowSkeleton />
+            </div>
+          ) : tournamentsError ? (
+            <EmptyState
+              icon={<Trophy className="w-12 h-12" />}
+              title="Couldn't load tournaments"
+              description="There was an error loading tournaments."
+              action={
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-pickle-600 hover:text-pickle-700 dark:text-pickle-400 font-medium"
+                >
+                  Try again
+                </button>
+              }
+            />
+          ) : tournaments.length === 0 ? (
+            <EmptyState
+              icon={<Trophy className="w-12 h-12" />}
+              title="No upcoming tournaments"
+              description="Check back later or create your own tournament!"
+              action={
+                <Link
+                  href="/tournaments/new"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Tournament
+                </Link>
+              }
+            />
+          ) : (
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {tournaments.slice(0, 4).map((tournament) => (
+                <TournamentRow key={tournament.id} tournament={tournament} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Secondary Content Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* My Leagues */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -361,7 +459,7 @@ export default function DashboardPage() {
           </div>
 
           {isLeaguesLoading ? (
-            <div className="p-4 space-y-3">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               <LeagueRowSkeleton />
               <LeagueRowSkeleton />
             </div>
@@ -383,7 +481,7 @@ export default function DashboardPage() {
             <EmptyState
               icon={<Users className="w-12 h-12" />}
               title="No leagues yet"
-              description="Join a league to compete against other players in organized play."
+              description="Join a league to compete in organized play."
               action={
                 <Link
                   href="/leagues"
@@ -400,6 +498,35 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Quick Tips / Getting Started */}
+        <div className="bg-gradient-to-br from-pickle-50 to-ball-50 dark:from-pickle-900/20 dark:to-ball-900/20 rounded-xl shadow-sm border border-pickle-200 dark:border-pickle-800">
+          <div className="p-4 border-b border-pickle-200 dark:border-pickle-800">
+            <h2 className="font-semibold text-gray-900 dark:text-white">
+              Get More from Paddle Up
+            </h2>
+          </div>
+          <div className="p-4 space-y-3">
+            <TipCard
+              icon={<Gamepad2 className="w-5 h-5" />}
+              title="Track Your Progress"
+              description="Log games after each match to see your improvement over time."
+              href="/games/new"
+            />
+            <TipCard
+              icon={<Trophy className="w-5 h-5" />}
+              title="Compete in Tournaments"
+              description="Join local tournaments to challenge yourself and meet players."
+              href="/tournaments"
+            />
+            <TipCard
+              icon={<Users className="w-5 h-5" />}
+              title="Find Your Crew"
+              description="Connect with players at your skill level through leagues."
+              href="/leagues"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -647,5 +774,132 @@ function LeagueRowSkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+function TournamentRow({ tournament }: { tournament: Tournament }) {
+  const statusColors: Record<string, string> = {
+    registration: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    completed: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+    cancelled: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  };
+
+  const statusLabels: Record<string, string> = {
+    registration: 'Open',
+    active: 'In Progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    draft: 'Coming Soon',
+  };
+
+  const formatTournamentDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const getSpotsText = () => {
+    const available = tournament.maxParticipants - tournament.currentParticipants;
+    if (available <= 0) return 'Full';
+    if (available <= 5) return `${available} spots left`;
+    return `${tournament.currentParticipants}/${tournament.maxParticipants}`;
+  };
+
+  return (
+    <Link href={`/tournaments/${tournament.id}`}>
+      <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <p className="font-medium text-gray-900 dark:text-white truncate">
+                {tournament.name}
+              </p>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${statusColors[tournament.status] || statusColors.registration}`}
+              >
+                {statusLabels[tournament.status] || tournament.status}
+              </span>
+              {tournament.isUserRegistered && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-pickle-100 text-pickle-700 dark:bg-pickle-900/30 dark:text-pickle-400">
+                  Registered
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {formatTournamentDate(tournament.startDate)}
+              </span>
+              {tournament.location && (
+                <span className="flex items-center gap-1 truncate">
+                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{tournament.location}</span>
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                {getSpotsText()}
+              </span>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function TournamentRowSkeleton() {
+  return (
+    <div className="p-4 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TipCard({
+  icon,
+  title,
+  description,
+  href,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-start gap-3 p-3 rounded-lg bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 transition-colors"
+    >
+      <div className="p-2 rounded-lg bg-pickle-100 dark:bg-pickle-900/30 text-pickle-600 dark:text-pickle-400 flex-shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <h3 className="font-medium text-gray-900 dark:text-white text-sm">
+          {title}
+        </h3>
+        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+          {description}
+        </p>
+      </div>
+    </Link>
   );
 }

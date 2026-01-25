@@ -7,16 +7,16 @@ import {
   Filter,
   Users,
   MapPin,
-  Trophy,
   Clock,
   ChevronRight,
-  Loader2,
   AlertCircle,
   Award,
   TrendingUp,
   Star,
 } from 'lucide-react';
 import { useLeagues } from '@/hooks/use-api';
+import { LeagueListSkeleton } from '@/components/skeletons';
+import { NoLeagues, NoLeaguesFiltered } from '@/components/empty-states';
 
 // Type definitions for API response
 type LeagueType = 'ladder' | 'round_robin' | 'doubles' | 'mixed_doubles' | 'singles';
@@ -128,25 +128,25 @@ export default function LeaguesPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400">Total Leagues</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : total}
+            {isLoading ? <span className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" /> : total}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400">My Leagues</div>
           <div className="text-2xl font-bold text-pickle-600 dark:text-pickle-400 mt-1">
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : myLeaguesCount}
+            {isLoading ? <span className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" /> : myLeaguesCount}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400">Active Now</div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : activeCount}
+            {isLoading ? <span className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" /> : activeCount}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400">Best Finish</div>
           <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '--'}
+            {isLoading ? <span className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" /> : '--'}
           </div>
         </div>
       </div>
@@ -176,14 +176,7 @@ export default function LeaguesPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12">
-          <div className="flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 text-pickle-500 animate-spin mb-4" />
-            <p className="text-gray-600 dark:text-gray-300">Loading leagues...</p>
-          </div>
-        </div>
-      )}
+      {isLoading && <LeagueListSkeleton />}
 
       {/* Error State */}
       {isError && (
@@ -210,37 +203,25 @@ export default function LeaguesPage() {
 
       {/* Empty State */}
       {!isLoading && !isError && displayedLeagues.length === 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12">
-          <div className="flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-pickle-100 dark:bg-pickle-900/30 flex items-center justify-center mb-4">
-              <Trophy className="w-8 h-8 text-pickle-600 dark:text-pickle-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {activeTab === 'my-leagues' ? 'No leagues joined yet' : 'No leagues found'}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md">
-              {activeTab === 'my-leagues'
-                ? 'Join a league to compete against other players in organized play. Browse available leagues to get started.'
-                : 'No leagues match your current filters. Try adjusting your filters or create a new league.'}
-            </p>
-            {activeTab === 'my-leagues' ? (
-              <button
-                onClick={() => setActiveTab('all')}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
-              >
-                Browse Leagues
-              </button>
-            ) : (
-              <Link
-                href="/leagues/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create League
-              </Link>
-            )}
-          </div>
-        </div>
+        activeTab === 'my-leagues' ? (
+          <NoLeagues
+            context="joined"
+            onBrowse={() => {
+              setActiveTab('all');
+              setPage(1);
+            }}
+          />
+        ) : activeTab === 'all' ? (
+          <NoLeagues context="browse" />
+        ) : (
+          <NoLeaguesFiltered
+            filterLabel={tabs.find(t => t.key === activeTab)?.label || activeTab}
+            onClearFilter={() => {
+              setActiveTab('all');
+              setPage(1);
+            }}
+          />
+        )
       )}
 
       {/* Leagues Grid */}
