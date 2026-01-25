@@ -110,6 +110,11 @@ export function Header({ onMenuClick, showSearch = true }: HeaderProps) {
             appearance={{
               elements: {
                 avatarBox: 'w-9 h-9',
+                userButtonPopoverCard: 'dark:bg-gray-800 dark:border-gray-700',
+                userButtonPopoverActionButton: 'dark:text-gray-200 dark:hover:bg-gray-700',
+                userButtonPopoverActionButtonText: 'dark:text-gray-200',
+                userButtonPopoverActionButtonIcon: 'dark:text-gray-400',
+                userButtonPopoverFooter: 'dark:bg-gray-800 dark:border-gray-700',
               },
             }}
             afterSignOutUrl="/"
