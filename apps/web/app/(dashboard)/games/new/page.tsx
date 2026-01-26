@@ -1040,7 +1040,7 @@ function EnterScoresStep({
   updateMatchScore: (matchId: string, team: 'team1' | 'team2', value: number) => void;
   allPlayers?: { id: string; name: string }[];
 }) {
-  const [currentRoundIndex, setCurrentRoundIndex] = React.useState(0);
+  const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
   const totalRounds = rounds.length;
   const currentRound = rounds[currentRoundIndex] ?? 1;
