@@ -196,7 +196,8 @@ export default function NewGamePage() {
           name: '',
           hasDuprLinked: false,
         }));
-        setState((prev) => ({ ...prev, roundRobinPlayers: emptyPlayers }));
+        setState((prev) => ({ ...prev, roundRobinPlayers: emptyPlayers, step: prev.step + 1 }));
+        return; // Exit early since we've already incremented step
       }
       if (state.gameMode === 'set-partner-round-robin' && state.teamCount) {
         // Initialize empty teams array based on teamCount
@@ -205,7 +206,8 @@ export default function NewGamePage() {
           player1: { id: `team-${i}-p1`, name: '', hasDuprLinked: false },
           player2: { id: `team-${i}-p2`, name: '', hasDuprLinked: false },
         }));
-        setState((prev) => ({ ...prev, teams: emptyTeams }));
+        setState((prev) => ({ ...prev, teams: emptyTeams, step: prev.step + 1 }));
+        return; // Exit early since we've already incremented step
       }
     }
 
@@ -222,7 +224,14 @@ export default function NewGamePage() {
           const result = state.gameFormat === 'singles'
             ? generateSinglesRoundRobin(validPlayers, options)
             : generateIndividualRoundRobin(validPlayers, options);
-          setState((prev) => ({ ...prev, roundRobinMatches: result.matches, roundRobinPlayers: validPlayers }));
+          // Combine state updates into single setState to avoid race condition
+          setState((prev) => ({
+            ...prev,
+            roundRobinMatches: result.matches,
+            roundRobinPlayers: validPlayers,
+            step: prev.step + 1,
+          }));
+          return; // Exit early since we've already incremented step
         }
       }
       if (state.gameMode === 'set-partner-round-robin') {
@@ -232,7 +241,14 @@ export default function NewGamePage() {
           // Pass maxRounds to limit the number of rounds generated
           const options = { maxRounds: state.numberOfRounds };
           const result = generateTeamRoundRobin(validTeams, options);
-          setState((prev) => ({ ...prev, teamRoundRobinMatches: result.matches, teams: validTeams }));
+          // Combine state updates into single setState to avoid race condition
+          setState((prev) => ({
+            ...prev,
+            teamRoundRobinMatches: result.matches,
+            teams: validTeams,
+            step: prev.step + 1,
+          }));
+          return; // Exit early since we've already incremented step
         }
       }
     }
