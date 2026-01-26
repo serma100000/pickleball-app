@@ -1045,17 +1045,6 @@ function EnterScoresStep({
                 className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex flex-col gap-3">
-                  {/* Labels Row */}
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide">
-                    <span className="text-pickle-600 dark:text-pickle-400 flex-1 text-center sm:text-right sm:pr-4">
-                      {singlesMode ? 'Player A' : 'Team A'}
-                    </span>
-                    <div className="w-[180px]" /> {/* Spacer for score inputs */}
-                    <span className="text-gray-500 dark:text-gray-400 flex-1 text-center sm:text-left sm:pl-4">
-                      {singlesMode ? 'Player B' : 'Team B'}
-                    </span>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Side 1 */}
                     <div className="flex-1 text-center sm:text-right">
@@ -1290,26 +1279,36 @@ function ReviewStep({
               {rounds.map((round) => (
                 <div key={round}>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Round {round}</p>
-                  {matchesByRound.get(round)?.map((match) => (
-                    <div
-                      key={match.id}
-                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded mb-1 text-sm"
-                    >
-                      <span className="truncate flex-1 text-gray-900 dark:text-white">
-                        {match.team1
-                          ? `${match.team1.player1.name} & ${match.team1.player2.name}`
-                          : 'Team 1'}
-                      </span>
-                      <span className="px-3 font-mono font-medium text-gray-900 dark:text-white">
-                        {match.score.team1} - {match.score.team2}
-                      </span>
-                      <span className="truncate flex-1 text-right text-gray-900 dark:text-white">
-                        {match.team2
-                          ? `${match.team2.player1.name} & ${match.team2.player2.name}`
-                          : 'Team 2'}
-                      </span>
-                    </div>
-                  ))}
+                  {matchesByRound.get(round)?.map((match) => {
+                    // Get participant names - handle singles (player1/player2) and doubles (team1/team2)
+                    const side1Name = match.player1
+                      ? match.player1.name
+                      : match.team1
+                        ? `${match.team1.player1.name} & ${match.team1.player2.name}`
+                        : 'Unknown';
+                    const side2Name = match.player2
+                      ? match.player2.name
+                      : match.team2
+                        ? `${match.team2.player1.name} & ${match.team2.player2.name}`
+                        : 'Unknown';
+
+                    return (
+                      <div
+                        key={match.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded mb-1 text-sm"
+                      >
+                        <span className="truncate flex-1 text-gray-900 dark:text-white">
+                          {side1Name}
+                        </span>
+                        <span className="px-3 font-mono font-medium text-gray-900 dark:text-white">
+                          {match.score.team1} - {match.score.team2}
+                        </span>
+                        <span className="truncate flex-1 text-right text-gray-900 dark:text-white">
+                          {side2Name}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>

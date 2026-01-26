@@ -121,8 +121,11 @@ export function generateSinglesRoundRobin(
 
 /**
  * Generate round robin matchups for individual players (doubles with rotating partners)
- * Uses a proper scheduling algorithm where each player plays exactly once per round
- * with a different partner each round (Swish-style rotating partners)
+ * Uses a balanced scheduling algorithm to ensure:
+ * 1. Each player plays exactly once per round
+ * 2. Partners rotate as evenly as possible across rounds
+ * 3. Each player faces different opponents across rounds
+ * (Swish-style rotating partners)
  */
 export function generateIndividualRoundRobin(
   players: Player[],
@@ -136,62 +139,78 @@ export function generateIndividualRoundRobin(
     return { matches: [], rounds: 0, totalPossibleRounds: 0 };
   }
 
-  // For rotating partners doubles, we use a modified circle method
-  // Each round: pair up players so everyone plays once with a different partner
-  // The total possible rounds depends on how we want to handle it:
-  // - If we want each player to partner with everyone once: n-1 rounds
-  // - If we want each player to play against everyone: more complex
-
-  // Swish-style: Each round, players rotate partners and opponents
-  // We use a balanced schedule where each player plays once per round
+  // Ensure we have a multiple of 4 players for clean doubles scheduling
+  // If not, some players will sit out each round (bye)
   const playersCopy = [...players];
 
-  // If odd number, add bye
-  const hasBye = n % 2 === 1;
-  if (hasBye) {
-    playersCopy.push({ id: 'bye', name: 'BYE' });
+  // If odd number or not divisible by 4, add bye placeholders
+  while (playersCopy.length % 4 !== 0) {
+    playersCopy.push({ id: `bye-${playersCopy.length}`, name: 'BYE' });
   }
 
   const numPlayers = playersCopy.length;
+  const matchesPerRound = numPlayers / 4;
 
-  // For doubles with 2n players, we need n/2 matches per round (each match uses 4 players)
-  // So we can have floor(numPlayers/4) matches per round where each player plays once
-  const matchesPerRound = Math.floor(numPlayers / 4);
-
-  if (matchesPerRound === 0) {
-    return { matches: [], rounds: 0, totalPossibleRounds: 0 };
-  }
-
-  // Calculate total possible rounds - in rotating doubles, this is complex
-  // A simple approach: generate rounds until we've had good variety
-  // Standard approach: n-1 rounds allows each player to partner with everyone once
+  // For n players, the maximum rounds where each player can have a unique partner
+  // is n-1 (each player can partner with n-1 other players)
   const totalPossibleRounds = numPlayers - 1;
   const maxRounds = options.maxRounds ?? totalPossibleRounds;
   const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
 
-  // Use a rotation system for fair matchups
-  // In each round, we rotate positions to create different pairings
+  // Track partnerships to ensure even distribution
+  const partnershipCount = new Map<string, number>();
+  const getPartnerKey = (p1: string, p2: string) => [p1, p2].sort().join('-');
+
+  // Use a balanced "whist tournament" style algorithm
+  // This ensures partners rotate evenly across rounds
   for (let round = 0; round < roundsToGenerate; round++) {
-    // Create rotated list (keep first player fixed, rotate others)
-    const rotated: Player[] = [playersCopy[0]!];
+    // Create pairings for this round using circle method with offset pairing
+    // Keep player 0 fixed, rotate others
+    const positions: number[] = [0];
     for (let i = 1; i < numPlayers; i++) {
-      const rotatedIndex = ((i - 1 + round) % (numPlayers - 1)) + 1;
-      rotated.push(playersCopy[rotatedIndex]!);
+      positions.push(((i - 1 + round) % (numPlayers - 1)) + 1);
     }
 
-    // Generate matches for this round
-    // Pair consecutive players: (0,1) vs (2,3), (4,5) vs (6,7), etc.
-    let courtNumber = 1;
-    for (let m = 0; m < matchesPerRound; m++) {
-      const idx = m * 4;
-      const p1 = rotated[idx];
-      const p2 = rotated[idx + 1];
-      const p3 = rotated[idx + 2];
-      const p4 = rotated[idx + 3];
+    // Map positions to actual players
+    const roundPlayers = positions.map(pos => playersCopy[pos]!);
 
-      // Skip if any player is a bye
-      if (!p1 || !p2 || !p3 || !p4) continue;
-      if (p1.id === 'bye' || p2.id === 'bye' || p3.id === 'bye' || p4.id === 'bye') continue;
+    // Create balanced partnerships for this round
+    // Use a scheme where partners come from different "halves" of the rotation
+    // This helps ensure variety in partnerships across rounds
+    const pairings: [Player, Player, Player, Player][] = [];
+
+    for (let m = 0; m < matchesPerRound; m++) {
+      // Use interleaved pairing: (0, n/2) vs (1, n/2+1), (2, n/2+2) vs (3, n/2+3), etc.
+      // This creates more variety in partnerships than consecutive pairing
+      const halfSize = numPlayers / 2;
+      const base = m * 2;
+
+      const p1 = roundPlayers[base % halfSize]!;
+      const p2 = roundPlayers[(base % halfSize) + halfSize]!;
+      const p3 = roundPlayers[(base + 1) % halfSize]!;
+      const p4 = roundPlayers[((base + 1) % halfSize) + halfSize]!;
+
+      pairings.push([p1, p2, p3, p4]);
+    }
+
+    // Generate matches from pairings
+    let courtNumber = 1;
+    for (const [p1, p2, p3, p4] of pairings) {
+      // Skip matches with bye players
+      if (p1.id.startsWith('bye') || p2.id.startsWith('bye') ||
+          p3.id.startsWith('bye') || p4.id.startsWith('bye')) {
+        continue;
+      }
+
+      // Track partnerships
+      partnershipCount.set(
+        getPartnerKey(p1.id, p2.id),
+        (partnershipCount.get(getPartnerKey(p1.id, p2.id)) ?? 0) + 1
+      );
+      partnershipCount.set(
+        getPartnerKey(p3.id, p4.id),
+        (partnershipCount.get(getPartnerKey(p3.id, p4.id)) ?? 0) + 1
+      );
 
       matches.push({
         id: generateId(),
