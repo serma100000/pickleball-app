@@ -129,11 +129,22 @@ export default function NewGamePage() {
   // Generate matchups when players/teams change
   const matchesByRound = useMemo(() => {
     if (state.gameMode === 'round-robin' && state.roundRobinMatches.length > 0) {
-      return getMatchesByRound(state.roundRobinMatches);
+      const result = getMatchesByRound(state.roundRobinMatches);
+      console.log('[DEBUG matchesByRound] round-robin mode:');
+      console.log('  - roundRobinMatches count:', state.roundRobinMatches.length);
+      console.log('  - rounds in map:', Array.from(result.keys()));
+      console.log('  - first match sample:', state.roundRobinMatches[0]);
+      return result;
     }
     if (state.gameMode === 'set-partner-round-robin' && state.teamRoundRobinMatches.length > 0) {
-      return getMatchesByRound(state.teamRoundRobinMatches);
+      const result = getMatchesByRound(state.teamRoundRobinMatches);
+      console.log('[DEBUG matchesByRound] set-partner mode:');
+      console.log('  - teamRoundRobinMatches count:', state.teamRoundRobinMatches.length);
+      console.log('  - rounds in map:', Array.from(result.keys()));
+      console.log('  - first match sample:', state.teamRoundRobinMatches[0]);
+      return result;
     }
+    console.log('[DEBUG matchesByRound] returning empty map, gameMode:', state.gameMode);
     return new Map<number, Match[]>();
   }, [state.gameMode, state.roundRobinMatches, state.teamRoundRobinMatches]);
 
@@ -217,6 +228,11 @@ export default function NewGamePage() {
         // Filter out players with empty names
         const validPlayers = state.roundRobinPlayers.filter(p => p.name.trim());
         const minPlayers = state.gameFormat === 'singles' ? 2 : 4;
+        console.log('[DEBUG handleNext] round-robin generation:');
+        console.log('  - validPlayers:', validPlayers.map(p => p.name));
+        console.log('  - gameFormat:', state.gameFormat);
+        console.log('  - minPlayers required:', minPlayers);
+        console.log('  - numberOfRounds:', state.numberOfRounds);
         if (validPlayers.length >= minPlayers) {
           // Use singles or doubles generator based on format
           // Pass maxRounds to limit the number of rounds generated
@@ -224,6 +240,10 @@ export default function NewGamePage() {
           const result = state.gameFormat === 'singles'
             ? generateSinglesRoundRobin(validPlayers, options)
             : generateIndividualRoundRobin(validPlayers, options);
+          console.log('[DEBUG handleNext] generation result:');
+          console.log('  - matches count:', result.matches.length);
+          console.log('  - rounds:', result.rounds);
+          console.log('  - first match:', result.matches[0]);
           // Combine state updates into single setState to avoid race condition
           setState((prev) => ({
             ...prev,
@@ -518,6 +538,14 @@ export default function NewGamePage() {
           <EnterScoresStep
             matchesByRound={matchesByRound}
             updateMatchScore={updateMatchScore}
+            allPlayers={
+              state.gameMode === 'round-robin'
+                ? state.roundRobinPlayers.map(p => ({ id: p.id, name: p.name }))
+                : state.teams.flatMap(t => [
+                    { id: t.player1.id, name: t.player1.name },
+                    { id: t.player2.id, name: t.player2.name },
+                  ])
+            }
           />
         )}
 
@@ -1002,15 +1030,21 @@ function AddTeamsStep({
   );
 }
 
-// Enter Scores Step Component
+// Enter Scores Step Component - Swish-style with round navigation
 function EnterScoresStep({
   matchesByRound,
   updateMatchScore,
+  allPlayers,
 }: {
   matchesByRound: Map<number, Match[]>;
   updateMatchScore: (matchId: string, team: 'team1' | 'team2', value: number) => void;
+  allPlayers?: { id: string; name: string }[];
 }) {
+  const [currentRoundIndex, setCurrentRoundIndex] = React.useState(0);
   const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
+  const totalRounds = rounds.length;
+  const currentRound = rounds[currentRoundIndex] ?? 1;
+  const currentMatches = matchesByRound.get(currentRound) ?? [];
 
   // Helper to get participant name(s) for display
   const getParticipantName = (match: Match, side: 'team1' | 'team2'): string => {
@@ -1035,76 +1069,243 @@ function EnterScoresStep({
   const allMatches = Array.from(matchesByRound.values()).flat();
   const singlesMode = isSingles(allMatches);
 
+  // Calculate players with byes in current round (players not in any match)
+  const getPlayersWithByes = (): string[] => {
+    if (!allPlayers || allPlayers.length === 0) return [];
+
+    const playersInRound = new Set<string>();
+    for (const match of currentMatches) {
+      if (match.player1) playersInRound.add(match.player1.id);
+      if (match.player2) playersInRound.add(match.player2.id);
+      if (match.team1) {
+        playersInRound.add(match.team1.player1.id);
+        playersInRound.add(match.team1.player2.id);
+      }
+      if (match.team2) {
+        playersInRound.add(match.team2.player1.id);
+        playersInRound.add(match.team2.player2.id);
+      }
+    }
+
+    return allPlayers
+      .filter(p => !playersInRound.has(p.id) && !p.id.startsWith('bye'))
+      .map(p => p.name);
+  };
+
+  const playersWithByes = getPlayersWithByes();
+
+  // Handle navigation
+  const goToPrevRound = () => {
+    setCurrentRoundIndex(Math.max(0, currentRoundIndex - 1));
+  };
+
+  const goToNextRound = () => {
+    setCurrentRoundIndex(Math.min(totalRounds - 1, currentRoundIndex + 1));
+  };
+
+  // Handle empty state
+  if (totalRounds === 0 || allMatches.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center">
+          <div className="text-amber-500 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            No Matches Generated
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Unable to generate matches with the current player configuration.
+            Please go back and adjust the number of players.
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+            Tip: For doubles with rotating partners, use 4, 6, 7, or 8 players. 5 players is not supported.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Enter Scores
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Enter the scores for each match. Matches are organized by round.
-        </p>
+    <div className="space-y-4">
+      {/* Header with round progress */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Enter Scores
+          </h2>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {currentMatches.filter(m => m.score.team1 > 0 || m.score.team2 > 0).length} of {currentMatches.length} scored
+          </span>
+        </div>
+
+        {/* Round navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={goToPrevRound}
+            disabled={currentRoundIndex === 0}
+            className={cn(
+              'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              currentRoundIndex === 0
+                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            )}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Prev
+          </button>
+
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-bold text-gray-900 dark:text-white">
+              Round {currentRound} of {totalRounds}
+            </span>
+            {/* Round dots indicator */}
+            <div className="flex gap-1.5 mt-2">
+              {rounds.map((r, idx) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setCurrentRoundIndex(idx)}
+                  className={cn(
+                    'w-2.5 h-2.5 rounded-full transition-all',
+                    idx === currentRoundIndex
+                      ? 'bg-pickle-500 scale-125'
+                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                  )}
+                  aria-label={`Go to round ${r}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToNextRound}
+            disabled={currentRoundIndex === totalRounds - 1}
+            className={cn(
+              'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              currentRoundIndex === totalRounds - 1
+                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            )}
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {rounds.map((round) => (
-        <div
-          key={round}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
-        >
-          <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-4">
-            Round {round}
-          </h3>
-          <div className="space-y-4">
-            {matchesByRound.get(round)?.map((match) => (
-              <div
-                key={match.id}
-                className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-              >
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {/* Side 1 */}
-                    <div className="flex-1 text-center sm:text-right">
-                      <div className="inline-block sm:block bg-pickle-50 dark:bg-pickle-900/20 rounded-lg px-3 py-2 border border-pickle-200 dark:border-pickle-800">
-                        <span className="text-sm font-medium text-pickle-700 dark:text-pickle-300">
-                          {getParticipantName(match, 'team1')}
-                        </span>
-                      </div>
-                    </div>
+      {/* Bye indicator */}
+      {playersWithByes.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-600 dark:text-amber-400 font-medium text-sm">
+              Sitting out this round:
+            </span>
+            <span className="text-amber-700 dark:text-amber-300 text-sm">
+              {playersWithByes.join(', ')}
+            </span>
+          </div>
+        </div>
+      )}
 
-                    {/* Score Input */}
-                    <div className="flex items-center justify-center gap-2 flex-shrink-0">
-                      <div className="bg-pickle-50 dark:bg-pickle-900/20 rounded-lg p-1 border border-pickle-200 dark:border-pickle-800">
-                        <ScoreInput
-                          value={match.score.team1}
-                          onChange={(val) => updateMatchScore(match.id, 'team1', val)}
-                          label={singlesMode ? 'Player 1 score' : 'Team 1 score'}
-                        />
-                      </div>
-                      <span className="text-gray-400 font-bold text-sm px-1">vs</span>
-                      <div className="bg-gray-100 dark:bg-gray-600/50 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
-                        <ScoreInput
-                          value={match.score.team2}
-                          onChange={(val) => updateMatchScore(match.id, 'team2', val)}
-                          label={singlesMode ? 'Player 2 score' : 'Team 2 score'}
-                        />
-                      </div>
-                    </div>
+      {/* Current round matches */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="space-y-4">
+          {currentMatches.map((match, matchIndex) => (
+            <div
+              key={match.id}
+              className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+            >
+              {/* Match header with court assignment */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Match {matchIndex + 1}
+                </span>
+                {match.court && (
+                  <span className="text-xs font-medium text-pickle-600 dark:text-pickle-400 bg-pickle-50 dark:bg-pickle-900/30 px-2 py-1 rounded">
+                    Court {match.court}
+                  </span>
+                )}
+              </div>
 
-                    {/* Side 2 */}
-                    <div className="flex-1 text-center sm:text-left">
-                      <div className="inline-block sm:block bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {getParticipantName(match, 'team2')}
-                        </span>
-                      </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Side 1 */}
+                  <div className="flex-1 text-center sm:text-right">
+                    <div className="inline-block sm:block bg-pickle-50 dark:bg-pickle-900/20 rounded-lg px-3 py-2 border border-pickle-200 dark:border-pickle-800">
+                      <span className="text-sm font-medium text-pickle-700 dark:text-pickle-300">
+                        {getParticipantName(match, 'team1')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Score Input */}
+                  <div className="flex items-center justify-center gap-2 flex-shrink-0">
+                    <div className="bg-pickle-50 dark:bg-pickle-900/20 rounded-lg p-1 border border-pickle-200 dark:border-pickle-800">
+                      <ScoreInput
+                        value={match.score.team1}
+                        onChange={(val) => updateMatchScore(match.id, 'team1', val)}
+                        label={singlesMode ? 'Player 1 score' : 'Team 1 score'}
+                      />
+                    </div>
+                    <span className="text-gray-400 font-bold text-sm px-1">vs</span>
+                    <div className="bg-gray-100 dark:bg-gray-600/50 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
+                      <ScoreInput
+                        value={match.score.team2}
+                        onChange={(val) => updateMatchScore(match.id, 'team2', val)}
+                        label={singlesMode ? 'Player 2 score' : 'Team 2 score'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Side 2 */}
+                  <div className="flex-1 text-center sm:text-left">
+                    <div className="inline-block sm:block bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {getParticipantName(match, 'team2')}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+
+      {/* Quick round navigation for mobile */}
+      <div className="flex justify-center gap-2 sm:hidden">
+        <button
+          type="button"
+          onClick={goToPrevRound}
+          disabled={currentRoundIndex === 0}
+          className={cn(
+            'flex-1 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+            currentRoundIndex === 0
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+          )}
+        >
+          Previous Round
+        </button>
+        <button
+          type="button"
+          onClick={goToNextRound}
+          disabled={currentRoundIndex === totalRounds - 1}
+          className={cn(
+            'flex-1 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+            currentRoundIndex === totalRounds - 1
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600'
+              : 'bg-pickle-500 text-white'
+          )}
+        >
+          Next Round
+        </button>
+      </div>
     </div>
   );
 }
