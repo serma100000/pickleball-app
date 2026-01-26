@@ -84,18 +84,21 @@ export function generateSinglesRoundRobin(
   const numPlayers = playersCopy.length;
   const totalPossibleRounds = numPlayers - 1;
   const maxRounds = options.maxRounds ?? totalPossibleRounds;
-  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
+  // Allow more rounds than totalPossibleRounds - matchups will repeat in cycles
+  const roundsToGenerate = maxRounds;
   const matchesPerRound = numPlayers / 2;
 
   for (let round = 0; round < roundsToGenerate; round++) {
+    // Use modulo to cycle through rotations when rounds exceed totalPossibleRounds
+    const rotationIndex = round % totalPossibleRounds;
     let courtNumber = 1;
     for (let match = 0; match < matchesPerRound; match++) {
       const home = match;
       const away = numPlayers - 1 - match;
 
       // Rotate players (keep first player fixed for circle method)
-      const homePlayer = playersCopy[home === 0 ? 0 : ((home + round - 1) % (numPlayers - 1)) + 1];
-      const awayPlayer = playersCopy[away === 0 ? 0 : ((away + round - 1) % (numPlayers - 1)) + 1];
+      const homePlayer = playersCopy[home === 0 ? 0 : ((home + rotationIndex - 1) % (numPlayers - 1)) + 1];
+      const awayPlayer = playersCopy[away === 0 ? 0 : ((away + rotationIndex - 1) % (numPlayers - 1)) + 1];
 
       // Skip bye matches
       if (homePlayer?.id === 'bye' || awayPlayer?.id === 'bye') {
@@ -155,7 +158,8 @@ export function generateIndividualRoundRobin(
   // is n-1 (each player can partner with n-1 other players)
   const totalPossibleRounds = numPlayers - 1;
   const maxRounds = options.maxRounds ?? totalPossibleRounds;
-  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
+  // Allow more rounds than totalPossibleRounds - matchups will repeat in cycles
+  const roundsToGenerate = maxRounds;
 
   // Track partnerships to ensure even distribution
   const partnershipCount = new Map<string, number>();
@@ -164,11 +168,13 @@ export function generateIndividualRoundRobin(
   // Use a balanced "whist tournament" style algorithm
   // This ensures partners rotate evenly across rounds
   for (let round = 0; round < roundsToGenerate; round++) {
+    // Use modulo to cycle through rotations when rounds exceed totalPossibleRounds
+    const rotationIndex = round % totalPossibleRounds;
     // Create pairings for this round using circle method with offset pairing
     // Keep player 0 fixed, rotate others
     const positions: number[] = [0];
     for (let i = 1; i < numPlayers; i++) {
-      positions.push(((i - 1 + round) % (numPlayers - 1)) + 1);
+      positions.push(((i - 1 + rotationIndex) % (numPlayers - 1)) + 1);
     }
 
     // Map positions to actual players
@@ -265,18 +271,21 @@ export function generateTeamRoundRobin(
   const numTeams = teamsCopy.length;
   const totalPossibleRounds = numTeams - 1;
   const maxRounds = options.maxRounds ?? totalPossibleRounds;
-  const roundsToGenerate = Math.min(maxRounds, totalPossibleRounds);
+  // Allow more rounds than totalPossibleRounds - matchups will repeat in cycles
+  const roundsToGenerate = maxRounds;
   const matchesPerRound = numTeams / 2;
 
   for (let round = 0; round < roundsToGenerate; round++) {
+    // Use modulo to cycle through rotations when rounds exceed totalPossibleRounds
+    const rotationIndex = round % totalPossibleRounds;
     let courtNumber = 1;
     for (let match = 0; match < matchesPerRound; match++) {
       const home = match;
       const away = numTeams - 1 - match;
 
       // Rotate teams (keep first team fixed for circle method)
-      const homeTeam = teamsCopy[home === 0 ? 0 : ((home + round - 1) % (numTeams - 1)) + 1];
-      const awayTeam = teamsCopy[away === 0 ? 0 : ((away + round - 1) % (numTeams - 1)) + 1];
+      const homeTeam = teamsCopy[home === 0 ? 0 : ((home + rotationIndex - 1) % (numTeams - 1)) + 1];
+      const awayTeam = teamsCopy[away === 0 ? 0 : ((away + rotationIndex - 1) % (numTeams - 1)) + 1];
 
       // Skip bye matches
       if (homeTeam?.id === 'bye' || awayTeam?.id === 'bye') {

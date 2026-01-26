@@ -247,12 +247,16 @@ describe('generateSinglesRoundRobin', () => {
       expect(result.matches.length).toBe(15);
     });
 
-    it('should not exceed totalPossibleRounds even if maxRounds is higher', () => {
+    it('should allow more rounds than totalPossibleRounds (matchups repeat in cycles)', () => {
       const players = createPlayers(4);
-      const result = generateSinglesRoundRobin(players, { maxRounds: 100 });
+      const result = generateSinglesRoundRobin(players, { maxRounds: 6 });
 
-      expect(result.rounds).toBe(3);
+      // 4 players have 3 unique rounds, but we requested 6 rounds
+      // Rounds 4-6 will repeat the matchups from rounds 1-3
+      expect(result.rounds).toBe(6);
       expect(result.totalPossibleRounds).toBe(3);
+      // 6 rounds * 2 matches per round = 12 matches
+      expect(result.matches.length).toBe(12);
     });
 
     it('should handle maxRounds of 1', () => {
@@ -730,12 +734,16 @@ describe('generateTeamRoundRobin', () => {
       expect(result.totalPossibleRounds).toBe(3);
     });
 
-    it('should not exceed totalPossibleRounds even if maxRounds is higher', () => {
+    it('should allow more rounds than totalPossibleRounds (matchups repeat in cycles)', () => {
       const teams = createTeams(4);
-      const result = generateTeamRoundRobin(teams, { maxRounds: 100 });
+      const result = generateTeamRoundRobin(teams, { maxRounds: 6 });
 
-      expect(result.rounds).toBe(3);
+      // 4 teams have 3 unique rounds, but we requested 6 rounds
+      // Rounds 4-6 will repeat the matchups from rounds 1-3
+      expect(result.rounds).toBe(6);
       expect(result.totalPossibleRounds).toBe(3);
+      // 6 rounds * 2 matches per round = 12 matches
+      expect(result.matches.length).toBe(12);
     });
 
     it('should handle maxRounds of 1', () => {
@@ -994,7 +1002,7 @@ describe('Combined Parameter Tests', () => {
   describe('Singles with various maxRounds and player counts', () => {
     const testCases = [
       { players: 4, maxRounds: 3, expectedRounds: 3 },
-      { players: 4, maxRounds: 5, expectedRounds: 3 }, // capped at totalPossible
+      { players: 4, maxRounds: 5, expectedRounds: 5 }, // allows more rounds than totalPossible (matchups cycle)
       { players: 5, maxRounds: 3, expectedRounds: 3 },
       { players: 6, maxRounds: 4, expectedRounds: 4 },
       { players: 8, maxRounds: 5, expectedRounds: 5 },
@@ -1012,7 +1020,7 @@ describe('Combined Parameter Tests', () => {
     const testCases = [
       { teams: 3, maxRounds: 3, expectedRounds: 3 },
       { teams: 4, maxRounds: 3, expectedRounds: 3 },
-      { teams: 4, maxRounds: 5, expectedRounds: 3 }, // capped at totalPossible
+      { teams: 4, maxRounds: 5, expectedRounds: 5 }, // allows more rounds than totalPossible (matchups cycle)
       { teams: 5, maxRounds: 4, expectedRounds: 4 },
       { teams: 6, maxRounds: 3, expectedRounds: 3 },
     ];
