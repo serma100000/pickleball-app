@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Bell, Mail, Smartphone, Trophy, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, Bell, Mail, Smartphone, Trophy, Users, Calendar, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface NotificationSetting {
   id: string;
@@ -83,8 +84,16 @@ export default function NotificationsPage() {
       // TODO: Call API to save notification preferences
       await new Promise((resolve) => setTimeout(resolve, 500));
       setSaved(true);
-    } catch {
-      // Handle error
+      toast.success({
+        title: 'Preferences saved',
+        description: 'Your notification preferences have been updated.',
+      });
+    } catch (error) {
+      console.error('Failed to save notification preferences:', error);
+      toast.error({
+        title: 'Could not save preferences',
+        description: 'Please try again.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -221,8 +230,9 @@ export default function NotificationsPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+          className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center gap-2"
         >
+          {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSaving ? 'Saving...' : 'Save Preferences'}
         </button>
       </div>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Shield, Eye, EyeOff, Download, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Download, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 export default function PrivacyPage() {
   const [profileVisibility, setProfileVisibility] = useState<'public' | 'friends' | 'private'>('public');
@@ -12,22 +13,48 @@ export default function PrivacyPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
       // TODO: Call API to save privacy settings
       await new Promise((resolve) => setTimeout(resolve, 500));
       setSaved(true);
-    } catch {
-      // Handle error
+      toast.success({
+        title: 'Settings saved',
+        description: 'Your privacy settings have been updated.',
+      });
+    } catch (error) {
+      console.error('Failed to save privacy settings:', error);
+      toast.error({
+        title: 'Could not save settings',
+        description: 'Please try again.',
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleExportData = async () => {
-    // TODO: Call API to export user data
-    alert('Your data export has been requested. You will receive an email with a download link.');
+    setIsExporting(true);
+    try {
+      // TODO: Call API to export user data
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success({
+        title: 'Export requested',
+        description: 'You will receive an email with a download link shortly.',
+      });
+    } catch (error) {
+      console.error('Failed to request data export:', error);
+      toast.error({
+        title: 'Could not request export',
+        description: 'Please try again later.',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -37,8 +64,24 @@ export default function PrivacyPage() {
     if (!confirm('This will permanently delete all your data including games, stats, and profile. Continue?')) {
       return;
     }
-    // TODO: Call API to delete account
-    alert('Account deletion requested. You will receive a confirmation email.');
+
+    setIsDeleting(true);
+    try {
+      // TODO: Call API to delete account
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success({
+        title: 'Deletion requested',
+        description: 'You will receive a confirmation email with next steps.',
+      });
+    } catch (error) {
+      console.error('Failed to request account deletion:', error);
+      toast.error({
+        title: 'Could not request deletion',
+        description: 'Please contact support for assistance.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -178,8 +221,9 @@ export default function PrivacyPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+          className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center gap-2"
         >
+          {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSaving ? 'Saving...' : 'Save Settings'}
         </button>
       </div>
@@ -206,9 +250,11 @@ export default function PrivacyPage() {
             </div>
             <button
               onClick={handleExportData}
-              className="px-4 py-2 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors min-h-[44px]"
+              disabled={isExporting}
+              className="px-4 py-2 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors min-h-[44px] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Export
+              {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isExporting ? 'Exporting...' : 'Export'}
             </button>
           </div>
 
@@ -227,9 +273,10 @@ export default function PrivacyPage() {
             </div>
             <button
               onClick={handleDeleteAccount}
-              className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors min-h-[44px]"
+              disabled={isDeleting}
+              className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 className="w-5 h-5" />
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
             </button>
           </div>
         </div>

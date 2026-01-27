@@ -11,6 +11,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { UserButton, useUser } from '@clerk/nextjs';
+import { toast } from '@/hooks/use-toast';
 
 // Dynamic user avatar component
 function ProfileAvatar() {
@@ -62,8 +63,17 @@ export default function ProfilePage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setDuprLinked(true);
-    } catch {
+      toast.success({
+        title: 'DUPR account linked',
+        description: 'Your DUPR account has been connected successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to link DUPR account:', error);
       setDuprError('Failed to link DUPR account. Please try again.');
+      toast.error({
+        title: 'Could not link account',
+        description: 'Please check your DUPR ID and try again.',
+      });
     } finally {
       setIsLinkingDupr(false);
     }

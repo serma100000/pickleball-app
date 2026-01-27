@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 export default function DuprSettingsPage() {
   const [duprId, setDuprId] = useState('');
@@ -32,8 +33,17 @@ export default function DuprSettingsPage() {
       // TODO: Call API to link DUPR account
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsLinked(true);
-    } catch {
+      toast.success({
+        title: 'DUPR account linked',
+        description: 'Your DUPR account has been connected successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to link DUPR account:', error);
       setError('Failed to link DUPR account. Please try again.');
+      toast.error({
+        title: 'Could not link account',
+        description: 'Please check your DUPR ID and try again.',
+      });
     } finally {
       setIsLinking(false);
     }
@@ -47,14 +57,40 @@ export default function DuprSettingsPage() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       setIsLinked(false);
       setDuprId('');
-    } catch {
+      toast.success({
+        title: 'DUPR account unlinked',
+        description: 'Your DUPR account has been disconnected.',
+      });
+    } catch (error) {
+      console.error('Failed to unlink DUPR account:', error);
       setError('Failed to unlink DUPR account.');
+      toast.error({
+        title: 'Could not unlink account',
+        description: 'Please try again.',
+      });
     }
   };
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const handleSync = async () => {
-    // TODO: Call API to sync DUPR data
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsSyncing(true);
+    try {
+      // TODO: Call API to sync DUPR data
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success({
+        title: 'DUPR data synced',
+        description: 'Your rating and match history have been updated.',
+      });
+    } catch (error) {
+      console.error('Failed to sync DUPR data:', error);
+      toast.error({
+        title: 'Could not sync data',
+        description: 'Please try again later.',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -117,10 +153,11 @@ export default function DuprSettingsPage() {
             <div className="flex gap-3">
               <button
                 onClick={handleSync}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw className="w-4 h-4" />
-                Sync Now
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Now'}
               </button>
               <button
                 onClick={handleUnlink}

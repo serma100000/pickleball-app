@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +16,7 @@ import {
   Shield,
   CheckCircle,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import {
   GameTypeSelector,
@@ -32,6 +34,9 @@ import {
 } from '@/lib/round-robin';
 import { cn } from '@/lib/utils';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { apiWithAuth } from '@/lib/api';
 
 type SingleMatchType = 'singles' | 'doubles';
 type GameFormat = 'singles' | 'doubles';
@@ -121,6 +126,10 @@ export default function NewGamePage() {
     locationCoordinates: undefined,
     notes: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const router = useRouter();
+  const { getToken, isSignedIn } = useAuth();
 
   const steps = STEPS[state.gameMode] as string[];
   const isLastStep = state.step === steps.length - 1;
@@ -279,46 +288,136 @@ export default function NewGamePage() {
     setState((prev) => ({ ...prev, step: Math.max(prev.step - 1, 0) }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const submitData = {
-      gameMode: state.gameMode,
-      reportToDupr: state.duprEnabled,
-      location: state.location,
-      locationCoordinates: state.locationCoordinates,
-      notes: state.notes,
-      timestamp: new Date().toISOString(),
-      ...(state.gameMode === 'single-match' && {
-        matchType: state.singleMatchType,
-        scores: state.singleMatchScores,
-        partner: state.partner,
-        opponents: state.opponents,
-        reportToDupr: state.duprEnabled,
-      }),
-      ...(state.gameMode === 'round-robin' && {
-        players: state.roundRobinPlayers,
-        matches: state.roundRobinMatches.map((match) => ({
-          ...match,
-          reportToDupr: state.duprEnabled,
-        })),
-        reportToDupr: state.duprEnabled,
-      }),
-      ...(state.gameMode === 'set-partner-round-robin' && {
-        teams: state.teams,
-        matches: state.teamRoundRobinMatches.map((match) => ({
-          ...match,
-          reportToDupr: state.duprEnabled,
-        })),
-        reportToDupr: state.duprEnabled,
-      }),
-    };
-
-    // TODO: Implement actual API submission
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Submitting game data:', submitData);
+    // Validate scores for single match
+    if (state.gameMode === 'single-match') {
+      const hasValidScore = state.singleMatchScores.some(
+        (score) => score.team1 > 0 || score.team2 > 0
+      );
+      if (!hasValidScore) {
+        toast.error({
+          title: 'Score required',
+          description: 'Please enter at least one game score.',
+        });
+        return;
+      }
     }
-    alert('Game submission not yet implemented');
+
+    // Validate round robin matches have scores
+    if (state.gameMode === 'round-robin' || state.gameMode === 'set-partner-round-robin') {
+      const matches = state.gameMode === 'round-robin'
+        ? state.roundRobinMatches
+        : state.teamRoundRobinMatches;
+
+      const completedMatches = matches.filter(
+        (m) => m.score.team1 > 0 || m.score.team2 > 0
+      );
+
+      if (completedMatches.length === 0) {
+        toast.error({
+          title: 'Scores required',
+          description: 'Please enter scores for at least one match.',
+        });
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const submitData = {
+        gameMode: state.gameMode,
+        reportToDupr: state.duprEnabled,
+        location: state.location,
+        locationCoordinates: state.locationCoordinates,
+        notes: state.notes,
+        timestamp: new Date().toISOString(),
+        ...(state.gameMode === 'single-match' && {
+          matchType: state.singleMatchType,
+          scores: state.singleMatchScores,
+          partner: state.partner,
+          opponents: state.opponents,
+          reportToDupr: state.duprEnabled,
+        }),
+        ...(state.gameMode === 'round-robin' && {
+          players: state.roundRobinPlayers,
+          matches: state.roundRobinMatches.map((match) => ({
+            ...match,
+            reportToDupr: state.duprEnabled,
+          })),
+          reportToDupr: state.duprEnabled,
+        }),
+        ...(state.gameMode === 'set-partner-round-robin' && {
+          teams: state.teams,
+          matches: state.teamRoundRobinMatches.map((match) => ({
+            ...match,
+            reportToDupr: state.duprEnabled,
+          })),
+          reportToDupr: state.duprEnabled,
+        }),
+      };
+
+      // Check if user is signed in
+      if (!isSignedIn) {
+        toast.error({
+          title: 'Not signed in',
+          description: 'Please sign in to log games.',
+        });
+        return;
+      }
+
+      // Get auth token
+      const token = await getToken();
+      if (!token) {
+        toast.error({
+          title: 'Authentication error',
+          description: 'Could not get authentication token. Please try signing in again.',
+        });
+        return;
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Submitting game data:', submitData);
+      }
+
+      // Submit to API
+      const response = await apiWithAuth.post('/games/log', token, submitData);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('API response:', response);
+      }
+
+      toast.success({
+        title: 'Game saved',
+        description: state.duprEnabled
+          ? 'Your game has been saved and will be reported to DUPR.'
+          : 'Your game has been saved successfully.',
+      });
+
+      // Redirect to games list
+      router.push('/games');
+    } catch (error) {
+      console.error('Failed to save game:', error);
+
+      // Extract error message if available
+      let errorMessage = 'Something went wrong. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      // Check for API error with message property
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String((error as { message: string }).message);
+      }
+
+      toast.error({
+        title: 'Could not save game',
+        description: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Single match helpers
@@ -639,9 +738,20 @@ export default function NewGamePage() {
           {isLastStep ? (
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-pickle-500 hover:bg-pickle-600 text-white rounded-xl font-medium transition-colors"
+              disabled={isSubmitting}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-pickle-500 text-white rounded-xl font-medium transition-colors',
+                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-pickle-600'
+              )}
             >
-              Save Game
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Game'
+              )}
             </button>
           ) : (
             <button

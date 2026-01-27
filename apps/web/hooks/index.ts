@@ -94,3 +94,6 @@ export type {
 
 // PWA hooks
 export { usePWAInstall, useIsStandalone } from './use-pwa-install';
+
+// Toast hooks
+export { useToast, toast } from './use-toast';

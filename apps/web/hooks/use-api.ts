@@ -295,7 +295,7 @@ export function useCreateTournament() {
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async (data: CreateTournamentInput) => {
+    mutationFn: async ({ token, data }: { token: string; data: CreateTournamentInput }) => {
       if (!isOnline) {
         // Queue for later sync
         await addToSyncQueue({
@@ -305,7 +305,7 @@ export function useCreateTournament() {
         });
         return { offline: true, data };
       }
-      return apiEndpoints.tournaments.create(data) as Promise<TournamentResponse>;
+      return apiEndpoints.tournaments.create(token, data) as Promise<TournamentResponse>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });

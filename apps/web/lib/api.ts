@@ -27,13 +27,14 @@ class ApiClientError extends Error {
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
+  token?: string; // Bearer token for authorization
 }
 
 async function request<T>(
   endpoint: string,
   config: RequestConfig = {}
 ): Promise<T> {
-  const { params, ...fetchConfig } = config;
+  const { params, token, ...fetchConfig } = config;
 
   // Build URL with query params
   let url = `${API_BASE_URL}${endpoint}`;
@@ -55,6 +56,11 @@ async function request<T>(
     'Content-Type': 'application/json',
     ...fetchConfig.headers,
   };
+
+  // Add authorization header if token provided
+  if (token) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(url, {
@@ -122,6 +128,36 @@ export const api = {
     request<T>(endpoint, { method: 'DELETE' }),
 };
 
+// Authenticated HTTP method helpers (requires auth token)
+export const apiWithAuth = {
+  get: <T>(endpoint: string, token: string, params?: RequestConfig['params']) =>
+    request<T>(endpoint, { method: 'GET', params, token }),
+
+  post: <T>(endpoint: string, token: string, data?: unknown) =>
+    request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+      token,
+    }),
+
+  put: <T>(endpoint: string, token: string, data?: unknown) =>
+    request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+      token,
+    }),
+
+  patch: <T>(endpoint: string, token: string, data?: unknown) =>
+    request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+      token,
+    }),
+
+  delete: <T>(endpoint: string, token: string) =>
+    request<T>(endpoint, { method: 'DELETE', token }),
+};
+
 // Typed API endpoints
 export const apiEndpoints = {
   // Auth
@@ -164,6 +200,45 @@ export const apiEndpoints = {
     create: (data: unknown) => api.post('/games', data),
     update: (id: string, data: unknown) => api.patch(`/games/${id}`, data),
     delete: (id: string) => api.delete(`/games/${id}`),
+    log: (data: {
+      gameMode: 'single-match' | 'round-robin' | 'set-partner-round-robin';
+      reportToDupr?: boolean;
+      location?: string;
+      locationCoordinates?: { lat: number; lng: number };
+      notes?: string;
+      timestamp?: string;
+      matchType?: 'singles' | 'doubles';
+      scores?: Array<{ team1: number; team2: number }>;
+      partner?: string;
+      opponents?: string[];
+      players?: Array<{ id: string; name: string; hasDuprLinked?: boolean }>;
+      teams?: Array<{
+        id: string;
+        player1: { id: string; name: string; hasDuprLinked?: boolean };
+        player2: { id: string; name: string; hasDuprLinked?: boolean };
+      }>;
+      matches?: Array<{
+        id: string;
+        round: number;
+        court?: number;
+        player1?: { id: string; name: string };
+        player2?: { id: string; name: string };
+        team1?: {
+          id: string;
+          player1: { id: string; name: string };
+          player2: { id: string; name: string };
+        };
+        team2?: {
+          id: string;
+          player1: { id: string; name: string };
+          player2: { id: string; name: string };
+        };
+        score: { team1: number; team2: number };
+        completed?: boolean;
+        reportToDupr?: boolean;
+      }>;
+    }) => api.post('/games/log', data),
+    myGames: () => api.get('/games/my-games'),
   },
 
   // Clubs
@@ -194,8 +269,10 @@ export const apiEndpoints = {
   tournaments: {
     list: (params?: { page?: number; limit?: number; upcoming?: boolean; managed?: boolean; status?: string }) =>
       api.get('/tournaments', params),
+    listWithAuth: (token: string, params?: { page?: number; limit?: number; upcoming?: boolean; managed?: boolean; status?: string }) =>
+      apiWithAuth.get('/tournaments', token, params),
     get: (id: string) => api.get(`/tournaments/${id}`),
-    create: (data: {
+    create: (token: string, data: {
       name: string;
       description?: string;
       startDate: string;
@@ -234,7 +311,7 @@ export const apiEndpoints = {
           consolationBracket: boolean;
         };
       }>;
-    }) => api.post('/tournaments', data),
+    }) => apiWithAuth.post('/tournaments', token, data),
     update: (id: string, data: {
       name?: string;
       description?: string;

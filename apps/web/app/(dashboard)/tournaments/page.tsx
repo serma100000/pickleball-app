@@ -26,6 +26,7 @@ import {
 import { useMyTournaments, useDeleteTournament } from '@/hooks/use-api';
 import { TournamentListSkeleton } from '@/components/skeletons';
 import { NoTournaments, NoTournamentsFiltered } from '@/components/empty-states';
+import { toast } from '@/hooks/use-toast';
 
 // Type definitions for tournament management
 type TournamentStatus = 'draft' | 'registration' | 'in_progress' | 'completed';
@@ -104,8 +105,16 @@ export default function TournamentsPage() {
       try {
         await deleteMutation.mutateAsync(tournamentId);
         refetch();
-      } catch {
-        alert('Failed to delete tournament. Please try again.');
+        toast.success({
+          title: 'Tournament deleted',
+          description: `"${tournamentName}" has been deleted.`,
+        });
+      } catch (error) {
+        console.error('Failed to delete tournament:', error);
+        toast.error({
+          title: 'Could not delete tournament',
+          description: 'Please try again.',
+        });
       }
     }
   };

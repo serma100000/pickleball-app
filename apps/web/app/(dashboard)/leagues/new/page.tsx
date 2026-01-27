@@ -15,12 +15,14 @@ import {
   Calendar,
   Shield,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
+import { toast } from '@/hooks/use-toast';
 
 // ============================================================================
 // Types
@@ -891,6 +893,7 @@ export default function NewLeaguePage() {
     playoffFormat: 'single_elimination',
     reportToDupr: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFirstStep = state.step === 0;
   const isLastStep = state.step === STEPS.length - 1;
@@ -903,40 +906,94 @@ export default function NewLeaguePage() {
     setState((prev) => ({ ...prev, step: Math.max(prev.step - 1, 0) }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const submitData = {
-      leagueType: state.leagueType,
-      name: state.name,
-      description: state.description,
-      location: state.location,
-      locationCoordinates: state.locationCoordinates,
-      startDate: state.startDate,
-      numberOfWeeks: state.numberOfWeeks,
-      daysPerWeek: state.daysPerWeek,
-      minPlayers: state.minPlayers,
-      maxPlayers: state.maxPlayers,
-      ...(state.leagueType === 'pool_play' || state.leagueType === 'hybrid'
-        ? { numberOfPools: state.numberOfPools }
-        : {}),
-      ...(state.leagueType === 'ladder' ? { challengeRange: state.challengeRange } : {}),
-      hasPlayoffs: state.hasPlayoffs,
-      ...(state.hasPlayoffs
-        ? {
-            playoffTeams: state.playoffTeams,
-            playoffFormat: state.playoffFormat,
-          }
-        : {}),
-      reportToDupr: state.reportToDupr,
-      createdAt: new Date().toISOString(),
-    };
-
-    // TODO: Implement actual API submission
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Creating league:', submitData);
+    // Validate required fields
+    if (!state.leagueType) {
+      toast.error({
+        title: 'League type required',
+        description: 'Please select a league type.',
+      });
+      return;
     }
-    alert('League creation not yet implemented');
+
+    if (!state.name.trim()) {
+      toast.error({
+        title: 'League name required',
+        description: 'Please enter a name for your league.',
+      });
+      return;
+    }
+
+    if (state.daysPerWeek.length === 0) {
+      toast.error({
+        title: 'Days required',
+        description: 'Please select at least one day for league play.',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const submitData = {
+        leagueType: state.leagueType,
+        name: state.name,
+        description: state.description,
+        location: state.location,
+        locationCoordinates: state.locationCoordinates,
+        startDate: state.startDate,
+        numberOfWeeks: state.numberOfWeeks,
+        daysPerWeek: state.daysPerWeek,
+        minPlayers: state.minPlayers,
+        maxPlayers: state.maxPlayers,
+        ...(state.leagueType === 'pool_play' || state.leagueType === 'hybrid'
+          ? { numberOfPools: state.numberOfPools }
+          : {}),
+        ...(state.leagueType === 'ladder' ? { challengeRange: state.challengeRange } : {}),
+        hasPlayoffs: state.hasPlayoffs,
+        ...(state.hasPlayoffs
+          ? {
+              playoffTeams: state.playoffTeams,
+              playoffFormat: state.playoffFormat,
+            }
+          : {}),
+        reportToDupr: state.reportToDupr,
+        createdAt: new Date().toISOString(),
+      };
+
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/leagues', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(submitData),
+      // });
+      // if (!response.ok) throw new Error('Failed to create league');
+
+      // Simulate API call for now
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Creating league:', submitData);
+      }
+
+      toast.success({
+        title: 'League created',
+        description: `"${state.name}" has been created successfully.`,
+      });
+
+      // TODO: Redirect to league page
+      // router.push(`/leagues/${response.id}`);
+    } catch (error) {
+      console.error('Failed to create league:', error);
+      toast.error({
+        title: 'Could not create league',
+        description: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {
@@ -1059,9 +1116,17 @@ export default function NewLeaguePage() {
           {isLastStep ? (
             <Button
               type="submit"
-              className="flex-1 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-medium transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create League
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create League'
+              )}
             </Button>
           ) : (
             <button

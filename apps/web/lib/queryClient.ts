@@ -1,4 +1,23 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+
+/**
+ * Extract a user-friendly error message from various error types
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    // Handle common API error structures
+    const apiError = error as Error & { response?: { data?: { message?: string } } };
+    if (apiError.response?.data?.message) {
+      return apiError.response.data.message;
+    }
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unexpected error occurred';
+}
 
 // Create a client
 export const queryClient = new QueryClient({
@@ -8,14 +27,20 @@ export const queryClient = new QueryClient({
       // This prevents showing errors on first load
       if (query.state.data !== undefined) {
         console.error('Query error:', error);
-        // TODO: Show toast notification
+        toast.error({
+          title: 'Error loading data',
+          description: getErrorMessage(error),
+        });
       }
     },
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
       console.error('Mutation error:', error);
-      // TODO: Show toast notification
+      toast.error({
+        title: 'Action failed',
+        description: getErrorMessage(error),
+      });
     },
   }),
   defaultOptions: {

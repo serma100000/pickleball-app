@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,12 +18,16 @@ import {
   ClipboardList,
   Save,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { apiEndpoints, ApiClientError } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -1350,6 +1355,9 @@ function ReviewStep({ state }: { state: TournamentFormState }) {
 // ============================================================================
 
 export default function NewTournamentPage() {
+  const router = useRouter();
+  const { isSignedIn, getToken, openSignIn } = useAuth();
+
   const [state, setState] = useState<TournamentFormState>({
     step: 0,
     name: '',
@@ -1367,6 +1375,8 @@ export default function NewTournamentPage() {
     isDraft: false,
     lastSaved: undefined,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const isFirstStep = state.step === 0;
   const isLastStep = state.step === STEPS.length - 1;
@@ -1379,61 +1389,168 @@ export default function NewTournamentPage() {
     setState((prev) => ({ ...prev, step: Math.max(prev.step - 1, 0) }));
   };
 
-  const handleSaveDraft = useCallback(() => {
-    const draftData = {
-      ...state,
-      isDraft: true,
-      lastSaved: new Date().toISOString(),
-    };
+  const handleSaveDraft = useCallback(async () => {
+    setIsSavingDraft(true);
 
-    // In a real app, this would save to an API or localStorage
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Saving draft:', draftData);
-    }
-
-    setState((prev) => ({
-      ...prev,
-      isDraft: true,
-      lastSaved: new Date().toISOString(),
-    }));
-
-    // Store in localStorage for persistence
     try {
-      localStorage.setItem('tournament_draft', JSON.stringify(draftData));
-    } catch {
-      // Silently fail if localStorage is not available
+      const draftData = {
+        ...state,
+        isDraft: true,
+        lastSaved: new Date().toISOString(),
+      };
+
+      // Store in localStorage for persistence
+      try {
+        localStorage.setItem('tournament_draft', JSON.stringify(draftData));
+      } catch (storageError) {
+        console.error('Failed to save draft to localStorage:', storageError);
+        toast.warning({
+          title: 'Draft saved temporarily',
+          description: 'Could not save to browser storage. Your draft will be lost if you leave this page.',
+        });
+      }
+
+      setState((prev) => ({
+        ...prev,
+        isDraft: true,
+        lastSaved: new Date().toISOString(),
+      }));
+
+      toast.success({
+        title: 'Draft saved',
+        description: 'Your tournament draft has been saved.',
+      });
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      toast.error({
+        title: 'Could not save draft',
+        description: 'Please try again. If the problem persists, check your browser settings.',
+      });
+    } finally {
+      setIsSavingDraft(false);
     }
   }, [state]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const submitData = {
-      name: state.name,
-      description: state.description,
-      startDate: state.startDate,
-      endDate: state.endDate,
-      registrationDeadline: state.registrationDeadline,
-      venue: state.venue,
-      venueCoordinates: state.venueCoordinates,
-      numberOfCourts: state.numberOfCourts,
-      director: {
-        name: state.directorName,
-        email: state.directorEmail,
-        phone: state.directorPhone,
-      },
-      events: state.events.map((event) => ({
-        ...event,
-        displayName: getEventDisplayName(event),
-      })),
-      createdAt: new Date().toISOString(),
-    };
-
-    // TODO: Implement actual API submission
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Creating tournament:', submitData);
+    // Validate required fields
+    if (!state.name.trim()) {
+      toast.error({
+        title: 'Tournament name required',
+        description: 'Please enter a name for your tournament.',
+      });
+      return;
     }
-    alert('Tournament creation not yet implemented');
+
+    if (state.events.length === 0) {
+      toast.error({
+        title: 'Events required',
+        description: 'Please add at least one event to your tournament.',
+      });
+      return;
+    }
+
+    // Check if user is signed in
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get auth token
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const submitData = {
+        name: state.name,
+        description: state.description || undefined,
+        startDate: state.startDate,
+        endDate: state.endDate,
+        registrationDeadline: state.registrationDeadline,
+        venue: state.venue,
+        venueCoordinates: state.venueCoordinates,
+        numberOfCourts: state.numberOfCourts,
+        director: {
+          name: state.directorName,
+          email: state.directorEmail,
+          phone: state.directorPhone || undefined,
+        },
+        events: state.events.map((event) => ({
+          name: event.name || getEventDisplayName(event),
+          category: event.category,
+          skillLevel: event.skillLevel,
+          ageGroup: event.ageGroup,
+          format: event.format,
+          maxParticipants: event.maxParticipants,
+          entryFee: event.entryFee,
+          prizeMoney: event.prizeMoney,
+          scoringFormat: event.scoringFormat,
+          pointsTo: event.pointsTo,
+          poolPlayConfig: event.poolPlayConfig,
+          seedingConfig: event.seedingConfig,
+          bracketConfig: event.bracketConfig,
+        })),
+      };
+
+      // Call the API
+      const response = await apiEndpoints.tournaments.create(token, submitData);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Tournament created:', response);
+      }
+
+      toast.success({
+        title: 'Tournament created',
+        description: `"${state.name}" has been created successfully.`,
+      });
+
+      // Clear draft from localStorage after successful submission
+      try {
+        localStorage.removeItem('tournament_draft');
+      } catch {
+        // Ignore localStorage errors on cleanup
+      }
+
+      // Redirect to tournament page
+      const tournamentResponse = response as { tournament?: { id?: string; slug?: string } };
+      if (tournamentResponse.tournament?.slug) {
+        router.push(`/tournaments/${tournamentResponse.tournament.slug}`);
+      } else if (tournamentResponse.tournament?.id) {
+        router.push(`/tournaments/${tournamentResponse.tournament.id}`);
+      } else {
+        router.push('/tournaments');
+      }
+    } catch (error) {
+      console.error('Failed to create tournament:', error);
+
+      if (error instanceof ApiClientError) {
+        if (error.status === 401) {
+          toast.error({
+            title: 'Authentication required',
+            description: 'Please sign in to create a tournament.',
+          });
+          openSignIn();
+          return;
+        }
+
+        toast.error({
+          title: 'Could not create tournament',
+          description: error.message || 'Please try again.',
+        });
+      } else {
+        toast.error({
+          title: 'Could not create tournament',
+          description: 'Something went wrong. Please try again.',
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {
@@ -1496,10 +1613,15 @@ export default function NewTournamentPage() {
           type="button"
           variant="outline"
           onClick={handleSaveDraft}
+          disabled={isSavingDraft}
           className="hidden sm:flex items-center gap-2"
         >
-          <Save className="w-4 h-4" />
-          Save Draft
+          {isSavingDraft ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {isSavingDraft ? 'Saving...' : 'Save Draft'}
         </Button>
       </div>
 
@@ -1566,10 +1688,17 @@ export default function NewTournamentPage() {
           {isLastStep ? (
             <Button
               type="submit"
-              disabled={!canProceed()}
+              disabled={!canProceed() || isSubmitting}
               className="flex-1 px-6 py-3 rounded-xl font-medium"
             >
-              Create Tournament
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Tournament'
+              )}
             </Button>
           ) : (
             <button
@@ -1595,11 +1724,16 @@ export default function NewTournamentPage() {
             type="button"
             variant="outline"
             onClick={handleSaveDraft}
+            disabled={isSavingDraft}
             className="w-full flex items-center justify-center gap-2"
           >
-            <Save className="w-4 h-4" />
-            Save Draft
-            {state.lastSaved && (
+            {isSavingDraft ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isSavingDraft ? 'Saving...' : 'Save Draft'}
+            {!isSavingDraft && state.lastSaved && (
               <span className="text-xs text-gray-500">
                 (Last saved: {new Date(state.lastSaved).toLocaleTimeString()})
               </span>
