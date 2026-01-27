@@ -149,7 +149,10 @@ function getClientIdentifier(c: Context): string {
   // Fall back to IP address
   const forwarded = c.req.header('x-forwarded-for');
   if (forwarded) {
-    return `ip:${forwarded.split(',')[0].trim()}`;
+    const firstIp = forwarded.split(',')[0];
+    if (firstIp) {
+      return `ip:${firstIp.trim()}`;
+    }
   }
 
   return `ip:${c.req.header('x-real-ip') || 'unknown'}`;

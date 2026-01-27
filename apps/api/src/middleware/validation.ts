@@ -1,13 +1,12 @@
-import type { Context, Next } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { z, ZodSchema, ZodError } from 'zod';
+import { z, type ZodSchema, ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 
 /**
  * Validate request body with Zod schema
  */
 export function validateBody<T extends ZodSchema>(schema: T) {
-  return zValidator('json', schema, (result, c) => {
+  return zValidator('json', schema, (result, _c) => {
     if (!result.success) {
       throw new HTTPException(400, {
         message: 'Validation failed',
@@ -21,7 +20,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
  * Validate query parameters with Zod schema
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
-  return zValidator('query', schema, (result, c) => {
+  return zValidator('query', schema, (result, _c) => {
     if (!result.success) {
       throw new HTTPException(400, {
         message: 'Invalid query parameters',
@@ -35,7 +34,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
  * Validate route parameters with Zod schema
  */
 export function validateParams<T extends ZodSchema>(schema: T) {
-  return zValidator('param', schema, (result, c) => {
+  return zValidator('param', schema, (result, _c) => {
     if (!result.success) {
       throw new HTTPException(400, {
         message: 'Invalid path parameters',

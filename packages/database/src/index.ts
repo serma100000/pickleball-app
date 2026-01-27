@@ -226,8 +226,9 @@ export async function rawQuery<T>(
   params: unknown[] = []
 ): Promise<T[]> {
   const client = getSqlClient();
-  const result = await client.unsafe(query, params as postgres.ParameterOrFragment<never>[]);
-  return result as T[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await client.unsafe(query, params as any);
+  return result as unknown as T[];
 }
 
 /**

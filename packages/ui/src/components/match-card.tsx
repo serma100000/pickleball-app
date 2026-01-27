@@ -1,6 +1,8 @@
-import * as React from 'react';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+import * as React from 'react';
+
 import { cn } from '../lib/utils';
+
 import { Avatar, AvatarImage, AvatarFallback, getInitials } from './avatar';
 import { Badge } from './badge';
 import { RatingBadge } from './rating-badge';

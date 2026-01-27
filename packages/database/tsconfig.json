@@ -1,5 +1,5 @@
 {
-  "extends": "@pickle-play/config/typescript/node.json",
+  "extends": "../config/typescript/node.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",

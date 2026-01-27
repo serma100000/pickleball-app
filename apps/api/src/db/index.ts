@@ -80,6 +80,7 @@ export async function withTransaction<T>(
 
 // Utility to run raw SQL queries (use sparingly)
 export async function rawQuery<T>(query: string, params: unknown[] = []): Promise<T[]> {
-  const result = await sql.unsafe(query, params as postgres.ParameterOrFragment<never>[]);
-  return result as T[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await sql.unsafe(query, params as any);
+  return result as unknown as T[];
 }

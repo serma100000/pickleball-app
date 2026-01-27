@@ -1,9 +1,11 @@
-import * as React from 'react';
 import { MapPin } from 'lucide-react';
+import * as React from 'react';
+
 import { cn } from '../lib/utils';
+
 import { Avatar, AvatarImage, AvatarFallback, getInitials } from './avatar';
-import { RatingBadge } from './rating-badge';
 import { Badge } from './badge';
+import { RatingBadge } from './rating-badge';
 
 export interface PlayerCardProps extends React.HTMLAttributes<HTMLDivElement> {
   name: string;

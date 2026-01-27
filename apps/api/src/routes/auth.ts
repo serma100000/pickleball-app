@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import { validateBody } from '../middleware/validation.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { userService } from '../services/userService.js';
-import { clerk, revokeAllSessions } from '../lib/clerk.js';
+import { revokeAllSessions } from '../lib/clerk.js';
 
 const auth = new Hono();
 
@@ -70,6 +70,12 @@ auth.post('/sync', authMiddleware, validateBody(syncSchema), async (c) => {
       displayName: data.displayName,
       avatarUrl: data.avatarUrl,
     });
+
+    if (!user) {
+      throw new HTTPException(500, {
+        message: 'Failed to sync user',
+      });
+    }
 
     // Log activity for new users
     if (isNewUser) {
