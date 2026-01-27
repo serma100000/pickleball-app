@@ -99,8 +99,12 @@ auth.post('/sync', authMiddleware, validateBody(syncSchema), async (c) => {
       throw error;
     }
     console.error('Error syncing user:', error);
+    // Include error details in development
+    const errorMessage = process.env.NODE_ENV === 'production'
+      ? 'Failed to sync user'
+      : `Failed to sync user: ${(error as Error).message}`;
     throw new HTTPException(500, {
-      message: 'Failed to sync user',
+      message: errorMessage,
     });
   }
 });

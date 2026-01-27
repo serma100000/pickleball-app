@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
+import { apiWithAuth } from '@/lib/api';
 import { getSocket, onSocketEvent } from '@/lib/socket';
 import { useAuth } from './use-auth';
 
@@ -87,24 +87,27 @@ const notificationKeys = {
 // API Functions
 // ============================================================================
 
-async function fetchNotifications(params: {
-  page?: number;
-  limit?: number;
-  unreadOnly?: boolean;
-}): Promise<NotificationsResponse> {
-  return api.get<NotificationsResponse>('/social/notifications', {
+async function fetchNotifications(
+  token: string,
+  params: {
+    page?: number;
+    limit?: number;
+    unreadOnly?: boolean;
+  }
+): Promise<NotificationsResponse> {
+  return apiWithAuth.get('/social/notifications', token, {
     page: params.page,
     limit: params.limit,
     unreadOnly: params.unreadOnly,
-  });
+  }) as Promise<NotificationsResponse>;
 }
 
-async function markNotificationAsRead(notificationId: string): Promise<void> {
-  return api.patch(`/social/notifications/${notificationId}/read`);
+async function markNotificationAsRead(token: string, notificationId: string): Promise<void> {
+  return apiWithAuth.patch(`/social/notifications/${notificationId}/read`, token);
 }
 
-async function markAllNotificationsAsRead(): Promise<void> {
-  return api.post('/social/notifications/read-all');
+async function markAllNotificationsAsRead(token: string): Promise<void> {
+  return apiWithAuth.post('/social/notifications/read-all', token);
 }
 
 // ============================================================================
@@ -116,7 +119,7 @@ export function useNotifications(
 ): UseNotificationsReturn {
   const { page = 1, limit = 20, unreadOnly = false, enabled = true } = options;
   const queryClient = useQueryClient();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
 
   // Determine if queries should be enabled
   const isEnabled = enabled && isSignedIn;
@@ -130,7 +133,11 @@ export function useNotifications(
     refetch,
   } = useQuery({
     queryKey: notificationKeys.list({ page, limit, unreadOnly }),
-    queryFn: () => fetchNotifications({ page, limit, unreadOnly }),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      return fetchNotifications(token, { page, limit, unreadOnly });
+    },
     enabled: isEnabled,
     staleTime: 1 * 60 * 1000, // 1 minute
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
@@ -138,7 +145,11 @@ export function useNotifications(
 
   // Mark single notification as read
   const markAsReadMutation = useMutation({
-    mutationFn: markNotificationAsRead,
+    mutationFn: async (notificationId: string) => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      return markNotificationAsRead(token, notificationId);
+    },
     onMutate: async (notificationId) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: notificationKeys.all });
@@ -183,7 +194,11 @@ export function useNotifications(
 
   // Mark all notifications as read
   const markAllAsReadMutation = useMutation({
-    mutationFn: markAllNotificationsAsRead,
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      return markAllNotificationsAsRead(token);
+    },
     onMutate: async () => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: notificationKeys.all });
@@ -346,13 +361,17 @@ export interface UseUnreadCountReturn {
 
 export function useUnreadNotificationCount(): UseUnreadCountReturn {
   const queryClient = useQueryClient();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
 
   // Use the main notifications query but only return unread count
   // This shares the cache with useNotifications
   const { data, isLoading, refetch } = useQuery({
     queryKey: notificationKeys.list({ page: 1, limit: 1, unreadOnly: false }),
-    queryFn: () => fetchNotifications({ page: 1, limit: 1, unreadOnly: false }),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      return fetchNotifications(token, { page: 1, limit: 1, unreadOnly: false });
+    },
     enabled: isSignedIn,
     staleTime: 1 * 60 * 1000,
     refetchInterval: 2 * 60 * 1000, // More frequent for badge

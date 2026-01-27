@@ -65,7 +65,7 @@ socialRouter.get('/friends', authMiddleware, validateQuery(paginationSchema), as
       avatarUrl: friend.avatarUrl,
       skillLevel: friend.skillLevel,
       rating: friend.rating,
-      lastActiveAt: friend.lastActiveAt,
+      lastActiveAt: friend.lastLoginAt,
       friendsSince: f.updatedAt,
     };
   });

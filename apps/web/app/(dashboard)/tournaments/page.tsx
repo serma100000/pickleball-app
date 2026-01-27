@@ -29,7 +29,7 @@ import { NoTournaments, NoTournamentsFiltered } from '@/components/empty-states'
 import { toast } from '@/hooks/use-toast';
 
 // Type definitions for tournament management
-type TournamentStatus = 'draft' | 'registration' | 'in_progress' | 'completed';
+type TournamentStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 
 interface Tournament {
   id: string;
@@ -55,7 +55,7 @@ interface TournamentsResponse {
   total: number;
 }
 
-type FilterTab = 'all' | 'draft' | 'registration' | 'in_progress' | 'completed';
+type FilterTab = 'all' | 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 
 export default function TournamentsPage() {
   const [page, setPage] = useState(1);
@@ -340,10 +340,15 @@ function TournamentCard({
         text: 'text-gray-600 dark:text-gray-400',
         label: 'Draft',
       },
-      registration: {
+      registration_open: {
         bg: 'bg-blue-100 dark:bg-blue-900/30',
         text: 'text-blue-700 dark:text-blue-400',
         label: 'Registration Open',
+      },
+      registration_closed: {
+        bg: 'bg-orange-100 dark:bg-orange-900/30',
+        text: 'text-orange-700 dark:text-orange-400',
+        label: 'Registration Closed',
       },
       in_progress: {
         bg: 'bg-green-100 dark:bg-green-900/30',
@@ -354,6 +359,11 @@ function TournamentCard({
         bg: 'bg-purple-100 dark:bg-purple-900/30',
         text: 'text-purple-700 dark:text-purple-400',
         label: 'Completed',
+      },
+      cancelled: {
+        bg: 'bg-red-100 dark:bg-red-900/30',
+        text: 'text-red-700 dark:text-red-400',
+        label: 'Cancelled',
       },
     };
     return styles[status];
@@ -412,7 +422,7 @@ function TournamentCard({
             </button>
           </>
         );
-      case 'registration':
+      case 'registration_open':
         return (
           <>
             <Link
@@ -438,6 +448,27 @@ function TournamentCard({
             </Link>
           </>
         );
+      case 'registration_closed':
+        return (
+          <>
+            <Link
+              href={`/tournaments/${tournament.id}/registrations`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              Registrations
+            </Link>
+            <Link
+              href={`/tournaments/${tournament.id}/start`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-pickle-500 hover:bg-pickle-600 rounded-lg transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              Start Tournament
+            </Link>
+          </>
+        );
+      case 'cancelled':
+        return null;
       case 'in_progress':
         return (
           <>

@@ -88,6 +88,15 @@ export const userService = {
   },
 
   /**
+   * Get user by email
+   */
+  async getByEmail(email: string) {
+    return db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+  },
+
+  /**
    * Update user
    */
   async update(id: string, input: UpdateUserInput) {
@@ -183,7 +192,7 @@ export const userService = {
   async updateLastActive(userId: string) {
     await db
       .update(users)
-      .set({ lastActiveAt: new Date() })
+      .set({ lastLoginAt: new Date() })
       .where(eq(users.id, userId));
   },
 
@@ -254,9 +263,9 @@ export const userService = {
     await db.insert(activityFeedEvents).values({
       userId,
       eventType: activityType,
-      entityType,
-      entityId,
-      metadata: data,
+      referenceType: entityType,
+      referenceId: entityId,
+      eventData: data || {},
     });
   },
 
@@ -265,50 +274,76 @@ export const userService = {
    * Creates a new user if they don't exist, or updates if they do
    */
   async syncFromClerk(input: SyncUserInput) {
-    const existingUser = await this.getByClerkId(input.clerkId);
+    try {
+      const existingUser = await this.getByClerkId(input.clerkId);
 
-    if (existingUser) {
-      // Update existing user with new data from Clerk
-      const [updatedUser] = await db
-        .update(users)
-        .set({
+      if (existingUser) {
+        // Update existing user with new data from Clerk
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            email: input.email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            displayName: input.displayName || `${input.firstName} ${input.lastName}`,
+            avatarUrl: input.avatarUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.clerkId, input.clerkId))
+          .returning();
+
+        // Invalidate cache
+        await cache.del(`user:${updatedUser.id}`);
+
+        return updatedUser;
+      }
+
+      // Check if email already exists (different clerk account)
+      const existingEmail = await this.getByEmail(input.email);
+      if (existingEmail) {
+        // Link the existing account to Clerk
+        const [linkedUser] = await db
+          .update(users)
+          .set({
+            clerkId: input.clerkId,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            displayName: input.displayName || `${input.firstName} ${input.lastName}`,
+            avatarUrl: input.avatarUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.email, input.email))
+          .returning();
+
+        await cache.del(`user:${linkedUser.id}`);
+        return linkedUser;
+      }
+
+      // Create new user
+      // Generate username from email or name if not provided
+      const username = input.username || this.generateUsername(input.email, input.firstName, input.lastName);
+      const displayName = input.displayName || `${input.firstName} ${input.lastName}`;
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          clerkId: input.clerkId,
           email: input.email,
+          username,
           firstName: input.firstName,
           lastName: input.lastName,
-          displayName: input.displayName || `${input.firstName} ${input.lastName}`,
+          displayName,
           avatarUrl: input.avatarUrl,
-          updatedAt: new Date(),
+          // Use a placeholder for password hash since Clerk handles auth
+          passwordHash: `clerk_managed_${nanoid()}`,
         })
-        .where(eq(users.clerkId, input.clerkId))
         .returning();
 
-      // Invalidate cache
-      await cache.del(`user:${updatedUser.id}`);
-
-      return updatedUser;
+      return newUser;
+    } catch (error) {
+      console.error('syncFromClerk error:', error);
+      throw error;
     }
-
-    // Create new user
-    // Generate username from email or name if not provided
-    const username = input.username || this.generateUsername(input.email, input.firstName, input.lastName);
-    const displayName = input.displayName || `${input.firstName} ${input.lastName}`;
-
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        clerkId: input.clerkId,
-        email: input.email,
-        username,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        displayName,
-        avatarUrl: input.avatarUrl,
-        // Use a placeholder for password hash since Clerk handles auth
-        passwordHash: `clerk_managed_${nanoid()}`,
-      })
-      .returning();
-
-    return newUser;
   },
 
   /**

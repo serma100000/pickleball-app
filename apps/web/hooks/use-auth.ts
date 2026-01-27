@@ -4,7 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser, useAuth as useClerkAuthHook, useClerk } from '@clerk/nextjs';
 
-import { apiEndpoints } from '@/lib/api';
+import { apiEndpoints, apiWithAuth } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { initSocket, connectSocket, disconnectSocket } from '@/lib/socket';
 
@@ -49,7 +49,18 @@ export function useAuth(): UseAuthReturn {
 
   // Sync user with backend on sign in
   const syncUserMutation = useMutation({
-    mutationFn: (clerkId: string) => apiEndpoints.auth.syncUser({ clerkId }),
+    mutationFn: async (userData: {
+      clerkId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      username?: string;
+      avatarUrl?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      return apiWithAuth.post('/auth/sync', token, userData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.user() });
     },
@@ -62,7 +73,12 @@ export function useAuth(): UseAuthReturn {
     error: profileError,
   } = useQuery<UserProfile>({
     queryKey: queryKeys.auth.user(),
-    queryFn: () => apiEndpoints.auth.me() as Promise<UserProfile>,
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('No auth token');
+      const response = await apiWithAuth.get('/auth/me', token) as { user: UserProfile };
+      return response.user;
+    },
     enabled: isSignedIn && isClerkLoaded,
     staleTime: 5 * 60 * 1000,
   });
@@ -77,8 +93,15 @@ export function useAuth(): UseAuthReturn {
         }
       });
 
-      if (clerkUser?.id) {
-        syncUserMutation.mutate(clerkUser.id);
+      if (clerkUser?.id && clerkUser?.primaryEmailAddress?.emailAddress) {
+        syncUserMutation.mutate({
+          clerkId: clerkUser.id,
+          email: clerkUser.primaryEmailAddress.emailAddress,
+          firstName: clerkUser.firstName || 'Player',
+          lastName: clerkUser.lastName || 'User',
+          username: clerkUser.username || undefined,
+          avatarUrl: clerkUser.imageUrl || undefined,
+        });
       }
     }
 

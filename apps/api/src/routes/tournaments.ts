@@ -236,64 +236,72 @@ tournamentsRouter.post('/', authMiddleware, validateBody(createTournamentWithEve
                           primaryEvent.format;
 
   // Use a transaction to create both tournament and events
-  const result = await db.transaction(async (tx) => {
-    // Create the tournament
-    const [tournament] = await tx
-      .insert(tournaments)
-      .values({
-        name: data.name,
-        slug,
-        description: data.description || null,
-        organizerId: dbUser.id,
-        startsAt: new Date(data.startDate),
-        endsAt: new Date(data.endDate),
-        registrationClosesAt: new Date(data.registrationDeadline),
-        locationNotes: data.venue,
-        maxParticipants: totalMaxParticipants,
-        tournamentFormat: tournamentFormat as 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'swiss',
-        gameFormat: gameFormat as 'singles' | 'doubles' | 'mixed_doubles',
-        pointsToWin: primaryEvent.pointsTo,
-        winBy: 2,
-        bestOf: primaryEvent.scoringFormat === 'best_of_3' ? 3 : 1,
-        status: 'draft',
-      })
-      .returning();
-
-    // Create tournament events
-    const createdEvents = [];
-    for (let i = 0; i < data.events.length; i++) {
-      const event = data.events[i]!;
-
-      // Map category to format expected by DB
-      const eventFormat = event.format === 'pool_to_bracket' ? 'pool_play' : event.format;
-
-      const [createdEvent] = await tx
-        .insert(tournamentEvents)
+  let result;
+  try {
+    result = await db.transaction(async (tx) => {
+      // Create the tournament
+      const [tournament] = await tx
+        .insert(tournaments)
         .values({
-          tournamentId: tournament!.id,
-          name: event.name || null,
-          category: event.category,
-          skillLevel: event.skillLevel,
-          ageGroup: event.ageGroup,
-          format: eventFormat as 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'swiss',
-          maxParticipants: event.maxParticipants,
-          entryFee: event.entryFee.toString(),
-          prizeMoney: event.prizeMoney.toString(),
-          scoringFormat: event.scoringFormat,
-          pointsTo: event.pointsTo,
-          poolPlayConfig: event.poolPlayConfig,
-          seedingConfig: event.seedingConfig,
-          bracketConfig: event.bracketConfig,
-          sortOrder: i,
-          status: 'pending',
+          name: data.name,
+          slug,
+          description: data.description || null,
+          organizerId: dbUser.id,
+          startsAt: new Date(data.startDate),
+          endsAt: new Date(data.endDate),
+          registrationClosesAt: new Date(data.registrationDeadline),
+          locationNotes: data.venue,
+          maxParticipants: totalMaxParticipants,
+          tournamentFormat: tournamentFormat as 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'swiss',
+          gameFormat: gameFormat as 'singles' | 'doubles' | 'mixed_doubles',
+          pointsToWin: primaryEvent.pointsTo,
+          winBy: 2,
+          bestOf: primaryEvent.scoringFormat === 'best_of_3' ? 3 : 1,
+          status: 'draft',
         })
         .returning();
 
-      createdEvents.push(createdEvent);
-    }
+      // Create tournament events
+      const createdEvents = [];
+      for (let i = 0; i < data.events.length; i++) {
+        const event = data.events[i]!;
 
-    return { tournament: tournament!, events: createdEvents };
-  });
+        // Map category to format expected by DB
+        const eventFormat = event.format === 'pool_to_bracket' ? 'pool_play' : event.format;
+
+        const [createdEvent] = await tx
+          .insert(tournamentEvents)
+          .values({
+            tournamentId: tournament!.id,
+            name: event.name || null,
+            category: event.category,
+            skillLevel: event.skillLevel,
+            ageGroup: event.ageGroup,
+            format: eventFormat as 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'swiss',
+            maxParticipants: event.maxParticipants,
+            entryFee: event.entryFee.toString(),
+            prizeMoney: event.prizeMoney.toString(),
+            scoringFormat: event.scoringFormat,
+            pointsTo: event.pointsTo,
+            poolPlayConfig: event.poolPlayConfig,
+            seedingConfig: event.seedingConfig,
+            bracketConfig: event.bracketConfig,
+            sortOrder: i,
+            status: 'pending',
+          })
+          .returning();
+
+        createdEvents.push(createdEvent);
+      }
+
+      return { tournament: tournament!, events: createdEvents };
+    });
+  } catch (dbError) {
+    console.error('Tournament creation DB error:', dbError);
+    throw new HTTPException(500, {
+      message: `Database error: ${(dbError as Error).message}`,
+    });
+  }
 
   await userService.logActivity(dbUser.id, 'tournament_created', 'tournament', result.tournament.id);
 
@@ -316,20 +324,23 @@ tournamentsRouter.post('/', authMiddleware, validateBody(createTournamentWithEve
 });
 
 /**
- * GET /tournaments/:id
- * Get tournament details with events
+ * GET /tournaments/:idOrSlug
+ * Get tournament details with events (accepts UUID or slug)
  */
-tournamentsRouter.get('/:id', validateParams(idParamSchema), async (c) => {
-  const { id } = c.req.valid('param');
+tournamentsRouter.get('/:idOrSlug', async (c) => {
+  const idOrSlug = c.req.param('idOrSlug');
 
-  const cacheKey = `tournament:${id}`;
+  const cacheKey = `tournament:${idOrSlug}`;
   const cached = await cache.get(cacheKey);
   if (cached) {
     return c.json({ tournament: cached });
   }
 
+  // Check if it's a UUID or slug
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
   const tournament = await db.query.tournaments.findFirst({
-    where: eq(tournaments.id, id),
+    where: isUUID ? eq(tournaments.id, idOrSlug) : eq(tournaments.slug, idOrSlug),
     with: {
       organizer: {
         columns: {

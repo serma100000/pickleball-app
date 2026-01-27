@@ -43,7 +43,7 @@ import {
 import { BracketMatch, type Match } from '@/components/tournaments/bracket-match';
 
 // Type definitions
-type TournamentStatus = 'draft' | 'registration' | 'in_progress' | 'completed' | 'cancelled';
+type TournamentStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 type EventFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'pool_to_bracket';
 type EventCategory = 'singles' | 'doubles' | 'mixed_doubles';
 type RegistrationStatus = 'pending' | 'confirmed' | 'checked_in' | 'waitlist' | 'cancelled';
@@ -213,10 +213,15 @@ export default function TournamentDetailPage() {
         text: 'text-gray-600 dark:text-gray-400',
         label: 'Draft',
       },
-      registration: {
+      registration_open: {
         bg: 'bg-blue-100 dark:bg-blue-900/30',
         text: 'text-blue-700 dark:text-blue-400',
         label: 'Registration Open',
+      },
+      registration_closed: {
+        bg: 'bg-orange-100 dark:bg-orange-900/30',
+        text: 'text-orange-700 dark:text-orange-400',
+        label: 'Registration Closed',
       },
       in_progress: {
         bg: 'bg-green-100 dark:bg-green-900/30',

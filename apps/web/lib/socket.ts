@@ -1,6 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
+
+// Disable socket in production unless explicitly configured
+const SOCKET_ENABLED = process.env.NODE_ENV === 'development' || !!SOCKET_URL;
 
 // Socket instance
 let socket: Socket | null = null;
@@ -53,12 +56,17 @@ export interface SocketEvents {
 }
 
 // Initialize socket connection
-export function initSocket(authToken?: string): Socket {
+export function initSocket(authToken?: string): Socket | null {
+  // Don't connect in production unless socket URL is explicitly configured
+  if (!SOCKET_ENABLED) {
+    return null;
+  }
+
   if (socket?.connected) {
     return socket;
   }
 
-  socket = io(SOCKET_URL, {
+  socket = io(SOCKET_URL || 'http://localhost:3001', {
     autoConnect: false,
     reconnection: true,
     reconnectionAttempts: 5,
@@ -83,7 +91,9 @@ export function initSocket(authToken?: string): Socket {
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Socket connection error:', error.message);
+    }
   });
 
   return socket;
@@ -96,6 +106,7 @@ export function getSocket(): Socket | null {
 
 // Connect socket
 export function connectSocket(): void {
+  if (!SOCKET_ENABLED) return;
   if (socket && !socket.connected) {
     socket.connect();
   }
