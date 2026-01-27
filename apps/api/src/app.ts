@@ -28,10 +28,25 @@ app.use('*', prettyJSON());
 app.use('*', secureHeaders());
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://www.paddle-up.app',
+  'https://paddle-up.app',
+  process.env.CORS_ORIGIN,
+].filter(Boolean) as string[];
+
 app.use(
   '*',
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return 'https://www.paddle-up.app';
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) return origin;
+      // Default to production
+      return 'https://www.paddle-up.app';
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
