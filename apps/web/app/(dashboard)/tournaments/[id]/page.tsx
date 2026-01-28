@@ -46,7 +46,7 @@ import { BracketMatch, type Match } from '@/components/tournaments/bracket-match
 type TournamentStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 type EventFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'pool_to_bracket';
 type EventCategory = 'singles' | 'doubles' | 'mixed_doubles';
-type RegistrationStatus = 'pending' | 'confirmed' | 'checked_in' | 'waitlist' | 'cancelled';
+type RegistrationStatus = 'registered' | 'waitlisted' | 'confirmed' | 'withdrawn' | 'disqualified';
 
 interface TournamentEvent {
   id: string;
@@ -917,27 +917,27 @@ function RegistrationsTab({
 
   const getStatusBadge = (status: RegistrationStatus) => {
     const styles: Record<RegistrationStatus, { bg: string; text: string; icon: typeof Check }> = {
-      pending: {
-        bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-        text: 'text-yellow-700 dark:text-yellow-400',
-        icon: Clock,
-      },
-      confirmed: {
+      registered: {
         bg: 'bg-blue-100 dark:bg-blue-900/30',
         text: 'text-blue-700 dark:text-blue-400',
         icon: Check,
       },
-      checked_in: {
+      confirmed: {
         bg: 'bg-green-100 dark:bg-green-900/30',
         text: 'text-green-700 dark:text-green-400',
         icon: CheckCircle,
       },
-      waitlist: {
+      waitlisted: {
         bg: 'bg-orange-100 dark:bg-orange-900/30',
         text: 'text-orange-700 dark:text-orange-400',
         icon: Clock,
       },
-      cancelled: {
+      withdrawn: {
+        bg: 'bg-gray-100 dark:bg-gray-700',
+        text: 'text-gray-600 dark:text-gray-400',
+        icon: XCircle,
+      },
+      disqualified: {
         bg: 'bg-red-100 dark:bg-red-900/30',
         text: 'text-red-700 dark:text-red-400',
         icon: XCircle,

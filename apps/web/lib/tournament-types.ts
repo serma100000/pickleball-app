@@ -105,13 +105,11 @@ export enum EventStatus {
  * Registration status for participants
  */
 export enum RegistrationStatus {
-  PENDING = 'pending',
+  REGISTERED = 'registered',
   CONFIRMED = 'confirmed',
   WAITLISTED = 'waitlisted',
-  CHECKED_IN = 'checked_in',
   WITHDRAWN = 'withdrawn',
   DISQUALIFIED = 'disqualified',
-  NO_SHOW = 'no_show',
 }
 
 /**

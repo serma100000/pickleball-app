@@ -502,6 +502,216 @@ tournamentsRouter.patch(
 );
 
 /**
+ * GET /tournaments/:id/events
+ * Get tournament events
+ */
+tournamentsRouter.get(
+  '/:id/events',
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, id),
+      with: {
+        events: {
+          orderBy: (events, { asc }) => [asc(events.sortOrder)],
+        },
+      },
+    });
+
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
+    return c.json({
+      events: tournament.events?.map((e) => ({
+        id: e.id,
+        name: e.name,
+        category: e.category,
+        skillLevel: e.skillLevel,
+        ageGroup: e.ageGroup,
+        format: e.format,
+        maxParticipants: e.maxParticipants,
+        currentParticipants: e.currentParticipants,
+        entryFee: e.entryFee,
+        prizeMoney: e.prizeMoney,
+        scoringFormat: e.scoringFormat,
+        pointsTo: e.pointsTo,
+        poolPlayConfig: e.poolPlayConfig,
+        seedingConfig: e.seedingConfig,
+        bracketConfig: e.bracketConfig,
+        status: e.status,
+        sortOrder: e.sortOrder,
+      })) || [],
+    });
+  }
+);
+
+/**
+ * GET /tournaments/:id/registrations
+ * Get tournament registrations (alias for participants)
+ */
+tournamentsRouter.get(
+  '/:id/registrations',
+  validateParams(idParamSchema),
+  validateQuery(paginationSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { page, limit } = c.req.valid('query');
+    const offset = (page - 1) * limit;
+
+    const registrations = await db.query.tournamentRegistrations.findMany({
+      where: eq(schema.tournamentRegistrations.tournamentId, id),
+      with: {
+        players: {
+          with: {
+            user: true,
+          },
+        },
+      },
+      limit,
+      offset,
+    });
+
+    return c.json({
+      registrations: registrations.map((reg) => ({
+        id: reg.id,
+        teamName: reg.teamName,
+        seed: reg.seed,
+        status: reg.status,
+        registeredAt: reg.registeredAt,
+        players: reg.players?.map((p) => ({
+          id: p.user?.id,
+          username: p.user?.username,
+          displayName: p.user?.displayName,
+          avatarUrl: p.user?.avatarUrl,
+          rating: p.ratingAtRegistration,
+          isCaptain: p.isCaptain,
+        })) || [],
+      })),
+      pagination: {
+        page,
+        limit,
+        hasMore: registrations.length === limit,
+      },
+    });
+  }
+);
+
+/**
+ * GET /tournaments/:id/bracket
+ * Get tournament bracket (singular - alias for brackets)
+ */
+tournamentsRouter.get(
+  '/:id/bracket',
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, id),
+    });
+
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
+    // Get matches
+    const matches = await db.query.tournamentMatches.findMany({
+      where: eq(tournamentMatches.tournamentId, id),
+      with: {
+        game: true,
+      },
+      orderBy: [desc(tournamentMatches.roundNumber), desc(tournamentMatches.matchNumber)],
+    });
+
+    // Group by round
+    const rounds: Record<number, typeof matches> = {};
+    for (const match of matches) {
+      const roundNum = match.roundNumber;
+      if (!rounds[roundNum]) {
+        rounds[roundNum] = [];
+      }
+      rounds[roundNum]!.push(match);
+    }
+
+    return c.json({
+      bracket: {
+        format: tournament.tournamentFormat,
+        totalRounds: Math.ceil(Math.log2(tournament.maxParticipants || 8)),
+        rounds: Object.entries(rounds).map(([round, matchList]) => ({
+          round: parseInt(round),
+          matches: matchList.map((m) => ({
+            id: m.id,
+            matchNumber: m.matchNumber,
+            roundNumber: m.roundNumber,
+            team1RegistrationId: m.team1RegistrationId,
+            team2RegistrationId: m.team2RegistrationId,
+            winnerRegistrationId: m.winnerRegistrationId,
+            scheduledAt: m.scheduledAt,
+            status: m.status,
+            scores: m.scores,
+            gameId: m.gameId,
+          })),
+        })),
+      },
+    });
+  }
+);
+
+/**
+ * GET /tournaments/:id/schedule
+ * Get tournament match schedule
+ */
+tournamentsRouter.get(
+  '/:id/schedule',
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, id),
+    });
+
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
+    // Get all scheduled matches
+    const matches = await db.query.tournamentMatches.findMany({
+      where: eq(tournamentMatches.tournamentId, id),
+      with: {
+        game: true,
+      },
+      orderBy: [desc(tournamentMatches.scheduledAt)],
+    });
+
+    return c.json({
+      schedule: {
+        tournamentId: id,
+        matches: matches.map((m) => ({
+          id: m.id,
+          matchNumber: m.matchNumber,
+          roundNumber: m.roundNumber,
+          team1RegistrationId: m.team1RegistrationId,
+          team2RegistrationId: m.team2RegistrationId,
+          scheduledAt: m.scheduledAt,
+          courtNumber: m.courtNumber,
+          status: m.status,
+        })),
+      },
+    });
+  }
+);
+
+/**
  * GET /tournaments/:id/brackets
  * Get tournament brackets
  */
