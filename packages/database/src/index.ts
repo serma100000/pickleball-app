@@ -226,7 +226,7 @@ export async function rawQuery<T>(
   params: unknown[] = []
 ): Promise<T[]> {
   const client = getSqlClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
   const result = await client.unsafe(query, params as any);
   return result as unknown as T[];
 }

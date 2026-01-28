@@ -61,8 +61,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check (excluding API)
-        run: pnpm --filter '!@pickle-play/api' typecheck
+      - name: Type check (excluding API and web)
+        run: pnpm turbo typecheck --filter='!@pickle-play/api' --filter='!@pickle-play/web'
 
   test-api:
     name: Test API
