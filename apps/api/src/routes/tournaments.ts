@@ -501,6 +501,61 @@ tournamentsRouter.patch(
   }
 );
 
+/**
+ * DELETE /tournaments/:id
+ * Delete a tournament
+ */
+tournamentsRouter.delete(
+  '/:id',
+  authMiddleware,
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { userId } = c.get('user');
+
+    // Get user from database
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, userId),
+    });
+
+    if (!dbUser) {
+      throw new HTTPException(401, {
+        message: 'User not found',
+      });
+    }
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, id),
+    });
+
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
+    if (tournament.organizerId !== dbUser.id) {
+      throw new HTTPException(403, {
+        message: 'Only the tournament organizer can delete it',
+      });
+    }
+
+    // Delete tournament (cascade will handle related records)
+    await db.delete(tournaments).where(eq(tournaments.id, id));
+
+    // Clear cache
+    await cache.del(`tournament:${id}`);
+    await cache.del(`tournament:${tournament.slug}`);
+
+    // Log activity
+    await userService.logActivity(dbUser.id, 'tournament_deleted', 'tournament', id);
+
+    return c.json({
+      message: 'Tournament deleted successfully',
+    });
+  }
+);
+
 // Helper to find tournament by ID or slug
 async function findTournamentByIdOrSlug(idOrSlug: string) {
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
