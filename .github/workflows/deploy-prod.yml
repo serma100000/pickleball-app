@@ -219,7 +219,7 @@ jobs:
       - name: Deploy to Railway Production
         run: |
           cd apps/api
-          railway up --environment production --detach
+          railway up --service api --environment production --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
