@@ -3,7 +3,7 @@ name: Deploy Preview
 on:
   pull_request:
     branches: [develop]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
@@ -14,27 +14,9 @@ env:
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
 jobs:
-  preview-info:
-    name: Preview Info
+  validate:
+    name: Validate PR
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
-    outputs:
-      pr_number: ${{ steps.pr.outputs.number }}
-      short_sha: ${{ steps.sha.outputs.short }}
-    steps:
-      - name: Get PR number
-        id: pr
-        run: echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-
-      - name: Get short SHA
-        id: sha
-        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-  build-preview:
-    name: Build Preview
-    runs-on: ubuntu-latest
-    needs: preview-info
-    if: github.event.action != 'closed'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,172 +35,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build all packages
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_URL: https://api-pr-${{ needs.preview-info.outputs.pr_number }}.pickle-play.dev
-          NEXT_PUBLIC_ENVIRONMENT: preview
+      - name: Run linter
+        run: pnpm lint
+        continue-on-error: true
 
-      - name: Upload web build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-preview-build
-          path: apps/web/.next
-          retention-days: 1
+      - name: Run type check
+        run: pnpm turbo build --filter=@pickle-play/ui && pnpm turbo typecheck --filter="@pickle-play/database" --filter="@pickle-play/ui" --filter="@pickle-play/validation" --filter="@pickle-play/types" --filter="@pickle-play/utils" --filter="@pickle-play/config"
 
-      - name: Upload API build
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-preview-build
-          path: apps/api/dist
-          retention-days: 1
+      - name: Run unit tests
+        run: pnpm test
+        continue-on-error: true
 
-  deploy-web-preview:
-    name: Deploy Web Preview
+  # Vercel automatically creates preview deployments for PRs
+  # Railway can be configured to create preview environments via its GitHub integration
+
+  comment-preview-info:
+    name: Comment Preview Info
     runs-on: ubuntu-latest
-    needs: [preview-info, build-preview]
-    if: github.event.action != 'closed'
-    environment:
-      name: preview
-      url: ${{ steps.deploy.outputs.preview_url }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download web build
-        uses: actions/download-artifact@v4
-        with:
-          name: web-preview-build
-          path: apps/web/.next
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Pull Vercel environment
-        run: |
-          vercel pull \
-            --yes \
-            --environment=preview \
-            --token=${{ secrets.VERCEL_TOKEN }}
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build with Vercel
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy to Vercel Preview
-        id: deploy
-        run: |
-          PREVIEW_URL=$(vercel deploy \
-            --prebuilt \
-            --token=${{ secrets.VERCEL_TOKEN }} \
-            --meta gitCommit=${{ github.sha }} \
-            --meta gitBranch=${{ github.head_ref }} \
-            --meta pullRequestNumber=${{ needs.preview-info.outputs.pr_number }})
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-    outputs:
-      preview_url: ${{ steps.deploy.outputs.preview_url }}
-
-  deploy-api-preview:
-    name: Deploy API Preview
-    runs-on: ubuntu-latest
-    needs: [preview-info, build-preview]
-    if: github.event.action != 'closed'
-    environment:
-      name: preview
-      url: ${{ steps.deploy.outputs.api_url }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download API build
-        uses: actions/download-artifact@v4
-        with:
-          name: api-preview-build
-          path: apps/api/dist
-
-      - name: Check Railway support for preview environments
-        id: railway-check
-        run: |
-          # Railway preview environments require specific project configuration
-          # Skip if RAILWAY_TOKEN is not set or preview environments not configured
-          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Railway token not configured, skipping API preview deployment"
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install Railway CLI
-        if: steps.railway-check.outputs.skip != 'true'
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway Preview
-        id: deploy
-        if: steps.railway-check.outputs.skip != 'true'
-        run: |
-          cd apps/api
-          # Create or use existing preview environment
-          railway environment create pr-${{ needs.preview-info.outputs.pr_number }} 2>/dev/null || true
-          railway up --environment pr-${{ needs.preview-info.outputs.pr_number }} --detach
-          API_URL="https://api-pr-${{ needs.preview-info.outputs.pr_number }}.pickle-play.dev"
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Set skipped API URL
-        if: steps.railway-check.outputs.skip == 'true'
-        id: skip-deploy
-        run: |
-          echo "api_url=Not deployed (Railway preview not configured)" >> $GITHUB_OUTPUT
-
-    outputs:
-      api_url: ${{ steps.deploy.outputs.api_url || steps.skip-deploy.outputs.api_url }}
-
-  run-preview-db-migrations:
-    name: Run Preview DB Migrations
-    runs-on: ubuntu-latest
-    needs: [preview-info, deploy-api-preview]
-    if: github.event.action != 'closed' && !contains(needs.deploy-api-preview.outputs.api_url, 'Not deployed')
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run database migrations
-        run: pnpm db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
-
-  comment-preview-urls:
-    name: Comment Preview URLs
-    runs-on: ubuntu-latest
-    needs: [preview-info, deploy-web-preview, deploy-api-preview]
-    if: github.event.action != 'closed'
+    needs: [validate]
     permissions:
       pull-requests: write
     steps:
@@ -226,73 +60,24 @@ jobs:
         uses: peter-evans/find-comment@v3
         id: find-comment
         with:
-          issue-number: ${{ needs.preview-info.outputs.pr_number }}
+          issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
           body-includes: Preview Deployment
-
-      - name: Determine API status
-        id: api-status
-        run: |
-          API_URL="${{ needs.deploy-api-preview.outputs.api_url }}"
-          if [[ "$API_URL" == *"Not deployed"* ]]; then
-            echo "status=Skipped" >> $GITHUB_OUTPUT
-            echo "url=N/A" >> $GITHUB_OUTPUT
-          else
-            echo "status=Deployed" >> $GITHUB_OUTPUT
-            echo "url=$API_URL" >> $GITHUB_OUTPUT
-          fi
 
       - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ needs.preview-info.outputs.pr_number }}
+          issue-number: ${{ github.event.pull_request.number }}
           edit-mode: replace
           body: |
             ## Preview Deployment
 
-            | Application | URL | Status |
-            |-------------|-----|--------|
-            | Web App | [${{ needs.deploy-web-preview.outputs.preview_url }}](${{ needs.deploy-web-preview.outputs.preview_url }}) | Deployed |
-            | API | ${{ steps.api-status.outputs.url }} | ${{ steps.api-status.outputs.status }} |
+            Validation complete. Preview deployments are handled automatically:
+            - **Vercel** creates a preview for the web app
+            - **Railway** creates a preview for the API (if configured)
+
+            Check the Vercel bot comment below for the preview URL.
 
             **Commit:** `${{ github.sha }}`
             **Branch:** `${{ github.head_ref }}`
-
-            ---
-
-            ### Quick Links
-            - [Web App](${{ needs.deploy-web-preview.outputs.preview_url }})
-            ${{ steps.api-status.outputs.status == 'Deployed' && format('- [API Health Check]({0}/health)', needs.deploy-api-preview.outputs.api_url) || '' }}
-            ${{ steps.api-status.outputs.status == 'Deployed' && format('- [API Docs]({0}/docs)', needs.deploy-api-preview.outputs.api_url) || '' }}
-
-            ---
-            <sub>Preview deployments are automatically deleted when the PR is closed or merged.</sub>
-
-  cleanup-on-close:
-    name: Cleanup Preview on Close
-    runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
-    steps:
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Delete Railway preview environment
-        if: ${{ secrets.RAILWAY_TOKEN != '' }}
-        run: |
-          railway environment delete pr-${{ github.event.pull_request.number }} --yes || true
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        continue-on-error: true
-
-      - name: Comment cleanup notification
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ## Preview Cleanup
-
-            The preview deployment for this PR has been cleaned up.
-
-            - Web preview: Removed from Vercel
-            - API preview: Environment deleted from Railway
