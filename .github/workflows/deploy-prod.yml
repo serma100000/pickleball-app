@@ -23,7 +23,6 @@ concurrency:
 env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-  NODE_ENV: production
 
 jobs:
   validate:
