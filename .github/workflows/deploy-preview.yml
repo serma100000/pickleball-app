@@ -278,7 +278,7 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Delete Railway preview environment
-        if: secrets.RAILWAY_TOKEN != ''
+        if: ${{ secrets.RAILWAY_TOKEN != '' }}
         run: |
           railway environment delete pr-${{ github.event.pull_request.number }} --yes || true
         env:
