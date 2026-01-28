@@ -50,16 +50,22 @@ type RegistrationStatus = 'registered' | 'waitlisted' | 'confirmed' | 'withdrawn
 
 interface TournamentEvent {
   id: string;
-  name: string;
-  category: EventCategory;
+  name: string | null;
+  category: string;
+  skillLevel: string;
+  ageGroup: string;
   format: EventFormat;
-  skillLevelMin: number | null;
-  skillLevelMax: number | null;
-  maxTeams: number;
-  currentTeams: number;
-  entryFee: number;
-  prizePool: number | null;
-  startTime: string | null;
+  maxParticipants: number;
+  currentParticipants: number;
+  entryFee: number | string;
+  prizeMoney: number | string;
+  scoringFormat: string;
+  pointsTo: number;
+  poolPlayConfig: unknown;
+  seedingConfig: unknown;
+  bracketConfig: unknown;
+  status: string;
+  sortOrder: number;
 }
 
 interface Registration {
@@ -106,33 +112,49 @@ interface ScheduleSlot {
 interface Tournament {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   status: TournamentStatus;
-  startDate: string;
-  endDate: string;
-  registrationDeadline: string | null;
+  startsAt: string;
+  endsAt: string;
+  registrationClosesAt: string | null;
+  registrationOpensAt: string | null;
+  locationNotes: string | null;
   venue: {
     id: string;
     name: string;
-    address: string | null;
+    slug: string;
+    streetAddress: string | null;
     city: string | null;
     state: string | null;
   } | null;
-  courts: number;
-  totalEvents: number;
-  totalRegistrations: number;
-  isUserOwner: boolean;
-  isUserAdmin: boolean;
-  isUserRegistered: boolean;
-  userRegistrationId: string | null;
-  creator: {
+  maxParticipants: number;
+  currentParticipants: number;
+  gameFormat: string;
+  tournamentFormat: string;
+  pointsToWin: number;
+  winBy: number;
+  bestOf: number;
+  isRated: boolean;
+  minRating: string | null;
+  maxRating: string | null;
+  organizer: {
     id: string;
     username: string;
     displayName: string | null;
-  };
+    email: string;
+  } | null;
+  events: TournamentEvent[];
   rules: string | null;
-  contactEmail: string | null;
-  websiteUrl: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Computed fields for UI (these may need to be added to API or computed client-side)
+  isUserOwner?: boolean;
+  isUserAdmin?: boolean;
+  isUserRegistered?: boolean;
+  userRegistrationId?: string | null;
 }
 
 type Tab = 'overview' | 'events' | 'registrations' | 'brackets' | 'schedule' | 'settings';
@@ -161,12 +183,12 @@ export default function TournamentDetailPage() {
   const publishMutation = usePublishTournament();
   const deleteMutation = useDeleteTournament();
 
-  // Cast data to expected types
-  const tournamentData = tournament as Tournament | undefined;
+  // Cast data to expected types - API returns nested objects like { tournament: {...} }
+  const tournamentData = (tournament as { tournament: Tournament } | undefined)?.tournament;
   const eventsData = events as { events: TournamentEvent[] } | undefined;
   const registrationsData = registrations as { registrations: Registration[] } | undefined;
-  const bracketData = bracket as { events: Array<{ id: string; name: string; matches: Match[] }> } | undefined;
-  const scheduleData = schedule as { slots: ScheduleSlot[]; courts: string[] } | undefined;
+  const bracketData = bracket as { bracket: { rounds: Array<{ round: number; matches: Match[] }> } } | undefined;
+  const scheduleData = schedule as { schedule: { matches: ScheduleSlot[] } } | undefined;
 
   // Loading state
   if (isLoading) {
@@ -315,7 +337,7 @@ export default function TournamentDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mt-3">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                {formatDateShort(tournamentData.startDate)} - {formatDateShort(tournamentData.endDate)}
+                {formatDateShort(tournamentData.startsAt)} - {formatDateShort(tournamentData.endsAt)}
               </div>
               {tournamentData.venue && (
                 <div className="flex items-center gap-1">
@@ -323,13 +345,19 @@ export default function TournamentDetailPage() {
                   {tournamentData.venue.name}{tournamentData.venue.city && `, ${tournamentData.venue.city}`}
                 </div>
               )}
+              {tournamentData.locationNotes && !tournamentData.venue && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {tournamentData.locationNotes}
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Trophy className="w-4 h-4" />
-                {tournamentData.totalEvents} events
+                {tournamentData.events?.length || 0} events
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                {tournamentData.totalRegistrations} registered
+                {tournamentData.currentParticipants || 0} registered
               </div>
             </div>
           </div>
@@ -528,8 +556,8 @@ function OverviewTab({
   };
 
   // Calculate totals
-  const totalSpots = events.reduce((sum, e) => sum + e.maxTeams, 0);
-  const totalRegistered = events.reduce((sum, e) => sum + e.currentTeams, 0);
+  const totalSpots = events.reduce((sum, e) => sum + e.maxParticipants, 0);
+  const totalRegistered = events.reduce((sum, e) => sum + e.currentParticipants, 0);
   const registrationPercentage = totalSpots > 0 ? (totalRegistered / totalSpots) * 100 : 0;
 
   return (
@@ -540,15 +568,15 @@ function OverviewTab({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Registrations</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.totalRegistrations}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.currentParticipants || 0}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Events</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.totalEvents}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.events?.length || 0}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Courts</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.courts}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Max Participants</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tournament.maxParticipants || 0}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Fill Rate</p>
@@ -563,8 +591,8 @@ function OverviewTab({
           </h2>
           <div className="space-y-4">
             {events.map((event) => {
-              const fillPercentage = event.maxTeams > 0
-                ? (event.currentTeams / event.maxTeams) * 100
+              const fillPercentage = event.maxParticipants > 0
+                ? (event.currentParticipants / event.maxParticipants) * 100
                 : 0;
               return (
                 <div key={event.id}>
@@ -573,7 +601,7 @@ function OverviewTab({
                       {event.name}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {event.currentTeams}/{event.maxTeams}
+                      {event.currentParticipants}/{event.maxParticipants}
                     </span>
                   </div>
                   <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -626,7 +654,7 @@ function OverviewTab({
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">{event.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {event.currentTeams}/{event.maxTeams} registered
+                    {event.currentParticipants}/{event.maxParticipants} registered
                   </p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -644,12 +672,12 @@ function OverviewTab({
             Key Dates
           </h3>
           <div className="space-y-4">
-            {tournament.registrationDeadline && (
+            {tournament.registrationClosesAt && (
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">Registration Deadline</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.registrationDeadline)}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.registrationClosesAt)}</p>
                 </div>
               </div>
             )}
@@ -657,14 +685,14 @@ function OverviewTab({
               <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">Tournament Start</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.startDate)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.startsAt)}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Trophy className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">Tournament End</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.endDate)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(tournament.endsAt)}</p>
               </div>
             </div>
           </div>
@@ -680,8 +708,8 @@ function OverviewTab({
               <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">{tournament.venue.name}</p>
-                {tournament.venue.address && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{tournament.venue.address}</p>
+                {tournament.venue.streetAddress && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{tournament.venue.streetAddress}</p>
                 )}
                 {(tournament.venue.city || tournament.venue.state) && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -694,42 +722,33 @@ function OverviewTab({
         )}
 
         {/* Contact */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Organizer
-          </h3>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-pickle-100 dark:bg-pickle-900/30 flex items-center justify-center">
-              <span className="text-pickle-700 dark:text-pickle-400 font-medium">
-                {(tournament.creator.displayName || tournament.creator.username).charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {tournament.creator.displayName || tournament.creator.username}
-              </p>
-              {tournament.contactEmail && (
-                <a
-                  href={`mailto:${tournament.contactEmail}`}
-                  className="text-sm text-pickle-600 dark:text-pickle-400 hover:underline"
-                >
-                  {tournament.contactEmail}
-                </a>
+        {tournament.organizer && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Organizer
+            </h3>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-pickle-100 dark:bg-pickle-900/30 flex items-center justify-center">
+                <span className="text-pickle-700 dark:text-pickle-400 font-medium">
+                  {(tournament.organizer.displayName || tournament.organizer.username).charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {tournament.organizer.displayName || tournament.organizer.username}
+                </p>
+                {tournament.organizer.email && (
+                  <a
+                    href={`mailto:${tournament.organizer.email}`}
+                    className="text-sm text-pickle-600 dark:text-pickle-400 hover:underline"
+                  >
+                    {tournament.organizer.email}
+                  </a>
               )}
             </div>
           </div>
-          {tournament.websiteUrl && (
-            <a
-              href={tournament.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 flex items-center gap-2 text-sm text-pickle-600 dark:text-pickle-400 hover:underline"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Tournament Website
-            </a>
-          )}
         </div>
+        )}
       </div>
     </div>
   );
@@ -777,10 +796,10 @@ function EventsTab({
         </div>
       ) : (
         events.map((event) => {
-          const fillPercentage = event.maxTeams > 0
-            ? (event.currentTeams / event.maxTeams) * 100
+          const fillPercentage = event.maxParticipants > 0
+            ? (event.currentParticipants / event.maxParticipants) * 100
             : 0;
-          const isFull = event.currentTeams >= event.maxTeams;
+          const isFull = event.currentParticipants >= event.maxParticipants;
 
           return (
             <div
@@ -812,9 +831,7 @@ function EventsTab({
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Skill Level</p>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {event.skillLevelMin && event.skillLevelMax
-                          ? `${event.skillLevelMin.toFixed(1)} - ${event.skillLevelMax.toFixed(1)}`
-                          : 'All Levels'}
+                        {event.skillLevel || 'All Levels'}
                       </p>
                     </div>
                     <div>
@@ -832,7 +849,7 @@ function EventsTab({
                         Registration
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {event.currentTeams}/{event.maxTeams} spots filled
+                        {event.currentParticipants}/{event.maxParticipants} spots filled
                       </span>
                     </div>
                     <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
