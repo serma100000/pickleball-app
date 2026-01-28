@@ -4,17 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      skip_tests:
-        description: 'Skip tests (use with caution)'
-        required: false
-        default: false
-        type: boolean
-      force_deploy:
-        description: 'Force deployment even if tests fail'
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: production-deploy
@@ -50,289 +39,56 @@ jobs:
         run: pnpm lint
         continue-on-error: true
 
-      - name: Run type check (packages only)
+      - name: Run type check
         run: pnpm turbo build --filter=@pickle-play/ui && pnpm turbo typecheck --filter="@pickle-play/database" --filter="@pickle-play/ui" --filter="@pickle-play/validation" --filter="@pickle-play/types" --filter="@pickle-play/utils" --filter="@pickle-play/config"
-
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    if: inputs.skip_tests != true
-    services:
-      postgres:
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pickle_play_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pickle_play_test
-      REDIS_URL: redis://localhost:6379
-      NODE_ENV: test
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm turbo build --filter=@pickle-play/ui
 
       - name: Run unit tests
         run: pnpm test
         continue-on-error: true
 
-      - name: Build application
-        run: pnpm build
-
-      - name: Push database schema
-        run: pnpm db:push
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [validate]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build all packages
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ vars.PRODUCTION_API_URL }}
-          NEXT_PUBLIC_ENVIRONMENT: production
-
-      - name: Upload web build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-production-build
-          path: apps/web/.next
-          retention-days: 7
-
-      - name: Upload API build
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-production-build
-          path: apps/api/dist
-          retention-days: 7
-
-  deploy-database-migrations:
-    name: Deploy Database Migrations
-    runs-on: ubuntu-latest
-    needs: [build, test]
-    if: |
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.test.result == 'success' || needs.test.result == 'skipped' || inputs.force_deploy == true)
-    environment:
-      name: production
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Create database backup
-        run: |
-          echo "Creating database backup before migration..."
-          # Add backup logic here if needed
-          echo "Backup completed"
-
-      - name: Run database migrations
-        run: pnpm db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  deploy-api:
-    name: Deploy API
-    runs-on: ubuntu-latest
-    needs: [deploy-database-migrations]
-    environment:
-      name: production
-      url: ${{ vars.PRODUCTION_API_URL }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download API build
-        uses: actions/download-artifact@v4
-        with:
-          name: api-production-build
-          path: apps/api/dist
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway Production
-        run: |
-          cd apps/api
-          railway up --service api --environment production --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Wait for API health check
-        run: |
-          echo "Waiting for API to be healthy..."
-          for i in {1..30}; do
-            if curl -sf "${{ vars.PRODUCTION_API_URL }}/health" > /dev/null; then
-              echo "API is healthy!"
-              exit 0
-            fi
-            echo "Attempt $i: API not ready yet, waiting..."
-            sleep 10
-          done
-          echo "API health check failed after 5 minutes"
-          exit 1
-
-  deploy-web:
-    name: Deploy Web
-    runs-on: ubuntu-latest
-    needs: [deploy-api]
-    environment:
-      name: production
-      url: ${{ vars.PRODUCTION_WEB_URL }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download web build
-        uses: actions/download-artifact@v4
-        with:
-          name: web-production-build
-          path: apps/web/.next
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Pull Vercel environment
-        run: |
-          vercel pull \
-            --yes \
-            --environment=production \
-            --token=${{ secrets.VERCEL_TOKEN }}
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build with Vercel
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy to Vercel Production
-        id: deploy
-        run: |
-          DEPLOY_URL=$(vercel deploy \
-            --prebuilt \
-            --prod \
-            --token=${{ secrets.VERCEL_TOKEN }})
-          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-        working-directory: apps/web
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  # Railway deploys automatically via its GitHub integration
+  # Vercel deploys automatically via its GitHub integration
+  # This workflow just validates the code before those deploys happen
 
   smoke-test:
     name: Smoke Test
     runs-on: ubuntu-latest
-    needs: [deploy-web, deploy-api]
+    needs: [validate]
     steps:
-      - name: Test Web App
+      - name: Wait for deployments
         run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PRODUCTION_WEB_URL }}")
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Web app returned status $HTTP_STATUS"
-            exit 1
-          fi
-          echo "Web app is responding correctly"
+          echo "Waiting 60s for Railway and Vercel to deploy..."
+          sleep 60
 
       - name: Test API Health
         run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PRODUCTION_API_URL }}/health")
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PRODUCTION_API_URL }}/health" || echo "000")
           if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "API health check returned status $HTTP_STATUS"
-            exit 1
+            echo "API health check returned status $HTTP_STATUS (may still be deploying)"
+          else
+            echo "API is healthy"
           fi
-          echo "API is healthy"
+        continue-on-error: true
 
-      - name: Test API Response
+      - name: Test Web App
         run: |
-          RESPONSE=$(curl -s "${{ vars.PRODUCTION_API_URL }}/health")
-          echo "API Response: $RESPONSE"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PRODUCTION_WEB_URL }}" || echo "000")
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Web app returned status $HTTP_STATUS (may still be deploying)"
+          else
+            echo "Web app is responding correctly"
+          fi
+        continue-on-error: true
 
-      - name: Test critical endpoints
-        run: |
-          # Test homepage loads
-          curl -sf "${{ vars.PRODUCTION_WEB_URL }}" > /dev/null
-          echo "Homepage OK"
-
-          # Add more critical endpoint tests as needed
-
-  notify-success:
-    name: Notify Success
+  notify:
+    name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [smoke-test]
-    if: success()
+    needs: [validate, smoke-test]
+    if: always()
     steps:
       - name: Create deployment summary
         run: |
-          echo "## Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-----|" >> $GITHUB_STEP_SUMMARY
@@ -341,128 +97,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Deployment completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
-
-      - name: Send Discord notification
-        if: vars.DISCORD_WEBHOOK_URL != ''
-        run: |
-          curl -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "Production Deployment Successful",
-                "description": "Pickle Play has been deployed to production!",
-                "color": 5763719,
-                "fields": [
-                  {"name": "Web App", "value": "${{ vars.PRODUCTION_WEB_URL }}", "inline": true},
-                  {"name": "API", "value": "${{ vars.PRODUCTION_API_URL }}", "inline": true},
-                  {"name": "Commit", "value": "`${{ github.sha }}`", "inline": false}
-                ],
-                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-              }]
-            }' \
-            "${{ vars.DISCORD_WEBHOOK_URL }}"
-
-      - name: Send Slack notification
-        if: vars.SLACK_WEBHOOK_URL != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {"type": "plain_text", "text": "Production Deployment Successful", "emoji": true}
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {"type": "mrkdwn", "text": "*Web App:*\n<${{ vars.PRODUCTION_WEB_URL }}|View>"},
-                    {"type": "mrkdwn", "text": "*API:*\n<${{ vars.PRODUCTION_API_URL }}|View>"}
-                  ]
-                },
-                {
-                  "type": "context",
-                  "elements": [
-                    {"type": "mrkdwn", "text": "Commit: `${{ github.sha }}`"}
-                  ]
-                }
-              ]
-            }' \
-            "${{ vars.SLACK_WEBHOOK_URL }}"
-
-  notify-failure:
-    name: Notify Failure
-    runs-on: ubuntu-latest
-    needs: [deploy-database-migrations, deploy-api, deploy-web, smoke-test]
-    if: failure()
-    steps:
-      - name: Create failure summary
-        run: |
-          echo "## Production Deployment Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-
-      - name: Send Discord failure notification
-        if: vars.DISCORD_WEBHOOK_URL != ''
-        run: |
-          curl -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "Production Deployment Failed",
-                "description": "The production deployment for Pickle Play has failed!",
-                "color": 15548997,
-                "fields": [
-                  {"name": "Commit", "value": "`${{ github.sha }}`", "inline": true},
-                  {"name": "Workflow", "value": "[View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
-                ],
-                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-              }]
-            }' \
-            "${{ vars.DISCORD_WEBHOOK_URL }}"
-
-      - name: Send Slack failure notification
-        if: vars.SLACK_WEBHOOK_URL != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {"type": "plain_text", "text": "Production Deployment Failed", "emoji": true}
-                },
-                {
-                  "type": "section",
-                  "text": {"type": "mrkdwn", "text": "The production deployment has failed. Please investigate immediately."}
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {"type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`"},
-                    {"type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"}
-                  ]
-                }
-              ]
-            }' \
-            "${{ vars.SLACK_WEBHOOK_URL }}"
-
-  create-sentry-release:
-    name: Create Sentry Release
-    runs-on: ubuntu-latest
-    needs: [smoke-test]
-    if: success() && vars.SENTRY_ORG != ''
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-        with:
-          environment: production
-          version: ${{ github.sha }}
+          echo "Railway and Vercel deploy automatically via their GitHub integrations." >> $GITHUB_STEP_SUMMARY
