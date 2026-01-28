@@ -353,7 +353,7 @@ export const apiEndpoints = {
       }>;
       status?: string;
     }) => api.patch(`/tournaments/${id}`, data),
-    delete: (id: string) => api.delete(`/tournaments/${id}`),
+    delete: (token: string, id: string) => apiWithAuth.delete(`/tournaments/${id}`, token),
     register: (id: string, data: unknown) =>
       api.post(`/tournaments/${id}/register`, data),
     unregister: (id: string, registrationId: string) =>

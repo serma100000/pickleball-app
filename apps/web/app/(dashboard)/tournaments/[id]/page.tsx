@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import {
   ArrowLeft,
   MapPin,
@@ -162,6 +163,7 @@ type Tab = 'overview' | 'events' | 'registrations' | 'brackets' | 'schedule' | '
 export default function TournamentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { getToken } = useAuth();
   const tournamentId = params.id as string;
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -285,7 +287,11 @@ export default function TournamentDetailPage() {
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this tournament? This action cannot be undone.')) {
-      await deleteMutation.mutateAsync(tournamentId);
+      const token = await getToken();
+      if (!token) {
+        return;
+      }
+      await deleteMutation.mutateAsync({ token, id: tournamentId });
       router.push('/tournaments');
     }
   };

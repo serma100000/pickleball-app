@@ -283,7 +283,8 @@ export function useDeleteTournament() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => apiEndpoints.tournaments.delete(id),
+    mutationFn: ({ token, id }: { token: string; id: string }) =>
+      apiEndpoints.tournaments.delete(token, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
     },

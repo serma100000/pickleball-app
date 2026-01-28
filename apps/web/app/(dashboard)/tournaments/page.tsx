@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import {
   Plus,
   Trophy,
@@ -68,6 +69,8 @@ export default function TournamentsPage() {
     return activeTab;
   };
 
+  const { getToken } = useAuth();
+
   const { data, isLoading, isError, error, refetch } = useMyTournaments({
     page,
     limit,
@@ -103,7 +106,15 @@ export default function TournamentsPage() {
   const handleDelete = async (tournamentId: string, tournamentName: string) => {
     if (confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
       try {
-        await deleteMutation.mutateAsync(tournamentId);
+        const token = await getToken();
+        if (!token) {
+          toast.error({
+            title: 'Authentication required',
+            description: 'Please sign in to delete tournaments.',
+          });
+          return;
+        }
+        await deleteMutation.mutateAsync({ token, id: tournamentId });
         refetch();
         toast.success({
           title: 'Tournament deleted',
