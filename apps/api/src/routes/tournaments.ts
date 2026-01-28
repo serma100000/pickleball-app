@@ -501,18 +501,26 @@ tournamentsRouter.patch(
   }
 );
 
+// Helper to find tournament by ID or slug
+async function findTournamentByIdOrSlug(idOrSlug: string) {
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+  return db.query.tournaments.findFirst({
+    where: isUUID ? eq(tournaments.id, idOrSlug) : eq(tournaments.slug, idOrSlug),
+  });
+}
+
 /**
- * GET /tournaments/:id/events
- * Get tournament events
+ * GET /tournaments/:idOrSlug/events
+ * Get tournament events (accepts UUID or slug)
  */
 tournamentsRouter.get(
-  '/:id/events',
-  validateParams(idParamSchema),
+  '/:idOrSlug/events',
   async (c) => {
-    const { id } = c.req.valid('param');
+    const idOrSlug = c.req.param('idOrSlug');
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
     const tournament = await db.query.tournaments.findFirst({
-      where: eq(tournaments.id, id),
+      where: isUUID ? eq(tournaments.id, idOrSlug) : eq(tournaments.slug, idOrSlug),
       with: {
         events: {
           orderBy: (events, { asc }) => [asc(events.sortOrder)],
@@ -551,20 +559,27 @@ tournamentsRouter.get(
 );
 
 /**
- * GET /tournaments/:id/registrations
- * Get tournament registrations (alias for participants)
+ * GET /tournaments/:idOrSlug/registrations
+ * Get tournament registrations (accepts UUID or slug)
  */
 tournamentsRouter.get(
-  '/:id/registrations',
-  validateParams(idParamSchema),
+  '/:idOrSlug/registrations',
   validateQuery(paginationSchema),
   async (c) => {
-    const { id } = c.req.valid('param');
+    const idOrSlug = c.req.param('idOrSlug');
     const { page, limit } = c.req.valid('query');
     const offset = (page - 1) * limit;
 
+    // First find the tournament to get its ID
+    const tournament = await findTournamentByIdOrSlug(idOrSlug);
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
     const registrations = await db.query.tournamentRegistrations.findMany({
-      where: eq(schema.tournamentRegistrations.tournamentId, id),
+      where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
       with: {
         players: {
           with: {
@@ -602,18 +617,15 @@ tournamentsRouter.get(
 );
 
 /**
- * GET /tournaments/:id/bracket
- * Get tournament bracket (singular - alias for brackets)
+ * GET /tournaments/:idOrSlug/bracket
+ * Get tournament bracket (accepts UUID or slug)
  */
 tournamentsRouter.get(
-  '/:id/bracket',
-  validateParams(idParamSchema),
+  '/:idOrSlug/bracket',
   async (c) => {
-    const { id } = c.req.valid('param');
+    const idOrSlug = c.req.param('idOrSlug');
 
-    const tournament = await db.query.tournaments.findFirst({
-      where: eq(tournaments.id, id),
-    });
+    const tournament = await findTournamentByIdOrSlug(idOrSlug);
 
     if (!tournament) {
       throw new HTTPException(404, {
@@ -623,7 +635,7 @@ tournamentsRouter.get(
 
     // Get matches
     const matches = await db.query.tournamentMatches.findMany({
-      where: eq(tournamentMatches.tournamentId, id),
+      where: eq(tournamentMatches.tournamentId, tournament.id),
       with: {
         game: true,
       },
@@ -665,18 +677,15 @@ tournamentsRouter.get(
 );
 
 /**
- * GET /tournaments/:id/schedule
- * Get tournament match schedule
+ * GET /tournaments/:idOrSlug/schedule
+ * Get tournament match schedule (accepts UUID or slug)
  */
 tournamentsRouter.get(
-  '/:id/schedule',
-  validateParams(idParamSchema),
+  '/:idOrSlug/schedule',
   async (c) => {
-    const { id } = c.req.valid('param');
+    const idOrSlug = c.req.param('idOrSlug');
 
-    const tournament = await db.query.tournaments.findFirst({
-      where: eq(tournaments.id, id),
-    });
+    const tournament = await findTournamentByIdOrSlug(idOrSlug);
 
     if (!tournament) {
       throw new HTTPException(404, {
@@ -686,7 +695,7 @@ tournamentsRouter.get(
 
     // Get all scheduled matches
     const matches = await db.query.tournamentMatches.findMany({
-      where: eq(tournamentMatches.tournamentId, id),
+      where: eq(tournamentMatches.tournamentId, tournament.id),
       with: {
         game: true,
       },
@@ -695,7 +704,7 @@ tournamentsRouter.get(
 
     return c.json({
       schedule: {
-        tournamentId: id,
+        tournamentId: tournament.id,
         matches: matches.map((m) => ({
           id: m.id,
           matchNumber: m.matchNumber,
