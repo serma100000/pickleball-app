@@ -200,9 +200,13 @@ interface NumberStepperProps {
   min: number;
   max: number;
   helpText?: string;
+  id?: string;
 }
 
-function NumberStepper({ value, onChange, label, min, max, helpText }: NumberStepperProps) {
+function NumberStepper({ value, onChange, label, min, max, helpText, id }: NumberStepperProps) {
+  // Generate a stable id from label if not provided
+  const inputId = id || `stepper-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseInt(e.target.value, 10);
     if (!isNaN(newValue)) {
@@ -226,7 +230,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
       </label>
       <div className="flex items-center gap-2">
@@ -241,16 +245,20 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
           )}
-          aria-label="Decrease"
+          aria-label={`Decrease ${label}`}
         >
           -
         </button>
         <Input
+          id={inputId}
           type="number"
           value={value}
           onChange={handleChange}
           min={min}
           max={max}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={value}
           className="w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
@@ -264,7 +272,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
           )}
-          aria-label="Increase"
+          aria-label={`Increase ${label}`}
         >
           +
         </button>
@@ -414,28 +422,33 @@ function LeagueDetailsStep({ state, setState }: StepProps) {
 
       {/* League Name */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="league-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           League Name <span className="text-red-500">*</span>
         </label>
         <Input
+          id="league-name"
           type="text"
           placeholder="e.g., Summer Doubles League 2025"
           value={state.name}
           onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
+          maxLength={100}
+          aria-required="true"
           className="w-full"
         />
       </div>
 
       {/* Description */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="league-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Description (Optional)
         </label>
         <textarea
+          id="league-description"
           rows={3}
           placeholder="Describe your league..."
           value={state.description}
           onChange={(e) => setState((prev) => ({ ...prev, description: e.target.value }))}
+          maxLength={2000}
           className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
         />
       </div>
@@ -466,16 +479,18 @@ function LeagueDetailsStep({ state, setState }: StepProps) {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="league-start-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Start Date
               </div>
             </label>
             <Input
+              id="league-start-date"
               type="date"
               value={state.startDate}
               onChange={(e) => setState((prev) => ({ ...prev, startDate: e.target.value }))}
+              aria-required="true"
               className="w-full"
             />
           </div>

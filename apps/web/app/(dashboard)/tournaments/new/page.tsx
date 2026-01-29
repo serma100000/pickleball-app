@@ -336,6 +336,7 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             data-form-type="other"
             data-lpignore="true"
             aria-describedby={`${id}-description`}
+            aria-required={required}
             className="w-full"
           />
           {/* Hidden description for screen readers */}
@@ -356,9 +357,13 @@ interface NumberStepperProps {
   min: number;
   max: number;
   helpText?: string;
+  id?: string;
 }
 
-function NumberStepper({ value, onChange, label, min, max, helpText }: NumberStepperProps) {
+function NumberStepper({ value, onChange, label, min, max, helpText, id }: NumberStepperProps) {
+  // Generate a stable id from label if not provided
+  const inputId = id || `stepper-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseInt(e.target.value, 10);
     if (!isNaN(newValue)) {
@@ -368,7 +373,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
       </label>
       <div className="flex items-center gap-2">
@@ -383,16 +388,20 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
           )}
-          aria-label="Decrease"
+          aria-label={`Decrease ${label}`}
         >
           -
         </button>
         <Input
+          id={inputId}
           type="number"
           value={value}
           onChange={handleChange}
           min={min}
           max={max}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={value}
           className="w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
@@ -406,7 +415,7 @@ function NumberStepper({ value, onChange, label, min, max, helpText }: NumberSte
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
           )}
-          aria-label="Increase"
+          aria-label={`Increase ${label}`}
         >
           +
         </button>
@@ -424,6 +433,7 @@ interface SelectFieldProps<T extends string> {
   onChange: (value: T) => void;
   options: { value: T; label: string }[];
   required?: boolean;
+  id?: string;
 }
 
 function SelectField<T extends string>({
@@ -432,15 +442,21 @@ function SelectField<T extends string>({
   onChange,
   options,
   required,
+  id,
 }: SelectFieldProps<T>) {
+  // Generate a stable id from label if not provided
+  const selectId = id || `select-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
+        id={selectId}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
+        aria-required={required}
         className="flex h-11 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2.5 text-base text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pickle-500 focus-visible:ring-offset-2"
       >
         {options.map((option) => (
@@ -574,6 +590,8 @@ function BasicInfoStep({ state, setState }: StepProps) {
           placeholder="e.g., Bay Area Spring Championship 2025"
           value={state.name}
           onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
+          maxLength={100}
+          aria-required="true"
           className="w-full"
         />
       </Card>
@@ -589,6 +607,7 @@ function BasicInfoStep({ state, setState }: StepProps) {
           placeholder="Describe your tournament..."
           value={state.description}
           onChange={(e) => setState((prev) => ({ ...prev, description: e.target.value }))}
+          maxLength={2000}
           className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-pickle-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
         />
       </Card>
@@ -625,6 +644,19 @@ function BasicInfoStep({ state, setState }: StepProps) {
             required
           />
         </div>
+        {/* Date validation messages */}
+        {state.startDate && state.endDate && state.endDate < state.startDate && (
+          <p className="mt-3 text-sm text-red-500 flex items-center gap-1">
+            <AlertTriangle className="w-4 h-4" />
+            End date must be on or after start date
+          </p>
+        )}
+        {state.startDate && state.registrationDeadline && state.registrationDeadline > state.startDate && (
+          <p className="mt-3 text-sm text-red-500 flex items-center gap-1">
+            <AlertTriangle className="w-4 h-4" />
+            Registration deadline must be before start date
+          </p>
+        )}
       </Card>
 
       {/* Venue */}
@@ -675,6 +707,8 @@ function BasicInfoStep({ state, setState }: StepProps) {
               placeholder="Director name"
               value={state.directorName}
               onChange={(e) => setState((prev) => ({ ...prev, directorName: e.target.value }))}
+              maxLength={100}
+              aria-required="true"
               className="w-full"
             />
           </div>
@@ -689,6 +723,8 @@ function BasicInfoStep({ state, setState }: StepProps) {
               placeholder="director@email.com"
               value={state.directorEmail}
               onChange={(e) => setState((prev) => ({ ...prev, directorEmail: e.target.value }))}
+              maxLength={255}
+              aria-required="true"
               className="w-full"
             />
           </div>
@@ -703,6 +739,7 @@ function BasicInfoStep({ state, setState }: StepProps) {
               placeholder="(555) 123-4567"
               value={state.directorPhone}
               onChange={(e) => setState((prev) => ({ ...prev, directorPhone: e.target.value }))}
+              maxLength={20}
               className="w-full"
             />
           </div>
@@ -1635,15 +1672,24 @@ export default function NewTournamentPage() {
 
   const canProceed = () => {
     switch (state.step) {
-      case 0:
-        return (
+      case 0: {
+        // Basic required field check
+        const hasRequiredFields =
           state.name.trim() !== '' &&
           state.startDate !== '' &&
           state.endDate !== '' &&
           state.registrationDeadline !== '' &&
           state.directorName.trim() !== '' &&
-          state.directorEmail.trim() !== ''
-        );
+          state.directorEmail.trim() !== '';
+
+        // Date validation: end date must be >= start date
+        const validEndDate = !state.startDate || !state.endDate || state.endDate >= state.startDate;
+
+        // Date validation: registration deadline must be < start date
+        const validDeadline = !state.startDate || !state.registrationDeadline || state.registrationDeadline <= state.startDate;
+
+        return hasRequiredFields && validEndDate && validDeadline;
+      }
       case 1:
         return state.events.length > 0;
       case 2:
