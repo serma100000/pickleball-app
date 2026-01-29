@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, forwardRef } from 'react';
+import { useState, useCallback, useRef, forwardRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -778,6 +778,7 @@ function EventsConfigStep({ state, setState }: StepProps) {
           Events Configuration
         </h2>
         <Button
+          id="add-event-button"
           type="button"
           onClick={addEvent}
           className="flex items-center gap-2"
@@ -1012,7 +1013,7 @@ function FormatSettingsStep({ state, setState }: StepProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-format-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Format Settings
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 -mt-2 mb-4">
@@ -1279,7 +1280,7 @@ function ReviewStep({ state }: { state: TournamentFormState }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-review-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Review & Create
       </h2>
 
@@ -1494,9 +1495,43 @@ export default function NewTournamentPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [stepAnnouncement, setStepAnnouncement] = useState('');
 
   const isFirstStep = state.step === 0;
   const isLastStep = state.step === STEPS.length - 1;
+
+  // Map of step index to first focusable element ID
+  const STEP_FIRST_FOCUS: Record<number, string> = {
+    0: 'tournament-name',
+    1: 'add-event-button',
+    2: 'step-format-heading',
+    3: 'step-review-heading',
+  };
+
+  // Focus first element when step changes
+  useEffect(() => {
+    const focusId = STEP_FIRST_FOCUS[state.step];
+    if (focusId) {
+      // Small delay to allow DOM to update
+      const timer = setTimeout(() => {
+        const element = document.getElementById(focusId);
+        if (element) {
+          element.focus();
+          // For headings, we need tabIndex to make them focusable
+          if (element.tagName === 'H2' || element.tagName === 'H3') {
+            element.setAttribute('tabindex', '-1');
+            element.focus();
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [state.step]);
+
+  // Announce step changes for screen readers
+  useEffect(() => {
+    setStepAnnouncement(`Step ${state.step + 1} of ${STEPS.length}: ${STEPS[state.step]}`);
+  }, [state.step]);
 
   const handleNext = () => {
     setState((prev) => ({ ...prev, step: Math.min(prev.step + 1, STEPS.length - 1) }));
@@ -1551,12 +1586,14 @@ export default function NewTournamentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
+    // Validate required fields with focus management
     if (!state.name.trim()) {
       toast.error({
         title: 'Tournament name required',
         description: 'Please enter a name for your tournament.',
       });
+      // Focus the problematic field
+      setTimeout(() => document.getElementById('tournament-name')?.focus(), 100);
       return;
     }
 
@@ -1565,6 +1602,8 @@ export default function NewTournamentPage() {
         title: 'Events required',
         description: 'Please add at least one event to your tournament.',
       });
+      // Focus the add event button
+      setTimeout(() => document.getElementById('add-event-button')?.focus(), 100);
       return;
     }
 
@@ -1718,6 +1757,19 @@ export default function NewTournamentPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Skip link for keyboard users */}
+      <a
+        href="#tournament-form-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-pickle-500 focus:text-white focus:rounded-lg focus:outline-none"
+      >
+        Skip to form content
+      </a>
+
+      {/* Aria-live region for step announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {stepAnnouncement}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
@@ -1788,7 +1840,7 @@ export default function NewTournamentPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="tournament-form-content" onSubmit={handleSubmit} className="space-y-6">
         {renderStep()}
 
         {/* Navigation Buttons */}

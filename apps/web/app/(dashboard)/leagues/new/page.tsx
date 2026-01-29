@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -396,7 +396,7 @@ interface StepProps {
 function LeagueTypeStep({ state, setState }: StepProps) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="league-type-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Select League Type
       </h2>
       <div className="space-y-3" role="radiogroup" aria-label="League type selection">
@@ -522,7 +522,7 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-players-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Player Settings
       </h2>
 
@@ -634,7 +634,7 @@ function PlayerSettingsStep({ state, setState }: StepProps) {
 function PlayoffSettingsStep({ state, setState }: StepProps) {
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-playoffs-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Playoff Settings
       </h2>
 
@@ -704,7 +704,7 @@ function PlayoffSettingsStep({ state, setState }: StepProps) {
 function RatingOptionsStep({ state, setState }: StepProps) {
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-ratings-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Rating Options
       </h2>
 
@@ -753,7 +753,7 @@ function ReviewStep({ state }: { state: LeagueFormState }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <h2 id="step-review-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4" tabIndex={-1}>
         Review & Create
       </h2>
 
@@ -909,9 +909,42 @@ export default function NewLeaguePage() {
     reportToDupr: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stepAnnouncement, setStepAnnouncement] = useState('');
 
   const isFirstStep = state.step === 0;
   const isLastStep = state.step === STEPS.length - 1;
+
+  // Map of step index to first focusable element ID
+  const STEP_FIRST_FOCUS: Record<number, string> = {
+    0: 'league-type-heading',
+    1: 'league-name',
+    2: 'step-players-heading',
+    3: 'step-playoffs-heading',
+    4: 'step-ratings-heading',
+    5: 'step-review-heading',
+  };
+
+  // Focus first element when step changes
+  useEffect(() => {
+    const focusId = STEP_FIRST_FOCUS[state.step];
+    if (focusId) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(focusId);
+        if (element) {
+          if (element.tagName === 'H2' || element.tagName === 'H3') {
+            element.setAttribute('tabindex', '-1');
+          }
+          element.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [state.step]);
+
+  // Announce step changes for screen readers
+  useEffect(() => {
+    setStepAnnouncement(`Step ${state.step + 1} of ${STEPS.length}: ${STEPS[state.step]}`);
+  }, [state.step]);
 
   const handleNext = () => {
     setState((prev) => ({ ...prev, step: Math.min(prev.step + 1, STEPS.length - 1) }));
@@ -924,12 +957,13 @@ export default function NewLeaguePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
+    // Validate required fields with focus management
     if (!state.leagueType) {
       toast.error({
         title: 'League type required',
         description: 'Please select a league type.',
       });
+      setTimeout(() => document.getElementById('league-type-heading')?.focus(), 100);
       return;
     }
 
@@ -938,6 +972,7 @@ export default function NewLeaguePage() {
         title: 'League name required',
         description: 'Please enter a name for your league.',
       });
+      setTimeout(() => document.getElementById('league-name')?.focus(), 100);
       return;
     }
 
@@ -1054,11 +1089,25 @@ export default function NewLeaguePage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Skip link for keyboard users */}
+      <a
+        href="#league-form-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand-500 focus:text-white focus:rounded-lg focus:outline-none"
+      >
+        Skip to form content
+      </a>
+
+      {/* Aria-live region for step announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {stepAnnouncement}
+      </div>
+
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link
           href="/leagues"
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          aria-label="Back to leagues"
         >
           <ChevronLeft className="w-5 h-5" />
         </Link>
@@ -1105,7 +1154,7 @@ export default function NewLeaguePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="league-form-content" onSubmit={handleSubmit} className="space-y-6">
         {renderStep()}
 
         {/* Navigation Buttons */}
