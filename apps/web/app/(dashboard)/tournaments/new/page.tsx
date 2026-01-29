@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, forwardRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -268,6 +268,87 @@ function formatCurrency(amount: number): string {
 // Helper Components
 // ============================================================================
 
+/**
+ * DateInput component that properly handles focus management for native date inputs.
+ * This fixes issues where:
+ * 1. Values would bleed into other text fields when typing
+ * 2. Tab navigation would send focus to wrong fields
+ * 3. Browser automation tools couldn't properly fill the fields
+ *
+ * The fix involves:
+ * - Proper label association via htmlFor/id
+ * - Event isolation with stopPropagation on keydown/input events
+ * - Using a wrapper div to contain the input's focus context
+ * - Preventing any bubbling that could interfere with parent form handlers
+ */
+interface DateInputProps {
+  id: string;
+  name: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  className?: string;
+}
+
+const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
+  ({ id, name, label, value, onChange, required = false, className }, ref) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const actualRef = ref || inputRef;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Stop propagation to prevent any parent handlers from interfering
+      e.stopPropagation();
+      onChange(e.target.value);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Stop propagation for all key events to prevent parent form interference
+      // This is critical for preventing keystrokes from bleeding into other fields
+      e.stopPropagation();
+    };
+
+    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      // Stop input event propagation as well
+      e.stopPropagation();
+    };
+
+    return (
+      <div className={className}>
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        {/* Wrapper div creates a focus containment boundary */}
+        <div className="relative">
+          <Input
+            ref={actualRef as React.Ref<HTMLInputElement>}
+            id={id}
+            name={name}
+            type="date"
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            aria-describedby={`${id}-description`}
+            className="w-full"
+          />
+          {/* Hidden description for screen readers */}
+          <span id={`${id}-description`} className="sr-only">
+            Enter date in format MM/DD/YYYY
+          </span>
+        </div>
+      </div>
+    );
+  }
+);
+DateInput.displayName = 'DateInput';
+
 interface NumberStepperProps {
   value: number;
   onChange: (value: number) => void;
@@ -484,10 +565,11 @@ function BasicInfoStep({ state, setState }: StepProps) {
 
       {/* Tournament Name */}
       <Card className="p-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="tournament-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Tournament Name <span className="text-red-500">*</span>
         </label>
         <Input
+          id="tournament-name"
           type="text"
           placeholder="e.g., Bay Area Spring Championship 2025"
           value={state.name}
@@ -498,10 +580,11 @@ function BasicInfoStep({ state, setState }: StepProps) {
 
       {/* Description */}
       <Card className="p-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="tournament-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Description
         </label>
         <textarea
+          id="tournament-description"
           rows={3}
           placeholder="Describe your tournament..."
           value={state.description}
@@ -517,39 +600,30 @@ function BasicInfoStep({ state, setState }: StepProps) {
           Dates
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Start Date <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="date"
-              value={state.startDate}
-              onChange={(e) => setState((prev) => ({ ...prev, startDate: e.target.value }))}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              End Date <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="date"
-              value={state.endDate}
-              onChange={(e) => setState((prev) => ({ ...prev, endDate: e.target.value }))}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Registration Deadline <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="date"
-              value={state.registrationDeadline}
-              onChange={(e) => setState((prev) => ({ ...prev, registrationDeadline: e.target.value }))}
-              className="w-full"
-            />
-          </div>
+          <DateInput
+            id="tournament-start-date"
+            name="startDate"
+            label="Start Date"
+            value={state.startDate}
+            onChange={(value) => setState((prev) => ({ ...prev, startDate: value }))}
+            required
+          />
+          <DateInput
+            id="tournament-end-date"
+            name="endDate"
+            label="End Date"
+            value={state.endDate}
+            onChange={(value) => setState((prev) => ({ ...prev, endDate: value }))}
+            required
+          />
+          <DateInput
+            id="tournament-registration-deadline"
+            name="registrationDeadline"
+            label="Registration Deadline"
+            value={state.registrationDeadline}
+            onChange={(value) => setState((prev) => ({ ...prev, registrationDeadline: value }))}
+            required
+          />
         </div>
       </Card>
 
@@ -591,10 +665,12 @@ function BasicInfoStep({ state, setState }: StepProps) {
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="director-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Name <span className="text-red-500">*</span>
             </label>
             <Input
+              id="director-name"
+              name="directorName"
               type="text"
               placeholder="Director name"
               value={state.directorName}
@@ -603,10 +679,12 @@ function BasicInfoStep({ state, setState }: StepProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="director-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email <span className="text-red-500">*</span>
             </label>
             <Input
+              id="director-email"
+              name="directorEmail"
               type="email"
               placeholder="director@email.com"
               value={state.directorEmail}
@@ -615,10 +693,12 @@ function BasicInfoStep({ state, setState }: StepProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="director-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Phone
             </label>
             <Input
+              id="director-phone"
+              name="directorPhone"
               type="tel"
               placeholder="(555) 123-4567"
               value={state.directorPhone}

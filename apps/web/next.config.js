@@ -70,6 +70,17 @@ const nextConfig = {
         destination: '/dashboard',
         permanent: true,
       },
+      // Alias /create routes to /new for RESTful consistency
+      {
+        source: '/leagues/create',
+        destination: '/leagues/new',
+        permanent: true,
+      },
+      {
+        source: '/tournaments/create',
+        destination: '/tournaments/new',
+        permanent: true,
+      },
     ];
   },
 
