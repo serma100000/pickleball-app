@@ -556,8 +556,8 @@ test.describe('League Creation Permutations', () => {
         return;
       }
 
-      // Select Pool Play
-      const poolPlayOption = page.locator('text=Pool Play');
+      // Select Pool Play - use heading within the card for specificity
+      const poolPlayOption = page.locator('h3:has-text("Pool Play")').first();
       if (await poolPlayOption.isVisible()) {
         await poolPlayOption.click();
       }

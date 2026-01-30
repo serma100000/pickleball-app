@@ -101,9 +101,15 @@ async function clickNext(page: Page) {
 
 // Helper to add an event and select format
 async function addEventWithFormat(page: Page, format: string) {
-  // Click Add Event button
-  const addEventButton = page.getByRole('button', { name: /add event|add your first event/i });
-  await addEventButton.click();
+  // Click Add Event button - use ID for specificity, fallback to first matching button
+  const addEventById = page.locator('#add-event-button');
+  const addEventByRole = page.getByRole('button', { name: /add event|add your first event/i }).first();
+
+  if (await addEventById.isVisible()) {
+    await addEventById.click();
+  } else {
+    await addEventByRole.click();
+  }
   await page.waitForTimeout(300);
 
   // Select format from dropdown (it's the 4th select in the form typically)

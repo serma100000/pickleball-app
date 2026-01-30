@@ -1,10 +1,22 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+
+// Auth state file path
+const authFile = path.join(__dirname, '.playwright/.auth/user.json');
 
 /**
  * Playwright E2E Test Configuration for Paddle Up
  *
  * Test against multiple browsers and mobile devices to ensure
  * cross-platform compatibility.
+ *
+ * Authentication:
+ * - Set E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD in .env.local
+ * - Run `pnpm test:e2e` to run all tests with authentication
  */
 export default defineConfig({
   // Test directory
@@ -32,7 +44,8 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    // Use 127.0.0.1 instead of localhost for better WSL2 compatibility
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3000',
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -44,10 +57,10 @@ export default defineConfig({
     video: 'on-first-retry',
 
     // Maximum time each action can take
-    actionTimeout: 10000,
+    actionTimeout: 15000,
 
-    // Maximum time for navigation
-    navigationTimeout: 30000,
+    // Maximum time for navigation - increased for Clerk which loads client-side
+    navigationTimeout: 60000,
   },
 
   // Global timeout for each test
@@ -62,51 +75,93 @@ export default defineConfig({
   outputDir: 'test-results/artifacts',
 
   // Configure projects for multiple browsers and devices
+  // Local: Chrome only (fast, covers most users)
+  // CI: All browsers (comprehensive cross-browser testing)
   projects: [
-    // Desktop browsers
+    // Authentication setup - runs first
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // Public pages - no auth required
+    {
+      name: 'Public Pages',
+      testMatch: /public-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+      // No dependencies - can run without auth
+    },
+
+    // Desktop Chrome (primary - with auth)
     {
       name: 'Desktop Chrome',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
+        storageState: authFile,
       },
-    },
-    {
-      name: 'Desktop Firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        viewport: { width: 1280, height: 720 },
-      },
-    },
-    {
-      name: 'Desktop Safari',
-      use: {
-        ...devices['Desktop Safari'],
-        viewport: { width: 1280, height: 720 },
-      },
+      dependencies: ['setup'],
     },
 
-    // Mobile browsers
+    // Mobile Chrome (with auth)
     {
       name: 'Mobile Chrome',
       use: {
         ...devices['Pixel 5'],
+        storageState: authFile,
       },
-    },
-    {
-      name: 'Mobile Safari',
-      use: {
-        ...devices['iPhone 12'],
-      },
+      dependencies: ['setup'],
     },
 
-    // Tablet browsers
-    {
-      name: 'Tablet',
-      use: {
-        ...devices['iPad Pro 11'],
-      },
-    },
+    // Firefox/Safari/WebKit - CI only (requires browser install, flaky in WSL)
+    ...(process.env.CI
+      ? [
+          // Desktop Firefox (with auth)
+          {
+            name: 'Desktop Firefox',
+            use: {
+              ...devices['Desktop Firefox'],
+              viewport: { width: 1280, height: 720 },
+              storageState: authFile,
+            },
+            dependencies: ['setup'],
+          },
+
+          // Desktop Safari (with auth)
+          {
+            name: 'Desktop Safari',
+            use: {
+              ...devices['Desktop Safari'],
+              viewport: { width: 1280, height: 720 },
+              storageState: authFile,
+            },
+            dependencies: ['setup'],
+          },
+
+          // Mobile Safari (with auth)
+          {
+            name: 'Mobile Safari',
+            use: {
+              ...devices['iPhone 12'],
+              storageState: authFile,
+            },
+            dependencies: ['setup'],
+          },
+
+          // Tablet (with auth)
+          {
+            name: 'Tablet',
+            use: {
+              ...devices['iPad Pro 11'],
+              storageState: authFile,
+            },
+            dependencies: ['setup'],
+          },
+        ]
+      : []),
   ],
 
   // Web server to start before running tests (optional)

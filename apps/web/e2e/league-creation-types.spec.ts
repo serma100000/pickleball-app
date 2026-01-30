@@ -748,10 +748,10 @@ test.describe('Keyboard Shortcut Tests', () => {
       await page.keyboard.press('Control+A');
       await page.waitForTimeout(300);
 
-      // URL should NOT have changed
+      // URL should NOT have changed - still on leagues/new page
       const currentUrl = page.url();
       expect(currentUrl).not.toContain('/tournaments');
-      expect(currentUrl).toBe(initialUrl.replace(/\/$/, '') + '/' || initialUrl);
+      expect(currentUrl).toContain('/leagues/new');
 
       // Text should be selected (we verify by checking input still has value)
       const inputValue = await nameInput.inputValue();
