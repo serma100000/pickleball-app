@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 
 import { apiEndpoints } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
@@ -272,9 +273,18 @@ export function useRegisterForTournament() {
 
 // My Tournaments (tournaments the user is directing/managing)
 export function useMyTournaments(params?: { page?: number; limit?: number; status?: string }) {
+  const { getToken, isSignedIn } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.tournaments.myTournaments(),
-    queryFn: () => apiEndpoints.tournaments.list({ ...params, managed: true }),
+    queryKey: ['tournaments', 'my', params],
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { tournaments: [], total: 0 };
+      }
+      return apiEndpoints.tournaments.listWithAuth(token, { ...params, managed: true });
+    },
+    enabled: isSignedIn,
     staleTime: 5 * 60 * 1000,
   });
 }

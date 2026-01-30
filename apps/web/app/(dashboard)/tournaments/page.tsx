@@ -91,14 +91,14 @@ export default function TournamentsPage() {
     active: tournaments.filter(t => t.status === 'in_progress').length,
     participants: tournaments.reduce((sum, t) => sum + t.registeredParticipants, 0),
     upcoming: tournaments.filter(t =>
-      t.status === 'registration' || t.status === 'draft'
+      t.status === 'registration_open' || t.status === 'draft'
     ).length,
   };
 
   const tabs: { key: FilterTab; label: string; icon: React.ReactNode }[] = [
     { key: 'all', label: 'All', icon: <Trophy className="w-4 h-4" /> },
     { key: 'draft', label: 'Draft', icon: <FileEdit className="w-4 h-4" /> },
-    { key: 'registration', label: 'Registration Open', icon: <UserPlus className="w-4 h-4" /> },
+    { key: 'registration_open', label: 'Registration Open', icon: <UserPlus className="w-4 h-4" /> },
     { key: 'in_progress', label: 'In Progress', icon: <Play className="w-4 h-4" /> },
     { key: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-4 h-4" /> },
   ];
@@ -565,7 +565,7 @@ function TournamentCard({
           </div>
 
           {/* Registration Progress */}
-          {(tournament.status === 'registration' || tournament.status === 'in_progress') && (
+          {(tournament.status === 'registration_open' || tournament.status === 'in_progress') && (
             <div className="mb-4">
               <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                 <span>Registration Progress</span>
