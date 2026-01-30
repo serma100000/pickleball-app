@@ -502,6 +502,84 @@ tournamentsRouter.patch(
 );
 
 /**
+ * POST /tournaments/:id/publish
+ * Publish a tournament (change status from draft to registration_open)
+ */
+tournamentsRouter.post(
+  '/:id/publish',
+  authMiddleware,
+  validateParams(idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const { userId } = c.get('user');
+
+    // Get user from database
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, userId),
+    });
+
+    if (!dbUser) {
+      throw new HTTPException(401, {
+        message: 'User not found',
+      });
+    }
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, id),
+    });
+
+    if (!tournament) {
+      throw new HTTPException(404, {
+        message: 'Tournament not found',
+      });
+    }
+
+    if (tournament.organizerId !== dbUser.id) {
+      throw new HTTPException(403, {
+        message: 'Only the tournament organizer can publish it',
+      });
+    }
+
+    // Verify tournament is in draft status
+    if (tournament.status !== 'draft') {
+      throw new HTTPException(400, {
+        message: `Tournament cannot be published. Current status: ${tournament.status}`,
+      });
+    }
+
+    // Update tournament status to registration_open
+    const [updated] = await db
+      .update(tournaments)
+      .set({
+        status: 'registration_open',
+        updatedAt: new Date(),
+      })
+      .where(eq(tournaments.id, id))
+      .returning();
+
+    // Clear cache
+    await cache.del(`tournament:${id}`);
+    await cache.del(`tournament:${tournament.slug}`);
+
+    // Log activity
+    await userService.logActivity(dbUser.id, 'tournament_published', 'tournament', id);
+
+    return c.json({
+      message: 'Tournament published successfully',
+      tournament: {
+        id: updated!.id,
+        name: updated!.name,
+        slug: updated!.slug,
+        status: updated!.status,
+        startsAt: updated!.startsAt,
+        endsAt: updated!.endsAt,
+        updatedAt: updated!.updatedAt,
+      },
+    });
+  }
+);
+
+/**
  * DELETE /tournaments/:id
  * Delete a tournament
  */
