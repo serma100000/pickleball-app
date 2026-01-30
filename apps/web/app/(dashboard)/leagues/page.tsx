@@ -20,7 +20,7 @@ import { NoLeagues, NoLeaguesFiltered } from '@/components/empty-states';
 
 // Type definitions for API response
 type LeagueType = 'ladder' | 'round_robin' | 'doubles' | 'mixed_doubles' | 'singles';
-type LeagueStatus = 'registration' | 'active' | 'playoffs' | 'completed';
+type LeagueStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 
 interface League {
   id: string;
@@ -60,12 +60,13 @@ export default function LeaguesPage() {
   const limit = 10;
 
   // Map tab to API status filter
+  // Backend expects: 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled'
   const getStatusFilter = () => {
     switch (activeTab) {
       case 'active':
-        return 'active';
+        return 'in_progress';
       case 'upcoming':
-        return 'registration';
+        return 'registration_open';
       case 'completed':
         return 'completed';
       default:
@@ -92,7 +93,7 @@ export default function LeaguesPage() {
 
   // Calculate stats
   const myLeaguesCount = leagues.filter(l => l.isUserRegistered).length;
-  const activeCount = leagues.filter(l => l.status === 'active').length;
+  const activeCount = leagues.filter(l => l.status === 'in_progress').length;
 
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -303,25 +304,35 @@ function LeagueCard({ league }: { league: League }) {
   // Get status badge styling
   const getStatusBadge = (status: LeagueStatus) => {
     const styles: Record<LeagueStatus, { bg: string; text: string; label: string }> = {
-      registration: {
-        bg: 'bg-blue-100 dark:bg-blue-900/30',
-        text: 'text-blue-700 dark:text-blue-400',
-        label: 'Registration',
-      },
-      active: {
-        bg: 'bg-green-100 dark:bg-green-900/30',
-        text: 'text-green-700 dark:text-green-400',
-        label: 'Active',
-      },
-      playoffs: {
-        bg: 'bg-orange-100 dark:bg-orange-900/30',
-        text: 'text-orange-700 dark:text-orange-400',
-        label: 'Playoffs',
-      },
-      completed: {
+      draft: {
         bg: 'bg-gray-100 dark:bg-gray-700',
         text: 'text-gray-600 dark:text-gray-400',
+        label: 'Draft',
+      },
+      registration_open: {
+        bg: 'bg-blue-100 dark:bg-blue-900/30',
+        text: 'text-blue-700 dark:text-blue-400',
+        label: 'Registration Open',
+      },
+      registration_closed: {
+        bg: 'bg-orange-100 dark:bg-orange-900/30',
+        text: 'text-orange-700 dark:text-orange-400',
+        label: 'Registration Closed',
+      },
+      in_progress: {
+        bg: 'bg-green-100 dark:bg-green-900/30',
+        text: 'text-green-700 dark:text-green-400',
+        label: 'In Progress',
+      },
+      completed: {
+        bg: 'bg-purple-100 dark:bg-purple-900/30',
+        text: 'text-purple-700 dark:text-purple-400',
         label: 'Completed',
+      },
+      cancelled: {
+        bg: 'bg-red-100 dark:bg-red-900/30',
+        text: 'text-red-700 dark:text-red-400',
+        label: 'Cancelled',
       },
     };
     return styles[status];
@@ -335,7 +346,7 @@ function LeagueCard({ league }: { league: League }) {
 
   // Get progress text based on status
   const getProgressText = () => {
-    if (league.status === 'registration') {
+    if (league.status === 'registration_open') {
       if (league.registrationDeadline) {
         const deadline = new Date(league.registrationDeadline);
         const now = new Date();
@@ -346,11 +357,8 @@ function LeagueCard({ league }: { league: League }) {
       }
       return `Starts ${formatDate(league.startDate)}`;
     }
-    if (league.status === 'active' && league.currentWeek && league.totalWeeks) {
+    if (league.status === 'in_progress' && league.currentWeek && league.totalWeeks) {
       return `Week ${league.currentWeek} of ${league.totalWeeks}`;
-    }
-    if (league.status === 'playoffs') {
-      return 'Playoffs in progress';
     }
     if (league.status === 'completed') {
       return `Ended ${formatDate(league.endDate)}`;
@@ -433,7 +441,7 @@ function LeagueCard({ league }: { league: League }) {
               <span className="px-3 py-1.5 text-sm font-medium bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400 rounded-lg">
                 Joined
               </span>
-            ) : league.status === 'registration' && league.currentTeams < league.maxTeams ? (
+            ) : league.status === 'registration_open' && league.currentTeams < league.maxTeams ? (
               <span className="px-3 py-1.5 text-sm font-medium bg-pickle-500 text-white rounded-lg">
                 Register Now
               </span>
