@@ -10,9 +10,8 @@ export default function ClubDetailPage() {
 
   // Convert slug back to display name
   const clubName = slug
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    ? slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    : 'Club';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

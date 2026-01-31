@@ -287,7 +287,8 @@ function GameRow({ game }: { game: Game }) {
     : null;
 
   // Format game type for display
-  const formatGameType = (format: string) => {
+  const formatGameType = (format: string | undefined | null) => {
+    if (!format) return 'Game';
     return format
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

@@ -718,7 +718,8 @@ function LeagueRow({ league }: { league: League }) {
     completed: 'Completed',
   };
 
-  const formatLeagueType = (type: string) => {
+  const formatLeagueType = (type: string | undefined | null) => {
+    if (!type) return 'League';
     return type
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
