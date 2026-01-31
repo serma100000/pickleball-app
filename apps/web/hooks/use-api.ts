@@ -690,3 +690,544 @@ export function useUserStats(userId: string) {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+// ============================================================================
+// REFERRALS HOOKS
+// ============================================================================
+
+/**
+ * Get or create user's referral code
+ */
+export function useReferralCode(params?: { eventType?: string; eventId?: string }) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.referrals.code(params),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.referrals.getCode(token, params);
+    },
+    enabled: isSignedIn,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+/**
+ * Get referral statistics
+ */
+export function useReferralStats() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.referrals.stats(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.referrals.getStats(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+/**
+ * Track a referral visit (no auth required)
+ */
+export function useTrackReferral() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { referralCode: string; eventId?: string; eventType?: string }) =>
+      apiEndpoints.referrals.track(data),
+    onSuccess: () => {
+      // Optionally invalidate referral stats if the user is signed in
+      queryClient.invalidateQueries({ queryKey: queryKeys.referrals.stats() });
+    },
+  });
+}
+
+/**
+ * Convert a referral (when user completes an action)
+ */
+export function useConvertReferral() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      referralCode: string;
+      conversionType: 'signup' | 'registration' | 'purchase';
+      eventId?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.referrals.convert(token, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.referrals.all });
+    },
+  });
+}
+
+/**
+ * Validate a referral code
+ */
+export function useValidateReferralCode(code: string | null) {
+  return useQuery({
+    queryKey: queryKeys.referrals.validate(code || ''),
+    queryFn: () => apiEndpoints.referrals.validate(code!),
+    enabled: Boolean(code),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// ============================================================================
+// PARTNER MARKETPLACE HOOKS
+// ============================================================================
+
+/**
+ * Get partner listings for an event
+ */
+export function usePartnerListings(params?: {
+  tournamentId?: string;
+  leagueId?: string;
+  eventId?: string;
+  skillMin?: number;
+  skillMax?: number;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.partners.listings(params),
+    queryFn: () => apiEndpoints.partners.list(params),
+    enabled: Boolean(params?.tournamentId || params?.leagueId),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+/**
+ * Create a partner listing
+ */
+export function useCreatePartnerListing() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      tournamentId?: string;
+      leagueId?: string;
+      eventId?: string;
+      skillLevelMin?: number;
+      skillLevelMax?: number;
+      message?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.partners.create(token, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+    },
+  });
+}
+
+/**
+ * Delete a partner listing
+ */
+export function useDeletePartnerListing() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.partners.delete(token, id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+    },
+  });
+}
+
+/**
+ * Contact a partner
+ */
+export function useContactPartner() {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: { listingId: string; message: string }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.partners.contact(token, data.listingId, { message: data.message });
+    },
+  });
+}
+
+/**
+ * Get current user's partner listings
+ */
+export function useMyPartnerListings() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.partners.myListings(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { listings: [] };
+      }
+      return apiEndpoints.partners.myListings(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// TEAM INVITE HOOKS
+// ============================================================================
+
+/**
+ * Get invite details by code (public)
+ */
+export function useInviteDetails(code: string) {
+  return useQuery({
+    queryKey: queryKeys.invites.detail(code),
+    queryFn: () => apiEndpoints.invites.get(code),
+    enabled: Boolean(code),
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
+/**
+ * Create a team invite
+ */
+export function useCreateTeamInvite() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      tournamentId?: string;
+      leagueId?: string;
+      eventId?: string;
+      inviteeEmail?: string;
+      inviteeUserId?: string;
+      teamName?: string;
+      message?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.invites.create(token, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.sent() });
+    },
+  });
+}
+
+/**
+ * Accept an invite
+ */
+export function useAcceptInvite() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.invites.accept(token, code);
+    },
+    onSuccess: (_, code) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.detail(code) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.received() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+    },
+  });
+}
+
+/**
+ * Decline an invite
+ */
+export function useDeclineInvite() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.invites.decline(token, code);
+    },
+    onSuccess: (_, code) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.detail(code) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.received() });
+    },
+  });
+}
+
+/**
+ * Cancel an invite (by inviter)
+ */
+export function useCancelInvite() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.invites.cancel(token, code);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invites.sent() });
+    },
+  });
+}
+
+/**
+ * Get invites sent by current user
+ */
+export function useSentInvites() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.invites.sent(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { invites: [] };
+      }
+      return apiEndpoints.invites.sent(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/**
+ * Get invites received by current user
+ */
+export function useReceivedInvites() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.invites.received(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { invites: [] };
+      }
+      return apiEndpoints.invites.received(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// WAITLIST HOOKS
+// ============================================================================
+
+/**
+ * Get waitlist status for an event (public)
+ */
+export function useWaitlistStatus(eventType: 'tournament' | 'league', eventId: string) {
+  return useQuery({
+    queryKey: ['waitlist', 'status', eventType, eventId],
+    queryFn: () => apiEndpoints.waitlist.getStatus(eventType, eventId),
+    enabled: isValidId(eventId),
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
+/**
+ * Get current user's waitlist position
+ */
+export function useWaitlistPosition(eventType: 'tournament' | 'league', eventId: string) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: ['waitlist', 'position', eventType, eventId],
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { onWaitlist: false };
+      }
+      return apiEndpoints.waitlist.getPosition(token, eventType, eventId);
+    },
+    enabled: isSignedIn && isValidId(eventId),
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 60 * 1000, // Refresh every minute for spot offer countdown
+  });
+}
+
+/**
+ * Join a waitlist
+ */
+export function useJoinWaitlist() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      eventType,
+      eventId,
+      eventSubId,
+    }: {
+      eventType: 'tournament' | 'league';
+      eventId: string;
+      eventSubId?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.waitlist.join(token, eventType, eventId, eventSubId);
+    },
+    onSuccess: (_, { eventType, eventId }) => {
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'status', eventType, eventId] });
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'position', eventType, eventId] });
+      if (eventType === 'tournament') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(eventId) });
+      } else {
+        queryClient.invalidateQueries({ queryKey: queryKeys.leagues.detail(eventId) });
+      }
+    },
+  });
+}
+
+/**
+ * Accept a waitlist spot offer
+ */
+export function useAcceptWaitlistSpot() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      eventType,
+      eventId,
+    }: {
+      eventType: 'tournament' | 'league';
+      eventId: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.waitlist.accept(token, eventType, eventId);
+    },
+    onSuccess: (_, { eventType, eventId }) => {
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'status', eventType, eventId] });
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'position', eventType, eventId] });
+      if (eventType === 'tournament') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(eventId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.registrations(eventId) });
+      } else {
+        queryClient.invalidateQueries({ queryKey: queryKeys.leagues.detail(eventId) });
+      }
+    },
+  });
+}
+
+/**
+ * Decline a waitlist spot offer
+ */
+export function useDeclineWaitlistSpot() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      eventType,
+      eventId,
+    }: {
+      eventType: 'tournament' | 'league';
+      eventId: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.waitlist.decline(token, eventType, eventId);
+    },
+    onSuccess: (_, { eventType, eventId }) => {
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'status', eventType, eventId] });
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'position', eventType, eventId] });
+    },
+  });
+}
+
+/**
+ * Get waitlist entries for an event (admin/organizer only)
+ */
+export function useWaitlistEntries(eventType: 'tournament' | 'league', eventId: string) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: ['waitlist', 'entries', eventType, eventId],
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { entries: [], total: 0 };
+      }
+      return apiEndpoints.waitlist.getEntries(token, eventType, eventId);
+    },
+    enabled: isSignedIn && isValidId(eventId),
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Process waitlist (manually offer spot to next person)
+ */
+export function useProcessWaitlist() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      eventType,
+      eventId,
+    }: {
+      eventType: 'tournament' | 'league';
+      eventId: string;
+    }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.waitlist.process(token, eventType, eventId);
+    },
+    onSuccess: (_, { eventType, eventId }) => {
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'entries', eventType, eventId] });
+      queryClient.invalidateQueries({ queryKey: ['waitlist', 'status', eventType, eventId] });
+    },
+  });
+}

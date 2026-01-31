@@ -965,24 +965,31 @@ tournamentsRouter.post(
       });
     }
 
-    // Check capacity
-    if (tournament.currentParticipants && tournament.currentParticipants >= (tournament.maxParticipants || 0)) {
-      throw new HTTPException(400, {
-        message: 'Tournament is full',
-      });
-    }
-
     // Check if already registered using tournamentRegistrations
-    const existing = await db.query.tournamentRegistrations.findFirst({
-      where: eq(schema.tournamentRegistrations.tournamentId, id),
-      with: {
-        players: {
-          where: eq(schema.tournamentRegistrationPlayers.userId, dbUser.id),
-        },
-      },
-    });
+    const existingRegistrations = await db
+      .select({
+        id: schema.tournamentRegistrations.id,
+        status: schema.tournamentRegistrations.status,
+      })
+      .from(schema.tournamentRegistrations)
+      .innerJoin(
+        schema.tournamentRegistrationPlayers,
+        eq(schema.tournamentRegistrations.id, schema.tournamentRegistrationPlayers.registrationId)
+      )
+      .where(
+        and(
+          eq(schema.tournamentRegistrations.tournamentId, id),
+          eq(schema.tournamentRegistrationPlayers.userId, dbUser.id)
+        )
+      );
 
-    if (existing?.players && existing.players.length > 0) {
+    if (existingRegistrations.length > 0) {
+      const existingStatus = existingRegistrations[0].status;
+      if (existingStatus === 'waitlisted' || existingStatus === 'spot_offered') {
+        throw new HTTPException(409, {
+          message: 'You are already on the waitlist for this tournament',
+        });
+      }
       throw new HTTPException(409, {
         message: 'Already registered for this tournament',
       });
@@ -1017,6 +1024,36 @@ tournamentsRouter.post(
           });
         }
       }
+    }
+
+    // Check capacity - if full, add to waitlist instead
+    const isFull = tournament.maxParticipants &&
+      (tournament.currentParticipants || 0) >= tournament.maxParticipants;
+
+    if (isFull && tournament.waitlistEnabled) {
+      // Import waitlist service dynamically to avoid circular dependency
+      const { waitlistService } = await import('../services/waitlistService.js');
+
+      const result = await waitlistService.addToWaitlist(
+        dbUser.id,
+        'tournament',
+        id
+      );
+
+      await cache.del(`tournament:${id}`);
+
+      return c.json({
+        message: 'Tournament is full. You have been added to the waitlist.',
+        registration: {
+          id: result.registrationId,
+          status: 'waitlisted',
+          waitlistPosition: result.position,
+        },
+      });
+    } else if (isFull) {
+      throw new HTTPException(400, {
+        message: 'Tournament is full and waitlist is not enabled',
+      });
     }
 
     // Create registration

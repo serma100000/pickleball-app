@@ -10,6 +10,10 @@ const isPublicRoute = createRouteMatcher([
   '/terms',
   '/contact',
   '/about',
+  // Public event pages - shareable without authentication
+  '/t/(.*)',      // Public tournament pages
+  '/l/(.*)',      // Public league pages
+  '/invite/(.*)', // Invitation links
 ])
 
 export default clerkMiddleware(async (auth, request) => {

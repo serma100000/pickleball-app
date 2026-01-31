@@ -26,7 +26,9 @@ import {
   ChevronRight,
   ChevronLeft,
 } from 'lucide-react';
-import { useLeague, useLeagueStandings, useLeagueSchedule, useRegisterForLeague } from '@/hooks/use-api';
+import { useLeague, useLeagueStandings, useLeagueSchedule } from '@/hooks/use-api';
+import { useAuth } from '@/hooks/use-auth';
+import { LeagueRegistrationModal } from '@/components/leagues/LeagueRegistrationModal';
 
 // Type definitions - aligned with API response
 type LeagueType = 'ladder' | 'doubles' | 'king_of_court' | 'pool_play' | 'hybrid' | 'round_robin' | 'mixed_doubles' | 'singles';
@@ -148,11 +150,12 @@ export default function LeagueDetailPage() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
-  const { data: league, isLoading, isError, error } = useLeague(leagueId);
+  const { user, profile } = useAuth();
+  const { data: league, isLoading, isError, error, refetch } = useLeague(leagueId);
   const { data: standings } = useLeagueStandings(leagueId);
   const { data: schedule } = useLeagueSchedule(leagueId);
-  const registerMutation = useRegisterForLeague();
 
   // Cast data to expected types - API returns { league: {...} }
   const leagueResponse = league as { league: League } | undefined;
@@ -380,13 +383,26 @@ export default function LeagueDetailPage() {
     return styles[status] ?? defaultStyle;
   };
 
-  const handleRegister = async () => {
-    try {
-      await registerMutation.mutateAsync({ leagueId, data: {} });
-    } catch (err) {
-      console.error('Registration failed:', err);
-    }
+  const handleOpenRegistration = () => {
+    setShowRegistrationModal(true);
   };
+
+  const handleCloseRegistration = () => {
+    setShowRegistrationModal(false);
+  };
+
+  const handleRegistrationSuccess = () => {
+    refetch();
+  };
+
+  // Build current user data for the modal
+  const currentUserData = user ? {
+    id: user.id,
+    username: user.username || user.primaryEmailAddress?.emailAddress || 'User',
+    displayName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || null,
+    rating: profile?.skillLevel || null,
+    ratingSource: profile?.skillLevel ? 'internal' as const : undefined,
+  } : null;
 
   const statusBadge = getStatusBadge(leagueData.status);
 
@@ -472,15 +488,10 @@ export default function LeagueDetailPage() {
               </button>
             ) : isRegistrationOpen(leagueData.status) && leagueData.currentTeams < leagueData.maxTeams ? (
               <button
-                onClick={handleRegister}
-                disabled={registerMutation.isPending}
-                className="px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                onClick={handleOpenRegistration}
+                className="px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
               >
-                {registerMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <UserPlus className="w-4 h-4" />
-                )}
+                <UserPlus className="w-4 h-4" />
                 Join League
               </button>
             ) : null}
@@ -575,6 +586,24 @@ export default function LeagueDetailPage() {
           />
         )}
       </div>
+
+      {/* Registration Modal */}
+      <LeagueRegistrationModal
+        league={{
+          id: leagueData.id,
+          name: leagueData.name,
+          leagueType: leagueData.leagueType,
+          skillLevelMin: leagueData.skillLevelMin,
+          skillLevelMax: leagueData.skillLevelMax,
+          isDuprRated: leagueData.isDuprRated,
+          maxTeams: leagueData.maxTeams,
+          currentTeams: leagueData.currentTeams,
+        }}
+        currentUser={currentUserData}
+        isOpen={showRegistrationModal}
+        onClose={handleCloseRegistration}
+        onSuccess={handleRegistrationSuccess}
+      />
     </div>
   );
 }

@@ -1,0 +1,1 @@
+export { LeagueRegistrationModal } from './LeagueRegistrationModal';

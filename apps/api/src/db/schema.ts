@@ -145,23 +145,30 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'game_invite',
   'game_reminder',
   'game_completed',
+  'game_result',
   'friend_request',
   'friend_accepted',
   'club_invite',
   'club_approved',
   'tournament_registration',
   'tournament_reminder',
+  'tournament_update',
   'match_scheduled',
   'match_result',
   'rating_update',
   'achievement_earned',
+  'achievement',
   'league_update',
+  'waitlist_update',
   'system',
 ]);
 
 export const registrationStatusEnum = pgEnum('registration_status', [
   'registered',
+  'pending_partner',
+  'pending_payment',
   'waitlisted',
+  'spot_offered',
   'confirmed',
   'withdrawn',
   'disqualified',
@@ -191,6 +198,19 @@ export const auditActionEnum = pgEnum('audit_action', [
   'INSERT',
   'UPDATE',
   'DELETE',
+]);
+
+export const teamInviteStatusEnum = pgEnum('team_invite_status', [
+  'pending',
+  'accepted',
+  'declined',
+  'expired',
+]);
+
+export const partnerListingStatusEnum = pgEnum('partner_listing_status', [
+  'active',
+  'matched',
+  'expired',
 ]);
 
 // ============================================================================
@@ -885,6 +905,13 @@ export const tournamentRegistrations = pgTable(
     status: registrationStatusEnum('status').notNull().default('registered'),
     waitlistPosition: integer('waitlist_position'),
 
+    // Waitlist spot offer tracking
+    spotOfferedAt: timestamp('spot_offered_at', { withTimezone: true }),
+    spotExpiresAt: timestamp('spot_expires_at', { withTimezone: true }),
+
+    // Partner tracking for doubles
+    partnerExpiresAt: timestamp('partner_expires_at', { withTimezone: true }),
+
     // Payment tracking (reference only, no financial data)
     paymentReference: varchar('payment_reference', { length: 100 }),
     paymentStatus: paymentStatusEnum('payment_status').default('pending'),
@@ -900,6 +927,10 @@ export const tournamentRegistrations = pgTable(
       table.tournamentId
     ),
     statusIdx: index('tournament_registrations_status_idx').on(table.status),
+    waitlistPositionIdx: index('tournament_registrations_waitlist_position_idx').on(
+      table.tournamentId,
+      table.waitlistPosition
+    ),
   })
 );
 
@@ -1565,6 +1596,164 @@ export const systemSettings = pgTable('system_settings', {
 });
 
 // ============================================================================
+// REGISTRATION & SHARING SYSTEM (4 tables)
+// ============================================================================
+
+// Team invitations table - For doubles partner invitations
+export const teamInvites = pgTable(
+  'team_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tournamentId: uuid('tournament_id').references(() => tournaments.id, {
+      onDelete: 'cascade',
+    }),
+    leagueId: uuid('league_id').references(() => leagues.id, {
+      onDelete: 'cascade',
+    }),
+    eventId: uuid('event_id'),
+
+    // Inviter and invitee
+    inviterId: uuid('inviter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    inviteeEmail: varchar('invitee_email', { length: 255 }),
+    inviteeUserId: uuid('invitee_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    // Invite details
+    inviteCode: varchar('invite_code', { length: 50 }).notNull().unique(),
+    teamName: varchar('team_name', { length: 100 }),
+    message: text('message'),
+
+    // Status
+    status: teamInviteStatusEnum('status').notNull().default('pending'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+
+    // Metadata
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    inviterIdIdx: index('team_invites_inviter_id_idx').on(table.inviterId),
+    inviteCodeIdx: uniqueIndex('team_invites_invite_code_idx').on(table.inviteCode),
+    statusIdx: index('team_invites_status_idx').on(table.status),
+    tournamentIdIdx: index('team_invites_tournament_id_idx').on(table.tournamentId),
+    leagueIdIdx: index('team_invites_league_id_idx').on(table.leagueId),
+    inviteeUserIdIdx: index('team_invites_invitee_user_id_idx').on(table.inviteeUserId),
+  })
+);
+
+// Referral codes table - For referral tracking
+export const referralCodes = pgTable(
+  'referral_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Code details
+    code: varchar('code', { length: 20 }).notNull().unique(),
+    eventType: varchar('event_type', { length: 50 }), // 'tournament', 'league', 'general'
+    eventId: uuid('event_id'),
+
+    // Usage tracking
+    usesCount: integer('uses_count').notNull().default(0),
+    maxUses: integer('max_uses'),
+    isActive: boolean('is_active').notNull().default(true),
+
+    // Metadata
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('referral_codes_user_id_idx').on(table.userId),
+    codeIdx: uniqueIndex('referral_codes_code_idx').on(table.code),
+    eventTypeIdx: index('referral_codes_event_type_idx').on(table.eventType),
+    isActiveIdx: index('referral_codes_is_active_idx').on(table.isActive),
+  })
+);
+
+// Referral conversions table - Track referral conversions
+export const referralConversions = pgTable(
+  'referral_conversions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    referralCodeId: uuid('referral_code_id')
+      .notNull()
+      .references(() => referralCodes.id, { onDelete: 'cascade' }),
+    referredUserId: uuid('referred_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Conversion details
+    conversionType: varchar('conversion_type', { length: 50 }).notNull(), // 'signup', 'registration', 'purchase'
+    eventId: uuid('event_id'),
+    rewardApplied: boolean('reward_applied').notNull().default(false),
+
+    // Metadata
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    referralCodeIdIdx: index('referral_conversions_referral_code_id_idx').on(
+      table.referralCodeId
+    ),
+    referredUserIdIdx: index('referral_conversions_referred_user_id_idx').on(
+      table.referredUserId
+    ),
+    conversionTypeIdx: index('referral_conversions_conversion_type_idx').on(
+      table.conversionType
+    ),
+    uniqueReferralUser: unique('referral_conversions_unique').on(
+      table.referralCodeId,
+      table.referredUserId
+    ),
+  })
+);
+
+// Partner listings table - Partner marketplace
+export const partnerListings = pgTable(
+  'partner_listings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Event references (one of these should be set)
+    tournamentId: uuid('tournament_id').references(() => tournaments.id, {
+      onDelete: 'cascade',
+    }),
+    leagueId: uuid('league_id').references(() => leagues.id, {
+      onDelete: 'cascade',
+    }),
+    eventId: uuid('event_id'),
+
+    // Partner preferences
+    skillLevelMin: decimal('skill_level_min', { precision: 4, scale: 2 }),
+    skillLevelMax: decimal('skill_level_max', { precision: 4, scale: 2 }),
+    message: text('message'),
+
+    // Status
+    status: partnerListingStatusEnum('status').notNull().default('active'),
+
+    // Metadata
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('partner_listings_user_id_idx').on(table.userId),
+    tournamentIdIdx: index('partner_listings_tournament_id_idx').on(table.tournamentId),
+    leagueIdIdx: index('partner_listings_league_id_idx').on(table.leagueId),
+    statusIdx: index('partner_listings_status_idx').on(table.status),
+    skillLevelIdx: index('partner_listings_skill_level_idx').on(
+      table.skillLevelMin,
+      table.skillLevelMax
+    ),
+  })
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -1591,6 +1780,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   notifications: many(notifications),
   availability: many(userAvailability),
   auditLogs: many(auditLog),
+  // Registration & sharing system
+  teamInvitesSent: many(teamInvites, { relationName: 'inviter' }),
+  teamInvitesReceived: many(teamInvites, { relationName: 'invitee' }),
+  referralCodes: many(referralCodes),
+  referralConversions: many(referralConversions),
+  partnerListings: many(partnerListings),
 }));
 
 // User ratings relations
@@ -1771,6 +1966,9 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   brackets: many(tournamentBrackets),
   matches: many(tournamentMatches),
   events: many(tournamentEvents),
+  // Registration & sharing system
+  teamInvites: many(teamInvites),
+  partnerListings: many(partnerListings),
 }));
 
 // Tournament events relations
@@ -1894,6 +2092,9 @@ export const leaguesRelations = relations(leagues, ({ one, many }) => ({
     references: [venues.id],
   }),
   seasons: many(leagueSeasons),
+  // Registration & sharing system
+  teamInvites: many(teamInvites),
+  partnerListings: many(partnerListings),
 }));
 
 // League seasons relations
@@ -2054,6 +2255,65 @@ export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
   }),
 }));
 
+// Team invites relations
+export const teamInvitesRelations = relations(teamInvites, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [teamInvites.tournamentId],
+    references: [tournaments.id],
+  }),
+  league: one(leagues, {
+    fields: [teamInvites.leagueId],
+    references: [leagues.id],
+  }),
+  inviter: one(users, {
+    fields: [teamInvites.inviterId],
+    references: [users.id],
+    relationName: 'inviter',
+  }),
+  invitee: one(users, {
+    fields: [teamInvites.inviteeUserId],
+    references: [users.id],
+    relationName: 'invitee',
+  }),
+}));
+
+// Referral codes relations
+export const referralCodesRelations = relations(referralCodes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [referralCodes.userId],
+    references: [users.id],
+  }),
+  conversions: many(referralConversions),
+}));
+
+// Referral conversions relations
+export const referralConversionsRelations = relations(referralConversions, ({ one }) => ({
+  referralCode: one(referralCodes, {
+    fields: [referralConversions.referralCodeId],
+    references: [referralCodes.id],
+  }),
+  referredUser: one(users, {
+    fields: [referralConversions.referredUserId],
+    references: [users.id],
+  }),
+}));
+
+// Partner listings relations
+export const partnerListingsRelations = relations(partnerListings, ({ one }) => ({
+  user: one(users, {
+    fields: [partnerListings.userId],
+    references: [users.id],
+  }),
+  tournament: one(tournaments, {
+    fields: [partnerListings.tournamentId],
+    references: [tournaments.id],
+  }),
+  league: one(leagues, {
+    fields: [partnerListings.leagueId],
+    references: [leagues.id],
+  }),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -2156,3 +2416,15 @@ export type NewAuditLog = typeof auditLog.$inferInsert;
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type NewSystemSetting = typeof systemSettings.$inferInsert;
+
+export type TeamInvite = typeof teamInvites.$inferSelect;
+export type NewTeamInvite = typeof teamInvites.$inferInsert;
+
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type NewReferralCode = typeof referralCodes.$inferInsert;
+
+export type ReferralConversion = typeof referralConversions.$inferSelect;
+export type NewReferralConversion = typeof referralConversions.$inferInsert;
+
+export type PartnerListing = typeof partnerListings.$inferSelect;
+export type NewPartnerListing = typeof partnerListings.$inferInsert;

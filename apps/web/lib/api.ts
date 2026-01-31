@@ -441,6 +441,225 @@ export const apiEndpoints = {
       api.get('/players/search', params),
     get: (id: string) => api.get(`/players/${id}`),
   },
+
+  // Referrals
+  referrals: {
+    // Get or create user's referral code
+    getCode: (token: string, params?: { eventType?: string; eventId?: string }) =>
+      apiWithAuth.get<{
+        code: string;
+        shareableUrl: string;
+        usesCount: number;
+        isActive: boolean;
+        createdAt: string;
+      }>('/referrals/code', token, params),
+
+    // Get referral statistics
+    getStats: (token: string) =>
+      apiWithAuth.get<{
+        totalViews: number;
+        totalSignups: number;
+        totalRegistrations: number;
+        totalPurchases: number;
+        successfulConversions: number;
+        recentConversions: Array<{
+          type: string;
+          user: { displayName: string | null; avatarUrl: string | null };
+          createdAt: string;
+          eventId?: string;
+        }>;
+        rewards: {
+          earned: Array<{ reward: string; description: string; earnedAt?: string }>;
+          nextMilestone: {
+            count: number;
+            reward: string;
+            description: string;
+            progress: number;
+          } | null;
+        };
+        codes: Array<{
+          code: string;
+          eventType: string | null;
+          eventId: string | null;
+          usesCount: number;
+          isActive: boolean;
+          createdAt: string;
+        }>;
+      }>('/referrals/stats', token),
+
+    // Track a referral visit (no auth required)
+    track: (data: { referralCode: string; eventId?: string; eventType?: string }) =>
+      api.post<{ tracked: boolean; eventType?: string; eventId?: string }>(
+        '/referrals/track',
+        data
+      ),
+
+    // Convert a referral
+    convert: (
+      token: string,
+      data: { referralCode: string; conversionType: 'signup' | 'registration' | 'purchase'; eventId?: string }
+    ) =>
+      apiWithAuth.post<{
+        converted: boolean;
+        conversionId?: string;
+        message?: string;
+        rewardAwarded?: boolean;
+        reward?: string;
+        description?: string;
+      }>('/referrals/convert', token, data),
+
+    // Validate a referral code
+    validate: (code: string) =>
+      api.get<{
+        valid: boolean;
+        referrer?: { displayName: string | null; avatarUrl: string | null };
+        eventType?: string;
+        eventId?: string;
+      }>(`/referrals/validate/${code}`),
+  },
+
+  // Partners
+  partners: {
+    // Get partner listings
+    list: (params?: {
+      tournamentId?: string;
+      leagueId?: string;
+      eventId?: string;
+      skillMin?: number;
+      skillMax?: number;
+      page?: number;
+      limit?: number;
+    }) => api.get('/partners/listings', params),
+
+    // Create a partner listing
+    create: (token: string, data: {
+      tournamentId?: string;
+      leagueId?: string;
+      eventId?: string;
+      skillLevelMin?: number;
+      skillLevelMax?: number;
+      message?: string;
+    }) => apiWithAuth.post('/partners/listings', token, data),
+
+    // Delete a partner listing
+    delete: (token: string, id: string) =>
+      apiWithAuth.delete(`/partners/listings/${id}`, token),
+
+    // Contact a partner
+    contact: (token: string, id: string, data: { message: string }) =>
+      apiWithAuth.post(`/partners/listings/${id}/contact`, token, data),
+
+    // Get my listings
+    myListings: (token: string) =>
+      apiWithAuth.get('/partners/listings/my', token),
+  },
+
+  // Invites
+  invites: {
+    // Create a team invite
+    create: (token: string, data: {
+      tournamentId?: string;
+      leagueId?: string;
+      eventId?: string;
+      inviteeEmail?: string;
+      inviteeUserId?: string;
+      teamName?: string;
+      message?: string;
+    }) => apiWithAuth.post('/invites', token, data),
+
+    // Get invite details (public)
+    get: (code: string) => api.get(`/invites/${code}`),
+
+    // Accept invite
+    accept: (token: string, code: string) =>
+      apiWithAuth.post(`/invites/${code}/accept`, token),
+
+    // Decline invite
+    decline: (token: string, code: string) =>
+      apiWithAuth.post(`/invites/${code}/decline`, token),
+
+    // Cancel invite (by inviter)
+    cancel: (token: string, code: string) =>
+      apiWithAuth.delete(`/invites/${code}`, token),
+
+    // Get sent invites
+    sent: (token: string) => apiWithAuth.get('/invites/my/sent', token),
+
+    // Get received invites
+    received: (token: string) => apiWithAuth.get('/invites/my/received', token),
+  },
+
+  // Waitlist
+  waitlist: {
+    // Get waitlist status for an event (public)
+    getStatus: (eventType: 'tournament' | 'league', eventId: string) =>
+      api.get<{
+        isFull: boolean;
+        currentCount: number;
+        maxCount: number | null;
+        waitlistEnabled: boolean;
+        waitlistCount: number;
+      }>('/waitlist/status', { eventType, eventId }),
+
+    // Get user's position on waitlist
+    getPosition: (token: string, eventType: 'tournament' | 'league', eventId: string) =>
+      apiWithAuth.get<{
+        onWaitlist: boolean;
+        position?: number;
+        totalWaitlisted?: number;
+        estimatedWaitDays?: number;
+        status?: string;
+        spotOfferedAt?: string | null;
+        spotExpiresAt?: string | null;
+        message?: string;
+      }>('/waitlist/position', token, { eventType, eventId }),
+
+    // Add user to waitlist
+    join: (token: string, eventType: 'tournament' | 'league', eventId: string, eventSubId?: string) =>
+      apiWithAuth.post<{
+        message: string;
+        registrationId: string;
+        position: number;
+      }>('/waitlist', token, { eventType, eventId, eventSubId }),
+
+    // Accept a waitlist spot offer
+    accept: (token: string, eventType: 'tournament' | 'league', eventId: string) =>
+      apiWithAuth.post<{
+        message: string;
+        success: boolean;
+      }>('/waitlist/accept', token, { eventType, eventId }),
+
+    // Decline a waitlist spot offer
+    decline: (token: string, eventType: 'tournament' | 'league', eventId: string) =>
+      apiWithAuth.post<{
+        message: string;
+        success: boolean;
+      }>('/waitlist/decline', token, { eventType, eventId }),
+
+    // Get waitlist entries (admin/organizer only)
+    getEntries: (token: string, eventType: 'tournament' | 'league', eventId: string) =>
+      apiWithAuth.get<{
+        entries: Array<{
+          id: string;
+          position: number;
+          status: string;
+          user: { id: string; displayName: string | null; email: string };
+          spotOfferedAt?: string | null;
+          spotExpiresAt?: string | null;
+          registeredAt: string;
+        }>;
+        total: number;
+      }>('/waitlist/entries', token, { eventType, eventId }),
+
+    // Manually process waitlist (admin/organizer only)
+    process: (token: string, eventType: 'tournament' | 'league', eventId: string) =>
+      apiWithAuth.post<{
+        message: string;
+        processed: boolean;
+        userId?: string;
+        registrationId?: string;
+      }>('/waitlist/process', token, { eventType, eventId }),
+  },
 };
 
 export { ApiClientError };

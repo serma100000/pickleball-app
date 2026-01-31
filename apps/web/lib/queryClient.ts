@@ -160,4 +160,29 @@ export const queryKeys = {
       [...queryKeys.notifications.all, 'list', filters] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
   },
+
+  // Referrals
+  referrals: {
+    all: ['referrals'] as const,
+    code: (params?: { eventType?: string; eventId?: string }) =>
+      [...queryKeys.referrals.all, 'code', params] as const,
+    stats: () => [...queryKeys.referrals.all, 'stats'] as const,
+    validate: (code: string) => [...queryKeys.referrals.all, 'validate', code] as const,
+  },
+
+  // Partners
+  partners: {
+    all: ['partners'] as const,
+    listings: (filters?: Record<string, unknown>) =>
+      [...queryKeys.partners.all, 'listings', filters] as const,
+    myListings: () => [...queryKeys.partners.all, 'my'] as const,
+  },
+
+  // Invites
+  invites: {
+    all: ['invites'] as const,
+    detail: (code: string) => [...queryKeys.invites.all, code] as const,
+    sent: () => [...queryKeys.invites.all, 'sent'] as const,
+    received: () => [...queryKeys.invites.all, 'received'] as const,
+  },
 };

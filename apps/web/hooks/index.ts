@@ -97,3 +97,16 @@ export { usePWAInstall, useIsStandalone } from './use-pwa-install';
 
 // Toast hooks
 export { useToast, toast } from './use-toast';
+
+// Profile completion hooks
+export {
+  useProfileCompletion,
+  getSettingsPathForField,
+  getPrimarySettingsPath,
+  FIELD_LABELS,
+  FIELD_SETTINGS_PATHS,
+} from './use-profile-completion';
+export type {
+  ProfileRequiredFields,
+  UseProfileCompletionReturn,
+} from './use-profile-completion';

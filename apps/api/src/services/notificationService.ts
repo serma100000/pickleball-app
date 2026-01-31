@@ -13,6 +13,8 @@ export interface CreateNotificationInput {
     | 'friend_request'
     | 'club_invite'
     | 'tournament_update'
+    | 'league_update'
+    | 'waitlist_update'
     | 'achievement'
     | 'system';
   title: string;

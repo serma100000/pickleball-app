@@ -18,6 +18,10 @@ import leaguesRoutes from './routes/leagues.js';
 import tournamentsRoutes from './routes/tournaments.js';
 import socialRoutes from './routes/social.js';
 import duprRoutes from './routes/dupr.js';
+import referralsRoutes from './routes/referrals.js';
+import partnersRoutes from './routes/partners.js';
+import invitesRoutes from './routes/invites.js';
+import waitlistRoutes from './routes/waitlist.js';
 
 const app = new Hono();
 
@@ -87,6 +91,10 @@ api.route('/leagues', leaguesRoutes);
 api.route('/tournaments', tournamentsRoutes);
 api.route('/social', socialRoutes);
 api.route('/dupr', duprRoutes);
+api.route('/referrals', referralsRoutes);
+api.route('/partners', partnersRoutes);
+api.route('/invites', invitesRoutes);
+api.route('/waitlist', waitlistRoutes);
 
 // Mount API under /api/v1
 app.route('/api/v1', api);
