@@ -28,9 +28,9 @@ import {
 } from 'lucide-react';
 import { useLeague, useLeagueStandings, useLeagueSchedule, useRegisterForLeague } from '@/hooks/use-api';
 
-// Type definitions
-type LeagueType = 'ladder' | 'round_robin' | 'doubles' | 'mixed_doubles' | 'singles';
-type LeagueStatus = 'registration' | 'active' | 'playoffs' | 'completed';
+// Type definitions - aligned with API response
+type LeagueType = 'ladder' | 'doubles' | 'king_of_court' | 'pool_play' | 'hybrid' | 'round_robin' | 'mixed_doubles' | 'singles';
+type LeagueStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled' | 'registration' | 'active' | 'playoffs';
 type MatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'forfeited';
 
 interface LeaguePlayer {
@@ -154,8 +154,9 @@ export default function LeagueDetailPage() {
   const { data: schedule } = useLeagueSchedule(leagueId);
   const registerMutation = useRegisterForLeague();
 
-  // Cast data to expected types
-  const leagueData = league as League | undefined;
+  // Cast data to expected types - API returns { league: {...} }
+  const leagueResponse = league as { league: League } | undefined;
+  const leagueData = leagueResponse?.league;
   const standingsData = standings as { standings: Standing[]; week?: number } | undefined;
   const scheduleData = schedule as { matches: LeagueMatch[]; playoffs?: PlayoffMatch[] } | undefined;
 
@@ -202,6 +203,14 @@ export default function LeagueDetailPage() {
     );
   }
 
+  // Helper to check if registration is open (handles both old and new status values)
+  const isRegistrationOpen = (status: string) =>
+    status === 'registration' || status === 'registration_open' || status === 'draft';
+
+  // Helper to check if league is active/in progress
+  const isLeagueActive = (status: string) =>
+    status === 'active' || status === 'in_progress';
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'long',
@@ -210,11 +219,15 @@ export default function LeagueDetailPage() {
     });
   };
 
-  const formatLeagueType = (type: LeagueType): string => {
-    const typeLabels: Record<LeagueType, string> = {
+  const formatLeagueType = (type: LeagueType | string | undefined): string => {
+    if (!type) return 'League';
+    const typeLabels: Record<string, string> = {
       ladder: 'Ladder',
-      round_robin: 'Round Robin',
       doubles: 'Doubles',
+      king_of_court: 'King of the Court',
+      pool_play: 'Pool Play',
+      hybrid: 'Hybrid',
+      round_robin: 'Round Robin',
       mixed_doubles: 'Mixed Doubles',
       singles: 'Singles',
     };
@@ -222,11 +235,31 @@ export default function LeagueDetailPage() {
   };
 
   const getStatusBadge = (status: LeagueStatus) => {
-    const styles: Record<LeagueStatus, { bg: string; text: string; label: string }> = {
+    const styles: Record<string, { bg: string; text: string; label: string }> = {
+      draft: {
+        bg: 'bg-gray-100 dark:bg-gray-700',
+        text: 'text-gray-600 dark:text-gray-400',
+        label: 'Draft',
+      },
+      registration_open: {
+        bg: 'bg-blue-100 dark:bg-blue-900/30',
+        text: 'text-blue-700 dark:text-blue-400',
+        label: 'Registration Open',
+      },
       registration: {
         bg: 'bg-blue-100 dark:bg-blue-900/30',
         text: 'text-blue-700 dark:text-blue-400',
         label: 'Registration Open',
+      },
+      registration_closed: {
+        bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+        text: 'text-yellow-700 dark:text-yellow-400',
+        label: 'Registration Closed',
+      },
+      in_progress: {
+        bg: 'bg-green-100 dark:bg-green-900/30',
+        text: 'text-green-700 dark:text-green-400',
+        label: 'In Progress',
       },
       active: {
         bg: 'bg-green-100 dark:bg-green-900/30',
@@ -243,8 +276,13 @@ export default function LeagueDetailPage() {
         text: 'text-gray-600 dark:text-gray-400',
         label: 'Completed',
       },
+      cancelled: {
+        bg: 'bg-red-100 dark:bg-red-900/30',
+        text: 'text-red-700 dark:text-red-400',
+        label: 'Cancelled',
+      },
     };
-    return styles[status];
+    return styles[status] || styles.draft;
   };
 
   const handleRegister = async () => {
@@ -263,7 +301,7 @@ export default function LeagueDetailPage() {
   // Determine available tabs
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: 'overview', label: 'Overview', show: true },
-    { key: 'standings', label: 'Standings', show: leagueData.status !== 'registration' },
+    { key: 'standings', label: 'Standings', show: !isRegistrationOpen(leagueData.status) },
     { key: 'schedule', label: 'Schedule', show: true },
     { key: 'players', label: 'Players', show: true },
     { key: 'playoffs', label: 'Playoffs', show: leagueData.hasPlayoffs && (leagueData.status === 'playoffs' || leagueData.status === 'completed') },
@@ -313,10 +351,14 @@ export default function LeagueDetailPage() {
                 <Users className="w-4 h-4" />
                 {leagueData.currentTeams}/{leagueData.maxTeams} {leagueData.leagueType === 'singles' || leagueData.leagueType === 'ladder' ? 'players' : 'teams'}
               </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                {formatDate(leagueData.startDate)} - {formatDate(leagueData.endDate)}
-              </div>
+              {(leagueData.startDate || leagueData.endDate) && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {leagueData.startDate ? formatDate(leagueData.startDate) : 'TBD'}
+                  {' - '}
+                  {leagueData.endDate ? formatDate(leagueData.endDate) : 'TBD'}
+                </div>
+              )}
               {leagueData.currentWeek && (
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
@@ -333,7 +375,7 @@ export default function LeagueDetailPage() {
                 <UserMinus className="w-4 h-4" />
                 Leave League
               </button>
-            ) : leagueData.status === 'registration' && leagueData.currentTeams < leagueData.maxTeams ? (
+            ) : isRegistrationOpen(leagueData.status) && leagueData.currentTeams < leagueData.maxTeams ? (
               <button
                 onClick={handleRegister}
                 disabled={registerMutation.isPending}
@@ -365,13 +407,13 @@ export default function LeagueDetailPage() {
                       <Edit className="w-4 h-4" />
                       Edit League
                     </button>
-                    {leagueData.status === 'registration' && (
+                    {isRegistrationOpen(leagueData.status) && (
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                         <Play className="w-4 h-4" />
                         Start League
                       </button>
                     )}
-                    {leagueData.status === 'active' && leagueData.hasPlayoffs && (
+                    {isLeagueActive(leagueData.status) && leagueData.hasPlayoffs && (
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                         <Trophy className="w-4 h-4" />
                         Start Playoffs
@@ -453,15 +495,19 @@ function OverviewTab({ league }: { league: League }) {
     });
   };
 
-  const getFormatExplanation = (type: LeagueType): string => {
-    const explanations: Record<LeagueType, string> = {
+  const getFormatExplanation = (type: LeagueType | string | undefined): string => {
+    if (!type) return 'Standard league format.';
+    const explanations: Record<string, string> = {
       ladder: 'Players are ranked and can challenge those above them. Win a challenge to swap positions. Defend your rank against challengers below you.',
-      round_robin: 'Every team plays against every other team once. Final standings are determined by total wins and point differential.',
       doubles: 'Teams of two compete in a bracket or round-robin format. Partners play together throughout the season.',
+      king_of_court: 'Fast-paced format where the winner stays on court. Players rotate through and compete for the most wins.',
+      pool_play: 'Teams are divided into pools and play round-robin within their pool. Top teams from each pool advance to playoffs.',
+      hybrid: 'Combines multiple formats like pool play followed by playoffs. Customizable format for varied competition.',
+      round_robin: 'Every team plays against every other team once. Final standings are determined by total wins and point differential.',
       mixed_doubles: 'Teams consist of one male and one female player. Standard doubles rules apply with mixed gender pairings.',
       singles: 'Individual players compete against each other. No partners or teams involved.',
     };
-    return explanations[type];
+    return explanations[type] || 'Standard league format.';
   };
 
   return (

@@ -406,23 +406,47 @@ leaguesRouter.get('/:id', validateParams(idParamSchema), async (c) => {
     }));
   }
 
+  // Extract settings for easier access
+  const settings = league.settings as {
+    leagueType?: string;
+    numberOfWeeks?: number;
+    hasPlayoffs?: boolean;
+    playoffTeams?: number;
+    maxPlayers?: number;
+  } | null;
+
   return c.json({
     league: {
       id: league.id,
       name: league.name,
       slug: league.slug,
       description: league.description,
+      leagueType: settings?.leagueType || 'doubles',
       gameFormat: league.gameFormat,
       status: league.status,
       isRated: league.isRated,
+      isDuprRated: league.isRated,
       minRating: league.minRating,
       maxRating: league.maxRating,
+      skillLevelMin: league.minRating ? parseFloat(league.minRating) : null,
+      skillLevelMax: league.maxRating ? parseFloat(league.maxRating) : null,
       settings: league.settings,
       rules: league.rules,
       logoUrl: league.logoUrl,
+      // Map organizer to creator for frontend compatibility
       organizer: league.organizer,
+      creator: league.organizer,
       club: league.club,
       venue: league.venue,
+      // Extract dates from currentSeason for frontend compatibility
+      startDate: currentSeason?.startsAt?.toISOString() || null,
+      endDate: currentSeason?.endsAt?.toISOString() || null,
+      registrationDeadline: currentSeason?.registrationClosesAt?.toISOString() || null,
+      totalWeeks: settings?.numberOfWeeks || 8,
+      maxTeams: currentSeason?.maxParticipants || settings?.maxPlayers || 16,
+      currentTeams: participants.length,
+      hasPlayoffs: settings?.hasPlayoffs || false,
+      playoffTeams: settings?.playoffTeams || null,
       currentSeason: currentSeason
         ? {
             id: currentSeason.id,
@@ -437,6 +461,22 @@ leaguesRouter.get('/:id', validateParams(idParamSchema), async (c) => {
           }
         : null,
       participants,
+      // For frontend compatibility - these will be populated when auth context is available
+      isUserRegistered: false,
+      isUserAdmin: false,
+      userTeamId: null,
+      teams: participants.map(p => ({
+        id: p.id,
+        name: p.teamName || 'Team',
+        players: p.players.map(player => ({
+          id: player.id,
+          username: player.username,
+          displayName: player.displayName,
+          avatarUrl: player.avatarUrl,
+          rating: null,
+        })),
+        registrationStatus: 'confirmed' as const,
+      })),
       createdAt: league.createdAt,
       updatedAt: league.updatedAt,
     },
