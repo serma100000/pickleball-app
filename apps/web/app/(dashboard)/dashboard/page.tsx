@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import {
   Trophy,
   Users,
@@ -131,8 +132,24 @@ export default function DashboardPage() {
   const leagues = typedLeaguesResponse?.leagues || [];
   const tournaments = typedTournamentsResponse?.tournaments || [];
 
-  // Format relative date
+  // Client-side greeting to avoid hydration mismatch
+  const [greeting, setGreeting] = useState('Welcome');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good morning');
+    else if (hour < 18) setGreeting('Good afternoon');
+    else setGreeting('Good evening');
+  }, []);
+
+  // Format relative date (uses mounted check to avoid hydration mismatch)
   const formatRelativeDate = (dateString: string): string => {
+    if (!mounted) {
+      // Return a static value during SSR to avoid hydration mismatch
+      return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = now.getTime() - date.getTime();
@@ -161,14 +178,6 @@ export default function DashboardPage() {
     return 'vs. Unknown';
   };
 
-  // Get greeting based on time of day
-  const getGreeting = (): string => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-
   const displayName = fullName || profile?.firstName || 'Player';
 
   return (
@@ -177,7 +186,7 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {getGreeting()}, {displayName}!
+            {greeting}, {displayName}!
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
             Here&apos;s your Paddle Up dashboard

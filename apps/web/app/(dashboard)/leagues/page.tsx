@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Filter,
@@ -289,6 +289,18 @@ export default function LeaguesPage() {
 }
 
 function LeagueCard({ league }: { league: League }) {
+  // Client-side only date calculation to avoid hydration mismatch
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (league.status === 'registration_open' && league.registrationDeadline) {
+      const deadline = new Date(league.registrationDeadline);
+      const now = new Date();
+      const days = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      setDaysLeft(days > 0 ? days : null);
+    }
+  }, [league.status, league.registrationDeadline]);
+
   // Format league type for display
   const formatLeagueType = (type: LeagueType): string => {
     const typeLabels: Record<LeagueType, string> = {
@@ -344,16 +356,11 @@ function LeagueCard({ league }: { league: League }) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Get progress text based on status
+  // Get progress text based on status (uses client-side daysLeft to avoid hydration mismatch)
   const getProgressText = () => {
     if (league.status === 'registration_open') {
-      if (league.registrationDeadline) {
-        const deadline = new Date(league.registrationDeadline);
-        const now = new Date();
-        const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysLeft > 0) {
-          return `Registration ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
-        }
+      if (daysLeft !== null) {
+        return `Registration ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
       }
       return `Starts ${formatDate(league.startDate)}`;
     }
