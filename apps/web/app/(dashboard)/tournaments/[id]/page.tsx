@@ -25,7 +25,6 @@ import {
   XCircle,
   Trash2,
   Copy,
-  ExternalLink,
   ChevronRight,
   ChevronLeft,
   AlertTriangle,
@@ -52,7 +51,7 @@ type RegistrationStatus = 'registered' | 'waitlisted' | 'confirmed' | 'withdrawn
 interface TournamentEvent {
   id: string;
   name: string | null;
-  category: string;
+  category: EventCategory;
   skillLevel: string;
   ageGroup: string;
   format: EventFormat;
@@ -170,7 +169,6 @@ export default function TournamentDetailPage() {
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEvent, setFilterEvent] = useState<string>('all');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Queries
   const { data: tournament, isLoading, isError, error } = useTournament(tournamentId);
@@ -190,7 +188,27 @@ export default function TournamentDetailPage() {
   const eventsData = events as { events: TournamentEvent[] } | undefined;
   const registrationsData = registrations as { registrations: Registration[] } | undefined;
   const bracketData = bracket as { bracket: { rounds: Array<{ round: number; matches: Match[] }> } } | undefined;
-  const scheduleData = schedule as { schedule: { matches: ScheduleSlot[] } } | undefined;
+  // Schedule API returns { schedule: { tournamentId, matches: [...] } }
+  // Transform to expected format for ScheduleTab
+  const rawScheduleData = schedule as { schedule: { tournamentId: string; matches: Array<{ id: string; courtNumber?: string; scheduledAt?: string; status: string; [key: string]: unknown }> } } | undefined;
+  const scheduleData = rawScheduleData?.schedule ? {
+    slots: rawScheduleData.schedule.matches.map(m => ({
+      id: m.id,
+      court: m.courtNumber || 'TBD',
+      startTime: m.scheduledAt || '',
+      endTime: '',
+      matchId: m.id,
+      match: m.status ? {
+        id: m.id,
+        eventName: '',
+        round: (m as { roundNumber?: number }).roundNumber || 0,
+        team1Name: 'TBD',
+        team2Name: 'TBD',
+        status: m.status as 'pending' | 'in_progress' | 'completed',
+      } : undefined,
+    })).filter(s => s.startTime),
+    courts: [...new Set(rawScheduleData.schedule.matches.map(m => m.courtNumber || 'TBD').filter(Boolean))] as string[],
+  } : undefined;
 
   // Loading state
   if (isLoading) {
@@ -297,7 +315,7 @@ export default function TournamentDetailPage() {
   };
 
   const statusBadge = getStatusBadge(tournamentData.status);
-  const canEdit = tournamentData.isUserOwner || tournamentData.isUserAdmin;
+  const canEdit = Boolean(tournamentData.isUserOwner || tournamentData.isUserAdmin);
 
   const formatDateShort = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -394,7 +412,7 @@ export default function TournamentDetailPage() {
               </button>
             )}
 
-            {tournamentData.status === 'registration' && !tournamentData.isUserRegistered && (
+            {tournamentData.status === 'registration_open' && !tournamentData.isUserRegistered && (
               <Link
                 href={`/tournaments/${tournamentId}/register`}
                 className="px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -519,9 +537,7 @@ export default function TournamentDetailPage() {
 
         {activeTab === 'brackets' && (
           <BracketsTab
-            events={bracketData?.events ?? []}
-            selectedEventId={selectedEventId}
-            onEventSelect={setSelectedEventId}
+            bracket={bracketData?.bracket}
           />
         )}
 
@@ -768,24 +784,24 @@ function EventsTab({
   tournament: Tournament;
   events: TournamentEvent[];
 }) {
-  const formatCategory = (category: EventCategory) => {
-    const labels: Record<EventCategory, string> = {
+  const formatCategory = (category: EventCategory | string) => {
+    const labels: Record<string, string> = {
       singles: 'Singles',
       doubles: 'Doubles',
       mixed_doubles: 'Mixed Doubles',
     };
-    return labels[category];
+    return labels[category] || category;
   };
 
-  const formatFormat = (format: EventFormat) => {
-    const labels: Record<EventFormat, string> = {
+  const formatFormat = (format: EventFormat | string) => {
+    const labels: Record<string, string> = {
       single_elimination: 'Single Elimination',
       double_elimination: 'Double Elimination',
       round_robin: 'Round Robin',
       pool_play: 'Pool Play',
       pool_to_bracket: 'Pool Play → Bracket',
     };
-    return labels[format];
+    return labels[format] || format;
   };
 
   return (
@@ -874,7 +890,7 @@ function EventsTab({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {tournament.status === 'registration' && !isFull && (
+                  {tournament.status === 'registration_open' && !isFull && (
                     <Link
                       href={`/tournaments/${tournament.id}/register?event=${event.id}`}
                       className="px-4 py-2 bg-pickle-500 hover:bg-pickle-600 text-white rounded-lg font-medium transition-colors text-center"
@@ -1120,19 +1136,12 @@ function RegistrationsTab({
 
 // Brackets Tab Component
 function BracketsTab({
-  events,
-  selectedEventId,
-  onEventSelect,
+  bracket,
 }: {
-  events: Array<{ id: string; name: string; matches: Match[] }>;
-  selectedEventId: string | null;
-  onEventSelect: (eventId: string | null) => void;
+  bracket: { format?: string; totalRounds?: number; rounds: Array<{ round: number; matches: Match[] }> } | undefined;
 }) {
-  // Auto-select first event if none selected
-  const currentEventId = selectedEventId || events[0]?.id;
-  const currentEvent = events.find(e => e.id === currentEventId);
-
-  if (events.length === 0) {
+  // Handle case when bracket data is not available
+  if (!bracket || !bracket.rounds || bracket.rounds.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
         <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -1146,13 +1155,13 @@ function BracketsTab({
     );
   }
 
-  // Group matches by round
+  // Group matches by round from the bracket data
   const matchesByRound: Record<number, Match[]> = {};
-  currentEvent?.matches.forEach((match) => {
-    if (!matchesByRound[match.round]) {
-      matchesByRound[match.round] = [];
+  bracket.rounds.forEach((roundData) => {
+    if (!matchesByRound[roundData.round]) {
+      matchesByRound[roundData.round] = [];
     }
-    matchesByRound[match.round]!.push(match);
+    matchesByRound[roundData.round]!.push(...roundData.matches);
   });
 
   const getRoundName = (round: number, totalRounds: number) => {
@@ -1162,35 +1171,17 @@ function BracketsTab({
     return `Round ${round}`;
   };
 
-  const totalRounds = Object.keys(matchesByRound).length;
+  const totalRounds = bracket.totalRounds || Object.keys(matchesByRound).length;
+  const hasMatches = Object.values(matchesByRound).some(matches => matches.length > 0);
 
   return (
     <div className="space-y-4">
-      {/* Event Tabs */}
-      {events.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {events.map((event) => (
-            <button
-              key={event.id}
-              onClick={() => onEventSelect(event.id)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
-                currentEventId === event.id
-                  ? 'bg-pickle-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {event.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Bracket View */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 overflow-x-auto">
-        {currentEvent?.matches.length === 0 ? (
+        {!hasMatches ? (
           <div className="text-center py-8">
             <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">No matches scheduled for this event yet</p>
+            <p className="text-gray-500 dark:text-gray-400">No matches scheduled yet</p>
           </div>
         ) : (
           <div className="flex gap-8 min-w-max">

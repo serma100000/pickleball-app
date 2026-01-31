@@ -54,6 +54,9 @@ const createLeagueSchema = z.object({
   // Capacity
   maxPlayers: z.number().min(4).max(128),
   minPlayers: z.number().min(2).default(4),
+  // League-type specific settings
+  numberOfPools: z.number().min(2).max(16).optional(), // For pool_play and hybrid
+  challengeRange: z.number().min(1).max(10).optional(), // For ladder
   // Playoffs
   hasPlayoffs: z.boolean().default(false),
   playoffFormat: playoffFormatEnum.optional(),
@@ -536,6 +539,8 @@ leaguesRouter.post('/', authMiddleware, validateBody(createLeagueSchema), async 
           playoffTeams: data.playoffTeams,
           minPlayers: data.minPlayers,
           maxPlayers: data.maxPlayers,
+          numberOfPools: data.numberOfPools,
+          challengeRange: data.challengeRange,
           reportToDupr: data.reportToDupr,
           location: data.location,
           locationCoordinates: data.locationCoordinates,

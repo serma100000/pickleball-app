@@ -78,6 +78,46 @@ export function useRecentGames() {
   });
 }
 
+// Type for game logging data (casual games with named players)
+interface LogGameData {
+  gameMode: 'single-match' | 'round-robin' | 'set-partner-round-robin';
+  reportToDupr?: boolean;
+  location?: string;
+  locationCoordinates?: { lat: number; lng: number };
+  notes?: string;
+  timestamp?: string;
+  matchType?: 'singles' | 'doubles';
+  scores?: Array<{ team1: number; team2: number }>;
+  partner?: string;
+  opponents?: string[];
+  players?: Array<{ id: string; name: string; hasDuprLinked?: boolean }>;
+  teams?: Array<{
+    id: string;
+    player1: { id: string; name: string; hasDuprLinked?: boolean };
+    player2: { id: string; name: string; hasDuprLinked?: boolean };
+  }>;
+  matches?: Array<{
+    id: string;
+    round: number;
+    court?: number;
+    player1?: { id: string; name: string };
+    player2?: { id: string; name: string };
+    team1?: {
+      id: string;
+      player1: { id: string; name: string };
+      player2: { id: string; name: string };
+    };
+    team2?: {
+      id: string;
+      player1: { id: string; name: string };
+      player2: { id: string; name: string };
+    };
+    score: { team1: number; team2: number };
+    completed?: boolean;
+    reportToDupr?: boolean;
+  }>;
+}
+
 export function useCreateGame() {
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
@@ -98,6 +138,55 @@ export function useCreateGame() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
     },
+  });
+}
+
+// Hook for logging casual games (with named players, not UUIDs)
+// This is the hook that should be used by the game creation wizard
+export function useLogGame() {
+  const queryClient = useQueryClient();
+  const { isOnline } = useOnlineStatus();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: LogGameData) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required to log games');
+      }
+
+      if (!isOnline) {
+        // Queue for later sync
+        await addToSyncQueue({
+          type: 'game',
+          action: 'create',
+          data,
+        });
+        return { offline: true, data };
+      }
+      return apiEndpoints.games.log(token, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
+    },
+  });
+}
+
+// Hook for fetching user's logged games
+export function useMyGames() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.games.myGames(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { games: [], total: 0 };
+      }
+      return apiEndpoints.games.myGames(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -204,10 +293,10 @@ export function useLeagueStandings(leagueId: string) {
   });
 }
 
-export function useLeagueSchedule(leagueId: string) {
+export function useLeagueSchedule(leagueId: string, params?: { week?: number; status?: string }) {
   return useQuery({
-    queryKey: queryKeys.leagues.schedule(leagueId),
-    queryFn: () => apiEndpoints.leagues.getSchedule(leagueId),
+    queryKey: [...queryKeys.leagues.schedule(leagueId), params],
+    queryFn: () => apiEndpoints.leagues.getSchedule(leagueId, params),
     enabled: isValidId(leagueId),
     staleTime: 10 * 60 * 1000,
   });
@@ -236,7 +325,8 @@ export function useCreateLeague() {
       if (!token) {
         throw new Error('Authentication required');
       }
-      return apiEndpoints.leagues.create(token, data) as Promise<{ id: string }>;
+      // Backend returns { message, league: { id, name, slug, status, season } }
+      return apiEndpoints.leagues.create(token, data) as Promise<{ league: { id: string }; id?: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
@@ -367,10 +457,16 @@ export function useCreateTournament() {
 
 export function useUpdateTournament() {
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTournamentInput }) =>
-      apiEndpoints.tournaments.update(id, data) as Promise<TournamentResponse>,
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTournamentInput }) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.tournaments.update(token, id, data) as Promise<TournamentResponse>;
+    },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.myTournaments() });
@@ -432,9 +528,16 @@ export function useCheckInRegistration() {
 
 export function usePublishTournament() {
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   return useMutation({
-    mutationFn: (tournamentId: string) => apiEndpoints.tournaments.publishTournament(tournamentId),
+    mutationFn: async (tournamentId: string) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.tournaments.publishTournament(token, tournamentId);
+    },
     onSuccess: (_, tournamentId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(tournamentId) });
     },

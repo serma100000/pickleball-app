@@ -200,7 +200,8 @@ export const apiEndpoints = {
     create: (data: unknown) => api.post('/games', data),
     update: (id: string, data: unknown) => api.patch(`/games/${id}`, data),
     delete: (id: string) => api.delete(`/games/${id}`),
-    log: (data: {
+    // Log casual game - requires authentication
+    log: (token: string, data: {
       gameMode: 'single-match' | 'round-robin' | 'set-partner-round-robin';
       reportToDupr?: boolean;
       location?: string;
@@ -237,8 +238,9 @@ export const apiEndpoints = {
         completed?: boolean;
         reportToDupr?: boolean;
       }>;
-    }) => api.post('/games/log', data),
-    myGames: () => api.get('/games/my-games'),
+    }) => apiWithAuth.post('/games/log', token, data),
+    // Get user's logged games - requires authentication
+    myGames: (token: string) => apiWithAuth.get('/games/my-games', token),
   },
 
   // Clubs
@@ -261,10 +263,13 @@ export const apiEndpoints = {
       apiWithAuth.get('/leagues', token, params),
     get: (id: string) => api.get(`/leagues/${id}`),
     create: (token: string, data: unknown) => apiWithAuth.post('/leagues', token, data),
+    // Note: Backend uses /join endpoint for registration
     register: (id: string, data: unknown) =>
-      api.post(`/leagues/${id}/register`, data),
+      api.post(`/leagues/${id}/join`, data),
     getStandings: (id: string) => api.get(`/leagues/${id}/standings`),
-    getSchedule: (id: string) => api.get(`/leagues/${id}/schedule`),
+    // Note: Backend uses /matches endpoint for schedule
+    getSchedule: (id: string, params?: { week?: number; status?: string }) =>
+      api.get(`/leagues/${id}/matches`, params),
   },
 
   // Tournaments
@@ -314,7 +319,7 @@ export const apiEndpoints = {
         };
       }>;
     }) => apiWithAuth.post('/tournaments', token, data),
-    update: (id: string, data: {
+    update: (token: string, id: string, data: {
       name?: string;
       description?: string;
       startDate?: string;
@@ -354,7 +359,7 @@ export const apiEndpoints = {
         };
       }>;
       status?: string;
-    }) => api.patch(`/tournaments/${id}`, data),
+    }) => apiWithAuth.patch(`/tournaments/${id}`, token, data),
     delete: (token: string, id: string) => apiWithAuth.delete(`/tournaments/${id}`, token),
     register: (id: string, data: unknown) =>
       api.post(`/tournaments/${id}/register`, data),
@@ -364,7 +369,7 @@ export const apiEndpoints = {
     getEvents: (id: string) => api.get(`/tournaments/${id}/events`),
     getRegistrations: (id: string) => api.get(`/tournaments/${id}/registrations`),
     getSchedule: (id: string) => api.get(`/tournaments/${id}/schedule`),
-    publishTournament: (id: string) => api.post(`/tournaments/${id}/publish`),
+    publishTournament: (token: string, id: string) => apiWithAuth.post(`/tournaments/${id}/publish`, token),
     closeRegistration: (id: string) => api.post(`/tournaments/${id}/close-registration`),
     checkIn: (id: string, registrationId: string) =>
       api.post(`/tournaments/${id}/registrations/${registrationId}/check-in`),

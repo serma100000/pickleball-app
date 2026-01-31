@@ -86,6 +86,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'PaddleUp',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 export const viewport: Viewport = {

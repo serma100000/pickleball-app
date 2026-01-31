@@ -106,6 +106,7 @@ export const queryKeys = {
       [...queryKeys.games.all, 'list', filters] as const,
     detail: (id: string) => [...queryKeys.games.all, id] as const,
     recent: () => [...queryKeys.games.all, 'recent'] as const,
+    myGames: () => [...queryKeys.games.all, 'my'] as const,
   },
 
   // Clubs

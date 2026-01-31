@@ -32,7 +32,7 @@ import { useCreateLeague } from '@/hooks/use-api';
 
 type LeagueType = 'ladder' | 'doubles' | 'king_of_court' | 'pool_play' | 'hybrid' | '';
 type PlayoffFormat = 'single_elimination' | 'double_elimination' | 'best_of_3';
-type GameFormat = 'singles' | 'doubles';
+type GameFormat = 'singles' | 'doubles' | 'mixed_doubles';
 
 interface LeagueFormState {
   step: number;
@@ -1031,7 +1031,9 @@ export default function NewLeaguePage() {
         description: `"${state.name}" has been created successfully.`,
       });
 
-      router.push(`/leagues/${response.id}`);
+      // Backend returns { league: { id, ... } }, extract the league id
+      const leagueId = response.league?.id || response.id;
+      router.push(`/leagues/${leagueId}`);
     } catch (error) {
       console.error('Failed to create league:', error);
       toast.error({

@@ -157,8 +157,102 @@ export default function LeagueDetailPage() {
   // Cast data to expected types - API returns { league: {...} }
   const leagueResponse = league as { league: League } | undefined;
   const leagueData = leagueResponse?.league;
-  const standingsData = standings as { standings: Standing[]; week?: number } | undefined;
-  const scheduleData = schedule as { matches: LeagueMatch[]; playoffs?: PlayoffMatch[] } | undefined;
+
+  // Transform API standings response to frontend Standing structure
+  const standingsResponse = standings as { standings: Array<{
+    rank: number;
+    previousRank: number | null;
+    participant: {
+      id: string;
+      teamName: string | null;
+      players: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null }>;
+    };
+    stats: {
+      matchesPlayed: number;
+      wins: number;
+      losses: number;
+      draws: number;
+      points: number;
+      gamesWon: number;
+      gamesLost: number;
+      gameDifferential: number;
+      pointsScored: number;
+      pointsConceded: number;
+      pointDifferential: number;
+      winRate: string;
+    };
+  }>; week?: number } | undefined;
+
+  const standingsData: { standings: Standing[]; week?: number } | undefined = standingsResponse ? {
+    standings: (standingsResponse.standings ?? []).map(s => ({
+      rank: s.rank,
+      teamId: s.participant.id,
+      teamName: s.participant.teamName || 'Team',
+      players: s.participant.players.map(p => ({
+        id: p.id,
+        username: p.username,
+        displayName: p.displayName,
+        avatarUrl: p.avatarUrl,
+        rating: null,
+      })),
+      wins: s.stats.wins,
+      losses: s.stats.losses,
+      pointsFor: s.stats.pointsScored,
+      pointsAgainst: s.stats.pointsConceded,
+      pointDiff: s.stats.pointDifferential,
+      streak: undefined, // API doesn't provide streak
+      isCurrentUser: false, // Will need to determine from auth context
+    })),
+    week: standingsResponse.week,
+  } : undefined;
+  // Schedule endpoint returns matches with pagination
+  const scheduleResponse = schedule as { matches: Array<{
+    id: string;
+    weekNumber: number;
+    status: MatchStatus;
+    scheduledAt: string | null;
+    participant1: { id: string; teamName: string; players: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null }> };
+    participant2: { id: string; teamName: string; players: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null }> };
+    scores: Array<{ team1: number; team2: number }> | null;
+    winner: string | null;
+    court?: { name: string } | null;
+  }>; playoffs?: PlayoffMatch[]; pagination?: object } | undefined;
+
+  // Transform API match structure to frontend LeagueMatch structure
+  const scheduleData: { matches: LeagueMatch[]; playoffs?: PlayoffMatch[] } | undefined = scheduleResponse ? {
+    matches: (scheduleResponse.matches ?? []).map(m => ({
+      id: m.id,
+      week: m.weekNumber,
+      scheduledAt: m.scheduledAt || new Date().toISOString(),
+      status: m.status,
+      team1: {
+        id: m.participant1.id,
+        name: m.participant1.teamName || 'Team 1',
+        players: m.participant1.players.map(p => ({
+          id: p.id,
+          username: p.username,
+          displayName: p.displayName,
+          avatarUrl: p.avatarUrl,
+          rating: null,
+        })),
+      },
+      team2: {
+        id: m.participant2.id,
+        name: m.participant2.teamName || 'Team 2',
+        players: m.participant2.players.map(p => ({
+          id: p.id,
+          username: p.username,
+          displayName: p.displayName,
+          avatarUrl: p.avatarUrl,
+          rating: null,
+        })),
+      },
+      scores: m.scores,
+      winningTeamId: m.winner,
+      court: m.court?.name,
+    })),
+    playoffs: scheduleResponse.playoffs,
+  } : undefined;
 
   // Set default selected week
   if (selectedWeek === null && leagueData?.currentWeek) {
@@ -234,13 +328,14 @@ export default function LeagueDetailPage() {
     return typeLabels[type] || type;
   };
 
-  const getStatusBadge = (status: LeagueStatus) => {
+  const getStatusBadge = (status: LeagueStatus): { bg: string; text: string; label: string } => {
+    const defaultStyle = {
+      bg: 'bg-gray-100 dark:bg-gray-700',
+      text: 'text-gray-600 dark:text-gray-400',
+      label: 'Draft',
+    };
     const styles: Record<string, { bg: string; text: string; label: string }> = {
-      draft: {
-        bg: 'bg-gray-100 dark:bg-gray-700',
-        text: 'text-gray-600 dark:text-gray-400',
-        label: 'Draft',
-      },
+      draft: defaultStyle,
       registration_open: {
         bg: 'bg-blue-100 dark:bg-blue-900/30',
         text: 'text-blue-700 dark:text-blue-400',
@@ -282,7 +377,7 @@ export default function LeagueDetailPage() {
         label: 'Cancelled',
       },
     };
-    return styles[status] || styles.draft;
+    return styles[status] ?? defaultStyle;
   };
 
   const handleRegister = async () => {

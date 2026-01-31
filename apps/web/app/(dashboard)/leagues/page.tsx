@@ -18,10 +18,50 @@ import { useLeagues } from '@/hooks/use-api';
 import { LeagueListSkeleton } from '@/components/skeletons';
 import { NoLeagues, NoLeaguesFiltered } from '@/components/empty-states';
 
-// Type definitions for API response
-type LeagueType = 'ladder' | 'round_robin' | 'doubles' | 'mixed_doubles' | 'singles';
+// Type definitions for API response - aligned with backend
+type LeagueType = 'ladder' | 'doubles' | 'king_of_court' | 'pool_play' | 'hybrid' | 'round_robin' | 'mixed_doubles' | 'singles';
 type LeagueStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
 
+// Raw API response shape
+interface LeagueApiResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  gameFormat: string;
+  status: LeagueStatus;
+  settings: {
+    leagueType?: string;
+    numberOfWeeks?: number;
+    maxPlayers?: number;
+    minPlayers?: number;
+    hasPlayoffs?: boolean;
+  } | null;
+  organizer: {
+    id: string;
+    username: string;
+    displayName: string | null;
+  };
+  venue: {
+    id: string;
+    name: string;
+    city: string | null;
+  } | null;
+  currentSeason: {
+    id: string;
+    name: string;
+    seasonNumber: number;
+    startsAt: string | null;
+    endsAt: string | null;
+    registrationClosesAt?: string | null;
+    maxParticipants: number | null;
+    status: string;
+  } | null;
+  logoUrl: string | null;
+  createdAt: string;
+}
+
+// Transformed League for display
 interface League {
   id: string;
   name: string;
@@ -47,9 +87,41 @@ interface League {
   userStanding?: number | null;
 }
 
-interface LeaguesResponse {
-  leagues: League[];
-  total: number;
+// Transform API response to display format
+function transformLeagueResponse(apiLeague: LeagueApiResponse): League {
+  return {
+    id: apiLeague.id,
+    name: apiLeague.name,
+    description: apiLeague.description,
+    leagueType: (apiLeague.settings?.leagueType || apiLeague.gameFormat || 'doubles') as LeagueType,
+    status: apiLeague.status,
+    startDate: apiLeague.currentSeason?.startsAt || new Date().toISOString(),
+    endDate: apiLeague.currentSeason?.endsAt || new Date().toISOString(),
+    registrationDeadline: apiLeague.currentSeason?.registrationClosesAt || null,
+    currentWeek: null, // API doesn't provide this on list endpoint
+    totalWeeks: apiLeague.settings?.numberOfWeeks || 8,
+    maxTeams: apiLeague.currentSeason?.maxParticipants || apiLeague.settings?.maxPlayers || 16,
+    currentTeams: 0, // API doesn't provide participant count on list endpoint
+    isDuprRated: false, // API doesn't provide this on list endpoint
+    skillLevelMin: null,
+    skillLevelMax: null,
+    venue: apiLeague.venue,
+    isUserRegistered: false,
+    userStanding: null,
+  };
+}
+
+// API returns pagination object with total
+interface LeaguesApiResponse {
+  leagues: LeagueApiResponse[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  // Legacy support: some endpoints return total directly
+  total?: number;
 }
 
 type FilterTab = 'all' | 'my-leagues' | 'active' | 'upcoming' | 'completed';
@@ -80,11 +152,12 @@ export default function LeaguesPage() {
     status: getStatusFilter(),
   });
 
-  // Cast the response to our expected type
-  const leaguesData = data as LeaguesResponse | undefined;
-  const leagues = leaguesData?.leagues ?? [];
-  const total = leaguesData?.total ?? 0;
-  const totalPages = Math.ceil(total / limit);
+  // Cast the response to our expected type and transform
+  const leaguesApiData = data as LeaguesApiResponse | undefined;
+  const leagues = (leaguesApiData?.leagues ?? []).map(transformLeagueResponse);
+  // Handle both pagination object and legacy total field
+  const total = leaguesApiData?.pagination?.total ?? leaguesApiData?.total ?? 0;
+  const totalPages = leaguesApiData?.pagination?.totalPages ?? Math.ceil(total / limit);
 
   // Filter for "My Leagues" tab (client-side for now)
   const displayedLeagues = activeTab === 'my-leagues'
@@ -302,13 +375,17 @@ function LeagueCard({ league }: { league: League }) {
   }, [league.status, league.registrationDeadline]);
 
   // Format league type for display
-  const formatLeagueType = (type: LeagueType): string => {
-    const typeLabels: Record<LeagueType, string> = {
+  const formatLeagueType = (type: LeagueType | string | undefined): string => {
+    if (!type) return 'League';
+    const typeLabels: Record<string, string> = {
       ladder: 'Ladder',
       round_robin: 'Round Robin',
       doubles: 'Doubles',
       mixed_doubles: 'Mixed Doubles',
       singles: 'Singles',
+      king_of_court: 'King of the Court',
+      pool_play: 'Pool Play',
+      hybrid: 'Hybrid',
     };
     return typeLabels[type] || type;
   };
