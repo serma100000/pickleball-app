@@ -255,10 +255,12 @@ export const apiEndpoints = {
 
   // Leagues
   leagues: {
-    list: (params?: { page?: number; limit?: number; status?: string }) =>
+    list: (params?: { page?: number; limit?: number; status?: string; myLeagues?: boolean }) =>
       api.get('/leagues', params),
+    listWithAuth: (token: string, params?: { page?: number; limit?: number; status?: string; myLeagues?: boolean }) =>
+      apiWithAuth.get('/leagues', token, params),
     get: (id: string) => api.get(`/leagues/${id}`),
-    create: (data: unknown) => api.post('/leagues', data),
+    create: (token: string, data: unknown) => apiWithAuth.post('/leagues', token, data),
     register: (id: string, data: unknown) =>
       api.post(`/leagues/${id}/register`, data),
     getStandings: (id: string) => api.get(`/leagues/${id}/standings`),

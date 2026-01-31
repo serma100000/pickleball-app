@@ -222,6 +222,42 @@ export function useRegisterForLeague() {
   });
 }
 
+export function useCreateLeague() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: unknown) => {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return apiEndpoints.leagues.create(token, data) as Promise<{ id: string }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+    },
+  });
+}
+
+// My Leagues (leagues the user is organizing/participating in)
+export function useMyLeagues(params?: { page?: number; limit?: number; status?: string }) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.leagues.myLeagues(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) {
+        return { leagues: [], total: 0 };
+      }
+      return apiEndpoints.leagues.listWithAuth(token, { ...params, myLeagues: true });
+    },
+    enabled: isSignedIn,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // Tournaments hooks
 export function useTournaments(params?: { page?: number; limit?: number; upcoming?: boolean }) {
   return useQuery({

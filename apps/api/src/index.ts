@@ -1,11 +1,6 @@
 import { serve } from '@hono/node-server';
 import { app } from './app.js';
 
-// Load dotenv only in development - Railway provides env vars directly in production
-if (process.env.NODE_ENV !== 'production') {
-  import('dotenv/config').catch(() => {});
-}
-
 const port = parseInt(process.env.PORT || '3001');
 const host = process.env.HOST || '0.0.0.0';
 

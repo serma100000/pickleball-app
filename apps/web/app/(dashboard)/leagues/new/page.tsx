@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
 import { toast } from '@/hooks/use-toast';
+import { useCreateLeague } from '@/hooks/use-api';
 
 // ============================================================================
 // Types
@@ -910,6 +912,8 @@ export default function NewLeaguePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stepAnnouncement, setStepAnnouncement] = useState('');
+  const router = useRouter();
+  const createLeagueMutation = useCreateLeague();
 
   const isFirstStep = state.step === 0;
   const isLastStep = state.step === STEPS.length - 1;
@@ -1013,19 +1017,10 @@ export default function NewLeaguePage() {
         createdAt: new Date().toISOString(),
       };
 
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/leagues', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(submitData),
-      // });
-      // if (!response.ok) throw new Error('Failed to create league');
-
-      // Simulate API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await createLeagueMutation.mutateAsync(submitData);
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('Creating league:', submitData);
+        console.log('League created:', response);
       }
 
       toast.success({
@@ -1033,8 +1028,7 @@ export default function NewLeaguePage() {
         description: `"${state.name}" has been created successfully.`,
       });
 
-      // TODO: Redirect to league page
-      // router.push(`/leagues/${response.id}`);
+      router.push(`/leagues/${response.id}`);
     } catch (error) {
       console.error('Failed to create league:', error);
       toast.error({
