@@ -183,11 +183,15 @@ export function useLeagues(params?: { page?: number; limit?: number; status?: st
   });
 }
 
+// Helper to validate ID is a real value (not undefined/null strings)
+const isValidId = (id: string | undefined | null): boolean =>
+  Boolean(id) && id !== 'undefined' && id !== 'null';
+
 export function useLeague(id: string) {
   return useQuery({
     queryKey: queryKeys.leagues.detail(id),
     queryFn: () => apiEndpoints.leagues.get(id),
-    enabled: Boolean(id),
+    enabled: isValidId(id),
   });
 }
 
@@ -195,7 +199,7 @@ export function useLeagueStandings(leagueId: string) {
   return useQuery({
     queryKey: queryKeys.leagues.standings(leagueId),
     queryFn: () => apiEndpoints.leagues.getStandings(leagueId),
-    enabled: Boolean(leagueId),
+    enabled: isValidId(leagueId),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -204,7 +208,7 @@ export function useLeagueSchedule(leagueId: string) {
   return useQuery({
     queryKey: queryKeys.leagues.schedule(leagueId),
     queryFn: () => apiEndpoints.leagues.getSchedule(leagueId),
-    enabled: Boolean(leagueId),
+    enabled: isValidId(leagueId),
     staleTime: 10 * 60 * 1000,
   });
 }
@@ -271,7 +275,7 @@ export function useTournament(id: string) {
   return useQuery({
     queryKey: queryKeys.tournaments.detail(id),
     queryFn: () => apiEndpoints.tournaments.get(id),
-    enabled: Boolean(id),
+    enabled: isValidId(id),
   });
 }
 
@@ -279,7 +283,7 @@ export function useTournamentBracket(tournamentId: string) {
   return useQuery({
     queryKey: queryKeys.tournaments.bracket(tournamentId),
     queryFn: () => apiEndpoints.tournaments.getBracket(tournamentId),
-    enabled: Boolean(tournamentId),
+    enabled: isValidId(tournamentId),
     staleTime: 1 * 60 * 1000, // 1 minute for live brackets
   });
 }
@@ -378,7 +382,7 @@ export function useTournamentEvents(tournamentId: string) {
   return useQuery({
     queryKey: queryKeys.tournaments.events(tournamentId),
     queryFn: () => apiEndpoints.tournaments.getEvents(tournamentId),
-    enabled: Boolean(tournamentId),
+    enabled: isValidId(tournamentId),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -387,7 +391,7 @@ export function useTournamentRegistrations(tournamentId: string) {
   return useQuery({
     queryKey: queryKeys.tournaments.registrations(tournamentId),
     queryFn: () => apiEndpoints.tournaments.getRegistrations(tournamentId),
-    enabled: Boolean(tournamentId),
+    enabled: isValidId(tournamentId),
     staleTime: 2 * 60 * 1000,
   });
 }
@@ -396,7 +400,7 @@ export function useTournamentSchedule(tournamentId: string) {
   return useQuery({
     queryKey: queryKeys.tournaments.schedule(tournamentId),
     queryFn: () => apiEndpoints.tournaments.getSchedule(tournamentId),
-    enabled: Boolean(tournamentId),
+    enabled: isValidId(tournamentId),
     staleTime: 2 * 60 * 1000,
   });
 }
