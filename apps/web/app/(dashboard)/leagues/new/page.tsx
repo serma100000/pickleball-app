@@ -991,15 +991,19 @@ export default function NewLeaguePage() {
     setIsSubmitting(true);
 
     try {
+      // Convert date to ISO datetime format (backend expects datetime, not just date)
+      const startDateTime = state.startDate ? new Date(state.startDate).toISOString() : new Date().toISOString();
+
       const submitData = {
         leagueType: state.leagueType,
+        gameFormat: state.gameFormat, // Required by backend
         name: state.name,
-        description: state.description,
-        location: state.location,
+        description: state.description || undefined,
+        location: state.location || undefined,
         locationCoordinates: state.locationCoordinates,
-        startDate: state.startDate,
+        startDate: startDateTime,
         numberOfWeeks: state.numberOfWeeks,
-        daysPerWeek: state.daysPerWeek,
+        daysPerWeek: state.daysPerWeek.length > 0 ? state.daysPerWeek : undefined,
         minPlayers: state.minPlayers,
         maxPlayers: state.maxPlayers,
         ...(state.leagueType === 'pool_play' || state.leagueType === 'hybrid'
@@ -1014,7 +1018,6 @@ export default function NewLeaguePage() {
             }
           : {}),
         reportToDupr: state.reportToDupr,
-        createdAt: new Date().toISOString(),
       };
 
       const response = await createLeagueMutation.mutateAsync(submitData);
