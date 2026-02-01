@@ -46,9 +46,47 @@ const localStorageMock = {
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
+
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
+}));
+
+
+// Mock Clerk auth
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({
+    isSignedIn: true,
+    isLoaded: true,
+    getToken: vi.fn().mockResolvedValue('mock-token'),
+  }),
+  useUser: () => ({
+    user: {
+      id: 'user-123',
+      firstName: 'Test',
+      lastName: 'User',
+      username: 'testuser',
+      primaryEmailAddress: { emailAddress: 'test@example.com' },
+      imageUrl: 'https://example.com/avatar.jpg',
+      unsafeMetadata: {},
+      publicMetadata: {},
+    },
+    isLoaded: true,
+    isSignedIn: true,
+  }),
+  useClerk: () => ({
+    openSignIn: vi.fn(),
+    openSignUp: vi.fn(),
+  }),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

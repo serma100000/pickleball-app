@@ -14,6 +14,8 @@ export default defineConfig({
       'components/**/__tests__/*.test.tsx',
       'hooks/__tests__/*.test.ts',
       'app/**/__tests__/*.test.tsx',
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
     ],
     coverage: {
       provider: 'v8',
