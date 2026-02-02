@@ -699,53 +699,63 @@ tournamentsRouter.get(
   '/:idOrSlug/registrations',
   validateQuery(paginationSchema),
   async (c) => {
-    const idOrSlug = c.req.param('idOrSlug');
-    const { page, limit } = c.req.valid('query');
-    const offset = (page - 1) * limit;
+    try {
+      const idOrSlug = c.req.param('idOrSlug');
+      const { page, limit } = c.req.valid('query');
+      const offset = (page - 1) * limit;
 
-    // First find the tournament to get its ID
-    const tournament = await findTournamentByIdOrSlug(idOrSlug);
-    if (!tournament) {
-      throw new HTTPException(404, {
-        message: 'Tournament not found',
-      });
-    }
+      // First find the tournament to get its ID
+      const tournament = await findTournamentByIdOrSlug(idOrSlug);
+      if (!tournament) {
+        throw new HTTPException(404, {
+          message: 'Tournament not found',
+        });
+      }
 
-    const registrations = await db.query.tournamentRegistrations.findMany({
-      where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
-      with: {
-        players: {
-          with: {
-            user: true,
+      const registrations = await db.query.tournamentRegistrations.findMany({
+        where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
+        with: {
+          players: {
+            with: {
+              user: true,
+            },
           },
         },
-      },
-      limit,
-      offset,
-    });
-
-    return c.json({
-      registrations: registrations.map((reg) => ({
-        id: reg.id,
-        teamName: reg.teamName,
-        seed: reg.seed,
-        status: reg.status,
-        registeredAt: reg.registeredAt,
-        players: reg.players?.map((p) => ({
-          id: p.user?.id,
-          username: p.user?.username,
-          displayName: p.user?.displayName,
-          avatarUrl: p.user?.avatarUrl,
-          rating: p.ratingAtRegistration,
-          isCaptain: p.isCaptain,
-        })) || [],
-      })),
-      pagination: {
-        page,
         limit,
-        hasMore: registrations.length === limit,
-      },
-    });
+        offset,
+      });
+
+      return c.json({
+        registrations: registrations.map((reg) => ({
+          id: reg.id,
+          teamName: reg.teamName,
+          seed: reg.seed,
+          status: reg.status,
+          registeredAt: reg.registeredAt,
+          players: reg.players?.map((p) => ({
+            id: p.user?.id,
+            username: p.user?.username,
+            displayName: p.user?.displayName,
+            avatarUrl: p.user?.avatarUrl,
+            rating: p.ratingAtRegistration,
+            isCaptain: p.isCaptain,
+          })) || [],
+        })),
+        pagination: {
+          page,
+          limit,
+          hasMore: registrations.length === limit,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching registrations:', error);
+      if (error instanceof HTTPException) {
+        throw error;
+      }
+      throw new HTTPException(500, {
+        message: 'Failed to fetch registrations',
+      });
+    }
   }
 );
 
