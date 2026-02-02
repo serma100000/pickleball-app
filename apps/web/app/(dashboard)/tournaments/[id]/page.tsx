@@ -1393,7 +1393,7 @@ function SettingsTab({
           </Link>
 
           <Link
-            href={`/tournaments/${tournament.id}/events/manage`}
+            href={`/tournaments/${tournament.id}/edit`}
             className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-pickle-300 dark:hover:border-pickle-700 transition-colors"
           >
             <div className="flex items-center gap-3">

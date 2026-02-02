@@ -24,7 +24,7 @@ import {
   UserPlus,
   Loader2,
 } from 'lucide-react';
-import { useMyTournaments, useDeleteTournament } from '@/hooks/use-api';
+import { useMyTournaments, useDeleteTournament, usePublishTournament } from '@/hooks/use-api';
 import { TournamentListSkeleton } from '@/components/skeletons';
 import { NoTournaments, NoTournamentsFiltered } from '@/components/empty-states';
 import { toast } from '@/hooks/use-toast';
@@ -78,6 +78,7 @@ export default function TournamentsPage() {
   });
 
   const deleteMutation = useDeleteTournament();
+  const publishMutation = usePublishTournament();
 
   // Cast the response to our expected type
   const tournamentsData = data as TournamentsResponse | undefined;
@@ -124,6 +125,25 @@ export default function TournamentsPage() {
         console.error('Failed to delete tournament:', error);
         toast.error({
           title: 'Could not delete tournament',
+          description: 'Please try again.',
+        });
+      }
+    }
+  };
+
+  const handlePublish = async (tournamentId: string, tournamentName: string) => {
+    if (confirm(`Are you sure you want to publish "${tournamentName}"? This will open registration.`)) {
+      try {
+        await publishMutation.mutateAsync(tournamentId);
+        refetch();
+        toast.success({
+          title: 'Tournament published',
+          description: `"${tournamentName}" is now open for registration.`,
+        });
+      } catch (error) {
+        console.error('Failed to publish tournament:', error);
+        toast.error({
+          title: 'Could not publish tournament',
           description: 'Please try again.',
         });
       }
@@ -278,6 +298,7 @@ export default function TournamentsPage() {
                 key={tournament.id}
                 tournament={tournament}
                 onDelete={handleDelete}
+                onPublish={handlePublish}
               />
             ))}
           </div>
@@ -339,9 +360,11 @@ export default function TournamentsPage() {
 function TournamentCard({
   tournament,
   onDelete,
+  onPublish,
 }: {
   tournament: Tournament;
   onDelete: (id: string, name: string) => void;
+  onPublish: (id: string, name: string) => void;
 }) {
   // Get status badge styling
   const getStatusBadge = (status: TournamentStatus) => {
@@ -417,13 +440,13 @@ function TournamentCard({
               <Edit className="w-4 h-4" />
               Edit
             </Link>
-            <Link
-              href={`/tournaments/${tournament.id}/publish`}
+            <button
+              onClick={() => onPublish(tournament.id, tournament.name)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-pickle-500 hover:bg-pickle-600 rounded-lg transition-colors"
             >
               <Play className="w-4 h-4" />
               Publish
-            </Link>
+            </button>
             <button
               onClick={() => onDelete(tournament.id, tournament.name)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
@@ -437,7 +460,7 @@ function TournamentCard({
         return (
           <>
             <Link
-              href={`/tournaments/${tournament.id}/registrations`}
+              href={`/tournaments/${tournament.id}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
               <Users className="w-4 h-4" />
@@ -451,7 +474,7 @@ function TournamentCard({
               Edit
             </Link>
             <Link
-              href={`/tournaments/${tournament.id}/close-registration`}
+              href={`/tournaments/${tournament.id}/edit`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
             >
               <Clock className="w-4 h-4" />
@@ -463,7 +486,7 @@ function TournamentCard({
         return (
           <>
             <Link
-              href={`/tournaments/${tournament.id}/registrations`}
+              href={`/tournaments/${tournament.id}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
               <Users className="w-4 h-4" />
@@ -590,7 +613,7 @@ function TournamentCard({
           <div className="flex flex-wrap items-center gap-2">
             {getQuickActions(tournament.status)}
             <Link
-              href={`/tournaments/${tournament.id}/manage`}
+              href={`/tournaments/${tournament.id}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               <Settings className="w-4 h-4" />
