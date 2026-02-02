@@ -699,31 +699,49 @@ tournamentsRouter.get(
   '/:idOrSlug/registrations',
   validateQuery(paginationSchema),
   async (c) => {
+    const idOrSlug = c.req.param('idOrSlug');
+    console.log('[registrations] Fetching registrations for:', idOrSlug);
+
     try {
-      const idOrSlug = c.req.param('idOrSlug');
       const { page, limit } = c.req.valid('query');
       const offset = (page - 1) * limit;
 
       // First find the tournament to get its ID
       const tournament = await findTournamentByIdOrSlug(idOrSlug);
       if (!tournament) {
+        console.log('[registrations] Tournament not found:', idOrSlug);
         throw new HTTPException(404, {
           message: 'Tournament not found',
         });
       }
+      console.log('[registrations] Found tournament:', tournament.id, tournament.name);
 
-      const registrations = await db.query.tournamentRegistrations.findMany({
-        where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
-        with: {
-          players: {
-            with: {
-              user: true,
+      // Try fetching registrations without nested user relation first
+      let registrations;
+      try {
+        registrations = await db.query.tournamentRegistrations.findMany({
+          where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
+          with: {
+            players: {
+              with: {
+                user: true,
+              },
             },
           },
-        },
-        limit,
-        offset,
-      });
+          limit,
+          offset,
+        });
+        console.log('[registrations] Found', registrations.length, 'registrations');
+      } catch (queryError) {
+        console.error('[registrations] Query error:', queryError);
+        // Fallback to simpler query without nested relations
+        registrations = await db.query.tournamentRegistrations.findMany({
+          where: eq(schema.tournamentRegistrations.tournamentId, tournament.id),
+          limit,
+          offset,
+        });
+        console.log('[registrations] Fallback found', registrations.length, 'registrations');
+      }
 
       return c.json({
         registrations: registrations.map((reg) => ({
@@ -732,7 +750,7 @@ tournamentsRouter.get(
           seed: reg.seed,
           status: reg.status,
           registeredAt: reg.registeredAt,
-          players: reg.players?.map((p) => ({
+          players: (reg as { players?: Array<{ user?: { id: string; username: string; displayName: string; avatarUrl: string }; ratingAtRegistration: string; isCaptain: boolean }> }).players?.map((p) => ({
             id: p.user?.id,
             username: p.user?.username,
             displayName: p.user?.displayName,
@@ -748,12 +766,13 @@ tournamentsRouter.get(
         },
       });
     } catch (error) {
-      console.error('Error fetching registrations:', error);
+      console.error('[registrations] Error for', idOrSlug, ':', error);
       if (error instanceof HTTPException) {
         throw error;
       }
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new HTTPException(500, {
-        message: 'Failed to fetch registrations',
+        message: `Failed to fetch registrations: ${errorMessage}`,
       });
     }
   }
