@@ -6,6 +6,15 @@ export default defineConfig({
     // Test environment
     environment: 'node',
 
+    // Run test files sequentially to avoid mock pollution
+    fileParallelism: false,
+
+    // Force mock isolation between test files
+    isolate: true,
+
+    // Clear mock call history between tests (NOT mockReset which resets implementations)
+    clearMocks: true,
+
     // Environment variables for tests
     env: {
       NODE_ENV: 'test',

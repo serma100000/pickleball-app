@@ -481,7 +481,14 @@ describe('Tournament API Routes', () => {
 
       vi.mocked(db.query.users.findFirst).mockResolvedValue(mockUser as any);
       vi.mocked(db.query.tournaments.findFirst).mockResolvedValue(mockTournament as any);
-      vi.mocked(db.query.tournamentRegistrations.findFirst).mockResolvedValue(null);
+      // Mock the db.select() chain for checking existing registrations
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]), // No existing registrations
+          }),
+        }),
+      } as any);
       vi.mocked(db.insert).mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{ id: 'reg-123', status: 'registered' }]),
@@ -565,9 +572,13 @@ describe('Tournament API Routes', () => {
 
       vi.mocked(db.query.users.findFirst).mockResolvedValue(mockUser as any);
       vi.mocked(db.query.tournaments.findFirst).mockResolvedValue(mockTournament as any);
-      vi.mocked(db.query.tournamentRegistrations.findFirst).mockResolvedValue({
-        id: 'existing-reg',
-        players: [{ userId: mockUser.id }],
+      // Mock the db.select() chain to return an existing registration
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ id: 'existing-reg', status: 'registered' }]),
+          }),
+        }),
       } as any);
 
       const app = createTestApp();

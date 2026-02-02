@@ -205,12 +205,12 @@ const mockGame = {
   scores: [],
   isRated: true,
   participants: [
-    { userId: mockUser.id, team: 1, user: mockUser, hasVerified: false },
-    { userId: mockUser2.id, team: 2, user: mockUser2, hasVerified: false },
+    { userId: mockUser.id, team: 1, user: mockUser, isConfirmed: false },
+    { userId: mockUser2.id, team: 2, user: mockUser2, isConfirmed: false },
   ],
   players: [
-    { userId: mockUser.id, team: 1, user: mockUser, hasVerified: false },
-    { userId: mockUser2.id, team: 2, user: mockUser2, hasVerified: false },
+    { userId: mockUser.id, team: 1, user: mockUser, isConfirmed: false },
+    { userId: mockUser2.id, team: 2, user: mockUser2, isConfirmed: false },
   ],
 };
 
@@ -231,9 +231,8 @@ describe('Games API Routes', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+  // Remove vi.resetAllMocks() as it clears mock implementations
+  // vi.clearAllMocks() in beforeEach is sufficient for clearing call history
 
   describe('POST /games - Create a new game', () => {
     it('should create a singles game successfully', async () => {
@@ -615,8 +614,8 @@ describe('Games API Routes', () => {
         ...mockGame,
         status: 'completed',
         players: [
-          { ...mockGame.participants[0], hasVerified: false },
-          { ...mockGame.participants[1], hasVerified: false },
+          { ...mockGame.participants[0], isConfirmed: false },
+          { ...mockGame.participants[1], isConfirmed: false },
         ],
       });
       vi.mocked(gameService.verify).mockResolvedValue({
@@ -684,8 +683,8 @@ describe('Games API Routes', () => {
         ...mockGame,
         status: 'completed',
         players: [
-          { ...mockGame.participants[0], hasVerified: true }, // Already verified
-          { ...mockGame.participants[1], hasVerified: false },
+          { ...mockGame.participants[0], isConfirmed: true }, // Already verified
+          { ...mockGame.participants[1], isConfirmed: false },
         ],
       });
 
