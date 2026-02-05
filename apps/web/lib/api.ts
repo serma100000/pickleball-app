@@ -11,17 +11,20 @@ interface ApiError {
   message: string;
   code?: string;
   status: number;
+  details?: Record<string, string[]>;
 }
 
 class ApiClientError extends Error {
   status: number;
   code?: string;
+  details?: Record<string, string[]>;
 
   constructor(error: ApiError) {
     super(error.message);
     this.name = 'ApiClientError';
     this.status = error.status;
     this.code = error.code;
+    this.details = error.details;
   }
 }
 
@@ -75,10 +78,22 @@ async function request<T>(
         message: 'An unexpected error occurred',
       }));
 
+      // Build detailed message when validation details are available
+      let message = errorData.message || `HTTP error ${response.status}`;
+      if (errorData.details && typeof errorData.details === 'object') {
+        const fieldErrors = Object.entries(errorData.details)
+          .map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+          .join('; ');
+        if (fieldErrors) {
+          message = `${message} - ${fieldErrors}`;
+        }
+      }
+
       throw new ApiClientError({
-        message: errorData.message || `HTTP error ${response.status}`,
+        message,
         code: errorData.code,
         status: response.status,
+        details: errorData.details,
       });
     }
 

@@ -1694,9 +1694,20 @@ export default function NewTournamentPage() {
           return;
         }
 
+        // Show detailed validation errors
+        let description = error.message || 'Please try again.';
+        if (error.details && typeof error.details === 'object') {
+          const fieldErrors = Object.entries(error.details)
+            .map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+            .join('\n');
+          if (fieldErrors) {
+            description = fieldErrors;
+          }
+        }
+
         toast.error({
           title: 'Could not create tournament',
-          description: error.message || 'Please try again.',
+          description,
         });
       } else {
         toast.error({
