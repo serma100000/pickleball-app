@@ -668,10 +668,10 @@ function OverviewTab({
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {events.slice(0, 4).map((event) => (
-              <Link
+              <button
                 key={event.id}
-                href={`/tournaments/${tournament.id}/events/${event.id}`}
-                className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-pickle-300 dark:hover:border-pickle-700 transition-colors"
+                onClick={() => setActiveTab('events')}
+                className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-pickle-300 dark:hover:border-pickle-700 transition-colors text-left w-full"
               >
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">{event.name}</p>
@@ -680,7 +680,7 @@ function OverviewTab({
                   </p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -898,12 +898,12 @@ function EventsTab({
                       Register
                     </Link>
                   )}
-                  <Link
-                    href={`/tournaments/${tournament.id}/events/${event.id}`}
+                  <button
+                    onClick={() => setActiveTab('events')}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center"
                   >
                     View Details
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
