@@ -178,6 +178,10 @@ const CROSS_POOL_SEEDING_OPTIONS: { value: CrossPoolSeedingMethod; label: string
 // Helper Functions
 // ============================================================================
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function generateEventId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -592,8 +596,11 @@ function BasicInfoStep({ state, setState }: StepProps) {
           onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
           maxLength={100}
           aria-required="true"
-          className="w-full"
+          className={cn('w-full', state.name && state.name.trim().length < 3 && state.name.trim().length > 0 && 'border-red-500 focus-visible:ring-red-500')}
         />
+        {state.name && state.name.trim().length > 0 && state.name.trim().length < 3 && (
+          <p className="mt-1 text-sm text-red-500">Name must be at least 3 characters</p>
+        )}
       </Card>
 
       {/* Description */}
@@ -725,8 +732,11 @@ function BasicInfoStep({ state, setState }: StepProps) {
               onChange={(e) => setState((prev) => ({ ...prev, directorEmail: e.target.value }))}
               maxLength={255}
               aria-required="true"
-              className="w-full"
+              className={cn('w-full', state.directorEmail && !isValidEmail(state.directorEmail) && 'border-red-500 focus-visible:ring-red-500')}
             />
+            {state.directorEmail && !isValidEmail(state.directorEmail) && (
+              <p className="mt-1 text-sm text-red-500">Please enter a valid email address</p>
+            )}
           </div>
           <div>
             <label htmlFor="director-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1725,12 +1735,12 @@ export default function NewTournamentPage() {
       case 0: {
         // Basic required field check
         const hasRequiredFields =
-          state.name.trim() !== '' &&
+          state.name.trim().length >= 3 &&
           state.startDate !== '' &&
           state.endDate !== '' &&
           state.registrationDeadline !== '' &&
           state.directorName.trim() !== '' &&
-          state.directorEmail.trim() !== '';
+          isValidEmail(state.directorEmail);
 
         // Date validation: end date must be >= start date
         const validEndDate = !state.startDate || !state.endDate || state.endDate >= state.startDate;
