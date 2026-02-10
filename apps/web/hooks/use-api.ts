@@ -1231,3 +1231,152 @@ export function useProcessWaitlist() {
     },
   });
 }
+
+// ============================================================================
+// DUPR Integration hooks
+// ============================================================================
+
+export function useDuprSettings() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.dupr.settings(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.getSettings(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDuprEntitlements() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.dupr.entitlements(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.getEntitlements(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useDuprSsoUrl() {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.dupr.ssoUrl(),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.getSsoUrl(token);
+    },
+    enabled: isSignedIn,
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useDuprSsoCallback() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      userToken: string;
+      refreshToken?: string;
+      id?: string;
+      duprId: string;
+      stats?: { singles?: number | null; doubles?: number | null; mixedDoubles?: number | null };
+    }) => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.ssoCallback(token, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dupr.all });
+    },
+  });
+}
+
+export function useDuprUnlink() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.unlink(token);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dupr.all });
+    },
+  });
+}
+
+export function useDuprSync() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.sync(token);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dupr.all });
+    },
+  });
+}
+
+export function useSubmitMatchToDupr() {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      gameId?: string;
+      tournamentMatchId?: string;
+      leagueMatchId?: string;
+      matchType: 'SINGLES' | 'DOUBLES';
+      team1Players: { duprId: string }[];
+      team2Players: { duprId: string }[];
+      scores: { team1Score: number; team2Score: number }[];
+      playedAt: string;
+      clubId?: string;
+      eventName?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.dupr.submitMatch(token, data);
+    },
+  });
+}
+
+// ============================================================================
+// Payment hooks
+// ============================================================================
+
+export function useCreatePaymentIntent() {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      amount: number;
+      currency?: string;
+      registrationId?: string;
+      eventType?: 'tournament' | 'club_event' | 'league';
+      eventId?: string;
+      description?: string;
+    }) => {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      return apiEndpoints.payments.createIntent(token, data);
+    },
+  });
+}

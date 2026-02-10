@@ -747,6 +747,11 @@ export const clubEvents = pgTable(
     isCancelled: boolean('is_cancelled').default(false),
     cancelledReason: text('cancelled_reason'),
 
+    // DUPR Integration
+    requiresDupr: boolean('requires_dupr').default(false),
+    requiresDuprPlus: boolean('requires_dupr_plus').default(false),
+    requiresDuprVerified: boolean('requires_dupr_verified').default(false),
+
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -844,6 +849,16 @@ export const tournaments = pgTable(
 
     // Rules
     rules: text('rules'),
+
+    // DUPR Integration
+    requiresDupr: boolean('requires_dupr').default(false),
+    requiresDuprPlus: boolean('requires_dupr_plus').default(false),
+    requiresDuprVerified: boolean('requires_dupr_verified').default(false),
+    reportToDupr: boolean('report_to_dupr').default(false),
+
+    // Payment
+    entryFee: decimal('entry_fee', { precision: 8, scale: 2 }).default('0'),
+    stripePaymentRequired: boolean('stripe_payment_required').default(false),
 
     status: tournamentStatusEnum('status').notNull().default('draft'),
 
@@ -1754,11 +1769,119 @@ export const partnerListings = pgTable(
 );
 
 // ============================================================================
+// DUPR INTEGRATION (2 tables)
+// ============================================================================
+
+// DUPR linked accounts - canonical store for DUPR account link per user
+export const duprAccounts = pgTable(
+  'dupr_accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' })
+      .unique(),
+    duprId: varchar('dupr_id', { length: 50 }).notNull().unique(),
+    duprInternalId: varchar('dupr_internal_id', { length: 100 }),
+
+    // OAuth tokens (encrypted at application level)
+    duprUserToken: text('dupr_user_token'),
+    duprRefreshToken: text('dupr_refresh_token'),
+    tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),
+
+    // Entitlements (cached, refreshed on login/sync)
+    entitlementLevel: varchar('entitlement_level', { length: 20 }).notNull().default('NONE'), // NONE, PREMIUM_L1, VERIFIED_L1
+
+    // Ratings snapshot (last synced from DUPR)
+    singlesRating: decimal('singles_rating', { precision: 4, scale: 2 }),
+    doublesRating: decimal('doubles_rating', { precision: 4, scale: 2 }),
+    mixedDoublesRating: decimal('mixed_doubles_rating', { precision: 4, scale: 2 }),
+
+    lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+    linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: uniqueIndex('dupr_accounts_user_id_idx').on(table.userId),
+    duprIdIdx: uniqueIndex('dupr_accounts_dupr_id_idx').on(table.duprId),
+  })
+);
+
+// DUPR match submissions - tracks matches submitted to DUPR
+export const duprMatchSubmissions = pgTable(
+  'dupr_match_submissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gameId: uuid('game_id').references(() => games.id, { onDelete: 'set null' }),
+    tournamentMatchId: uuid('tournament_match_id').references(() => tournamentMatches.id, {
+      onDelete: 'set null',
+    }),
+    leagueMatchId: uuid('league_match_id').references(() => leagueMatches.id, {
+      onDelete: 'set null',
+    }),
+
+    duprMatchId: varchar('dupr_match_id', { length: 100 }), // ID returned by DUPR after submission
+    status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, submitted, confirmed, failed, deleted
+
+    submittedBy: uuid('submitted_by').references(() => users.id),
+
+    // Payload snapshot (what was sent to DUPR)
+    payload: jsonb('payload').notNull(),
+    errorMessage: text('error_message'),
+
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    gameIdIdx: index('dupr_match_submissions_game_id_idx').on(table.gameId),
+    tournamentMatchIdIdx: index('dupr_match_submissions_tournament_match_id_idx').on(
+      table.tournamentMatchId
+    ),
+    statusIdx: index('dupr_match_submissions_status_idx').on(table.status),
+    duprMatchIdIdx: index('dupr_match_submissions_dupr_match_id_idx').on(table.duprMatchId),
+  })
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
+// DUPR accounts relations
+export const duprAccountsRelations = relations(duprAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [duprAccounts.userId],
+    references: [users.id],
+  }),
+}));
+
+// DUPR match submissions relations
+export const duprMatchSubmissionsRelations = relations(duprMatchSubmissions, ({ one }) => ({
+  game: one(games, {
+    fields: [duprMatchSubmissions.gameId],
+    references: [games.id],
+  }),
+  tournamentMatch: one(tournamentMatches, {
+    fields: [duprMatchSubmissions.tournamentMatchId],
+    references: [tournamentMatches.id],
+  }),
+  leagueMatch: one(leagueMatches, {
+    fields: [duprMatchSubmissions.leagueMatchId],
+    references: [leagueMatches.id],
+  }),
+  submittedByUser: one(users, {
+    fields: [duprMatchSubmissions.submittedBy],
+    references: [users.id],
+  }),
+}));
+
 // Users relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
+  duprAccount: one(duprAccounts),
   ratings: many(userRatings),
   ratingHistory: many(ratingHistory),
   venuesOwned: many(venues),
@@ -2428,3 +2551,9 @@ export type NewReferralConversion = typeof referralConversions.$inferInsert;
 
 export type PartnerListing = typeof partnerListings.$inferSelect;
 export type NewPartnerListing = typeof partnerListings.$inferInsert;
+
+export type DuprAccount = typeof duprAccounts.$inferSelect;
+export type NewDuprAccount = typeof duprAccounts.$inferInsert;
+
+export type DuprMatchSubmission = typeof duprMatchSubmissions.$inferSelect;
+export type NewDuprMatchSubmission = typeof duprMatchSubmissions.$inferInsert;

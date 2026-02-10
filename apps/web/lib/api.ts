@@ -604,6 +604,104 @@ export const apiEndpoints = {
     received: (token: string) => apiWithAuth.get('/invites/my/received', token),
   },
 
+  // DUPR Integration
+  dupr: {
+    getSettings: (token: string) =>
+      apiWithAuth.get<{
+        linked: boolean;
+        duprId: string | null;
+        ratings: { singles: string | null; doubles: string | null; mixedDoubles: string | null };
+        entitlementLevel: string;
+        lastSync: string | null;
+        linkedAt: string | null;
+      }>('/dupr/settings', token),
+
+    getSsoUrl: (token: string) =>
+      apiWithAuth.get<{ url: string }>('/dupr/sso-url', token),
+
+    ssoCallback: (token: string, data: {
+      userToken: string;
+      refreshToken?: string;
+      id?: string;
+      duprId: string;
+      stats?: { singles?: number | null; doubles?: number | null; mixedDoubles?: number | null };
+    }) => apiWithAuth.post<{
+      message: string;
+      duprId: string;
+      entitlementLevel: string;
+      ratings: { singles: number | null; doubles: number | null; mixedDoubles: number | null };
+      linkedAt: string;
+    }>('/dupr/sso/callback', token, data),
+
+    unlink: (token: string) =>
+      apiWithAuth.delete<{ message: string }>('/dupr/link', token),
+
+    sync: (token: string) =>
+      apiWithAuth.post<{
+        message: string;
+        lastSync: string;
+        ratings: { singles: number | null; doubles: number | null; mixedDoubles: number | null };
+        entitlementLevel: string;
+      }>('/dupr/sync', token),
+
+    getEntitlements: (token: string) =>
+      apiWithAuth.get<{
+        linked: boolean;
+        isPremium: boolean;
+        isVerified: boolean;
+        entitlementLevel: string;
+      }>('/dupr/entitlements', token),
+
+    submitMatch: (token: string, data: {
+      gameId?: string;
+      tournamentMatchId?: string;
+      leagueMatchId?: string;
+      matchType: 'SINGLES' | 'DOUBLES';
+      team1Players: { duprId: string }[];
+      team2Players: { duprId: string }[];
+      scores: { team1Score: number; team2Score: number }[];
+      playedAt: string;
+      clubId?: string;
+      eventName?: string;
+    }) => apiWithAuth.post<{
+      message: string;
+      submissionId: string;
+      duprMatchId: string;
+      status: string;
+    }>('/dupr/matches', token, data),
+
+    updateMatch: (token: string, submissionId: string, data: {
+      scores?: { team1Score: number; team2Score: number }[];
+      playedAt?: string;
+    }) => apiWithAuth.put<{ message: string }>(`/dupr/matches/${submissionId}`, token, data),
+
+    deleteMatch: (token: string, submissionId: string) =>
+      apiWithAuth.delete<{ message: string }>(`/dupr/matches/${submissionId}`, token),
+  },
+
+  // Payments (Stripe)
+  payments: {
+    createIntent: (token: string, data: {
+      amount: number;
+      currency?: string;
+      registrationId?: string;
+      eventType?: 'tournament' | 'club_event' | 'league';
+      eventId?: string;
+      description?: string;
+    }) => apiWithAuth.post<{
+      clientSecret: string;
+      paymentIntentId: string;
+    }>('/payments/create-intent', token, data),
+
+    getStatus: (token: string, paymentIntentId: string) =>
+      apiWithAuth.get<{
+        id: string;
+        status: string;
+        amount: number;
+        currency: string;
+      }>(`/payments/status/${paymentIntentId}`, token),
+  },
+
   // Waitlist
   waitlist: {
     // Get waitlist status for an event (public)

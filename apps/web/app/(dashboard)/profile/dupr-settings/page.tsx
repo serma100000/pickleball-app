@@ -10,42 +10,32 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  Shield,
+  Star,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useDuprSettings, useDuprSync, useDuprUnlink } from '@/hooks/use-api';
+import { DuprSsoModal } from '@/components/dupr/DuprSsoModal';
 
 export default function DuprSettingsPage() {
-  const [duprId, setDuprId] = useState('');
-  const [isLinking, setIsLinking] = useState(false);
-  const [isLinked, setIsLinked] = useState(false);
-  const [error, setError] = useState('');
-  const [autoSync, setAutoSync] = useState(true);
+  const { data: settings, isLoading, refetch } = useDuprSettings();
+  const syncMutation = useDuprSync();
+  const unlinkMutation = useDuprUnlink();
+  const [showSso, setShowSso] = useState(false);
 
-  const handleLink = async () => {
-    if (!duprId.trim()) {
-      setError('Please enter your DUPR ID');
-      return;
-    }
-
-    setIsLinking(true);
-    setError('');
-
+  const handleSync = async () => {
     try {
-      // TODO: Call API to link DUPR account
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setIsLinked(true);
+      await syncMutation.mutateAsync();
       toast.success({
-        title: 'DUPR account linked',
-        description: 'Your DUPR account has been connected successfully.',
+        title: 'DUPR data synced',
+        description: 'Your ratings have been updated from DUPR.',
       });
     } catch (error) {
-      console.error('Failed to link DUPR account:', error);
-      setError('Failed to link DUPR account. Please try again.');
+      console.error('Failed to sync DUPR data:', error);
       toast.error({
-        title: 'Could not link account',
-        description: 'Please check your DUPR ID and try again.',
+        title: 'Could not sync data',
+        description: error instanceof Error ? error.message : 'Please try again later.',
       });
-    } finally {
-      setIsLinking(false);
     }
   };
 
@@ -53,45 +43,49 @@ export default function DuprSettingsPage() {
     if (!confirm('Are you sure you want to unlink your DUPR account?')) return;
 
     try {
-      // TODO: Call API to unlink DUPR account
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setIsLinked(false);
-      setDuprId('');
+      await unlinkMutation.mutateAsync();
       toast.success({
         title: 'DUPR account unlinked',
         description: 'Your DUPR account has been disconnected.',
       });
     } catch (error) {
       console.error('Failed to unlink DUPR account:', error);
-      setError('Failed to unlink DUPR account.');
       toast.error({
         title: 'Could not unlink account',
-        description: 'Please try again.',
+        description: error instanceof Error ? error.message : 'Please try again.',
       });
     }
   };
 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const entitlementBadge = () => {
+    if (!settings?.entitlementLevel || settings.entitlementLevel === 'NONE') return null;
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      // TODO: Call API to sync DUPR data
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success({
-        title: 'DUPR data synced',
-        description: 'Your rating and match history have been updated.',
-      });
-    } catch (error) {
-      console.error('Failed to sync DUPR data:', error);
-      toast.error({
-        title: 'Could not sync data',
-        description: 'Please try again later.',
-      });
-    } finally {
-      setIsSyncing(false);
+    if (settings.entitlementLevel === 'VERIFIED_L1') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">
+          <Shield className="w-3 h-3" /> Verified
+        </span>
+      );
     }
+
+    if (settings.entitlementLevel === 'PREMIUM_L1') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium">
+          <Star className="w-3 h-3" /> DUPR+
+        </span>
+      );
+    }
+
+    return null;
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -110,7 +104,7 @@ export default function DuprSettingsPage() {
           DUPR Settings
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your DUPR account connection and sync preferences
+          Manage your DUPR account connection and rating sync
         </p>
       </div>
 
@@ -123,7 +117,7 @@ export default function DuprSettingsPage() {
           </h2>
         </div>
 
-        {isLinked ? (
+        {settings?.linked ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-3">
@@ -131,16 +125,19 @@ export default function DuprSettingsPage() {
                   <Check className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    DUPR Account Linked
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      DUPR Account Linked
+                    </p>
+                    {entitlementBadge()}
+                  </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    ID: {duprId}
+                    ID: {settings.duprId}
                   </p>
                 </div>
               </div>
               <a
-                href={`https://www.dupr.com/player/${duprId}`}
+                href={`https://mydupr.com/player/${settings.duprId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium"
@@ -150,18 +147,48 @@ export default function DuprSettingsPage() {
               </a>
             </div>
 
+            {/* Ratings */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Singles', value: settings.ratings.singles },
+                { label: 'Doubles', value: settings.ratings.doubles },
+                { label: 'Mixed', value: settings.ratings.mixedDoubles },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center"
+                >
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {label}
+                  </p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {value ? parseFloat(value).toFixed(2) : '--'}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {settings.lastSync && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Last synced: {new Date(settings.lastSync).toLocaleString()}
+              </p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={handleSync}
-                disabled={isSyncing}
+                disabled={syncMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : 'Sync Now'}
+                <RefreshCw
+                  className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`}
+                />
+                {syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
               </button>
               <button
                 onClick={handleUnlink}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                disabled={unlinkMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 Unlink Account
@@ -171,44 +198,22 @@ export default function DuprSettingsPage() {
         ) : (
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-300">
-              Link your DUPR account to import your official rating and match
-              history.
+              Link your DUPR account to import your official rating and enable
+              match reporting.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={duprId}
-                  onChange={(e) => {
-                    setDuprId(e.target.value);
-                    setError('');
-                  }}
-                  placeholder="Enter your DUPR ID (e.g., 12345678)"
-                  className="w-full px-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                />
-                {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-              </div>
-              <button
-                onClick={handleLink}
-                disabled={isLinking}
-                className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                {isLinking ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Linking...
-                  </>
-                ) : (
-                  'Link Account'
-                )}
-              </button>
-            </div>
+            <button
+              onClick={() => setShowSso(true)}
+              className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              <LinkIcon className="w-4 h-4" />
+              Link with DUPR
+            </button>
 
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Don&apos;t have a DUPR account?{' '}
               <a
-                href="https://www.dupr.com"
+                href="https://mydupr.com/signup"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-brand-600 hover:text-brand-700 font-medium"
@@ -220,34 +225,6 @@ export default function DuprSettingsPage() {
         )}
       </div>
 
-      {/* Sync Preferences */}
-      {isLinked && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-4">
-            Sync Preferences
-          </h2>
-
-          <div className="space-y-4">
-            <label className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Auto-sync ratings
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Automatically update your rating when it changes on DUPR
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={autoSync}
-                onChange={(e) => setAutoSync(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-              />
-            </label>
-          </div>
-        </div>
-      )}
-
       {/* How it Works */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="font-semibold text-gray-900 dark:text-white mb-4">
@@ -255,23 +232,47 @@ export default function DuprSettingsPage() {
         </h2>
         <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
           <p>
-            <strong>1. Link your account:</strong> Enter your DUPR ID to connect
-            your accounts.
+            <strong>1. Sign in with DUPR:</strong> Click &quot;Link with
+            DUPR&quot; and log in to your DUPR account securely.
           </p>
           <p>
             <strong>2. Import your rating:</strong> Your official DUPR rating
-            will be displayed on your profile.
+            (singles, doubles, mixed) will be synced automatically.
           </p>
           <p>
-            <strong>3. Sync match history:</strong> Your verified DUPR matches
-            can be imported into PaddleUp.
+            <strong>3. Report matches:</strong> Match results can be submitted
+            directly to DUPR for official rating updates.
           </p>
           <p>
-            <strong>4. Stay updated:</strong> Enable auto-sync to keep your
-            rating current.
+            <strong>4. Stay current:</strong> Use &quot;Sync Now&quot; to pull
+            the latest ratings from DUPR at any time.
           </p>
         </div>
       </div>
+
+      {/* Match Dispute Support */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-2">
+          Need Help?
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          If you have a dispute about a match result submitted to DUPR, or need
+          help with your account, contact our support team.
+        </p>
+        <a
+          href="mailto:support@paddle-up.app"
+          className="text-brand-600 hover:text-brand-700 text-sm font-medium"
+        >
+          support@paddle-up.app
+        </a>
+      </div>
+
+      {/* SSO Modal */}
+      <DuprSsoModal
+        open={showSso}
+        onOpenChange={setShowSso}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }

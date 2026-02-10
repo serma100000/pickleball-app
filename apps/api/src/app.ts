@@ -17,7 +17,8 @@ import clubsRoutes from './routes/clubs.js';
 import leaguesRoutes from './routes/leagues.js';
 import tournamentsRoutes from './routes/tournaments.js';
 import socialRoutes from './routes/social.js';
-import duprRoutes from './routes/dupr.js';
+import duprRoutes, { duprWebhookRouter } from './routes/dupr.js';
+import paymentsRoutes, { paymentsWebhookRouter } from './routes/payments.js';
 import referralsRoutes from './routes/referrals.js';
 import partnersRoutes from './routes/partners.js';
 import invitesRoutes from './routes/invites.js';
@@ -37,6 +38,10 @@ const allowedOrigins = [
   'http://localhost:3001',
   'https://www.paddle-up.app',
   'https://paddle-up.app',
+  // DUPR SSO origins
+  'https://uat.dupr.gg',
+  'https://dupr.gg',
+  'https://dashboard.dupr.com',
   process.env.CORS_ORIGIN,
 ].filter(Boolean) as string[];
 
@@ -77,6 +82,10 @@ app.get('/health', (c) => {
   });
 });
 
+// Webhook routes (unauthenticated — mounted before main API routes)
+app.route('/api/v1/dupr', duprWebhookRouter);
+app.route('/api/v1/payments', paymentsWebhookRouter);
+
 // API version prefix
 const api = new Hono();
 
@@ -91,6 +100,7 @@ api.route('/leagues', leaguesRoutes);
 api.route('/tournaments', tournamentsRoutes);
 api.route('/social', socialRoutes);
 api.route('/dupr', duprRoutes);
+api.route('/payments', paymentsRoutes);
 api.route('/referrals', referralsRoutes);
 api.route('/partners', partnersRoutes);
 api.route('/invites', invitesRoutes);

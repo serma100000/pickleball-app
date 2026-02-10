@@ -178,6 +178,20 @@ export const queryKeys = {
     myListings: () => [...queryKeys.partners.all, 'my'] as const,
   },
 
+  // DUPR
+  dupr: {
+    all: ['dupr'] as const,
+    settings: () => [...queryKeys.dupr.all, 'settings'] as const,
+    entitlements: () => [...queryKeys.dupr.all, 'entitlements'] as const,
+    ssoUrl: () => [...queryKeys.dupr.all, 'sso-url'] as const,
+  },
+
+  // Payments
+  payments: {
+    all: ['payments'] as const,
+    status: (id: string) => [...queryKeys.payments.all, 'status', id] as const,
+  },
+
   // Invites
   invites: {
     all: ['invites'] as const,

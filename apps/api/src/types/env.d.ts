@@ -12,6 +12,17 @@ declare namespace NodeJS {
     WS_PORT?: string;
     ENABLE_WEBSOCKETS?: string;
     ENABLE_RATE_LIMITING?: string;
+
+    // DUPR Integration
+    DUPR_CLIENT_ID?: string;
+    DUPR_CLIENT_KEY?: string;
+    DUPR_CLIENT_SECRET?: string;
+    DUPR_ENVIRONMENT?: 'uat' | 'production';
+    DUPR_WEBHOOK_SECRET?: string;
+
+    // Stripe Payments
+    STRIPE_SECRET_KEY?: string;
+    STRIPE_WEBHOOK_SECRET?: string;
   }
 }
 
