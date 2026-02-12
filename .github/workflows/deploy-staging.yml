@@ -186,7 +186,7 @@ jobs:
       - name: Deploy to Railway Staging
         run: |
           cd apps/api
-          railway up --environment staging --detach
+          railway up --environment staging --service pickleball-app-staging --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
