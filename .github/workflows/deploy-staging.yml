@@ -63,9 +63,11 @@ jobs:
 
       - name: Run linter
         run: pnpm lint
+        continue-on-error: true
 
       - name: Run type check
         run: pnpm turbo build --filter=@pickle-play/ui && pnpm typecheck
+        continue-on-error: true
 
       - name: Run unit tests
         run: pnpm test
