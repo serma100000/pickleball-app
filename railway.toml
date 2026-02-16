@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install && pnpm turbo build --filter=@pickle-play/api"
+buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm turbo build --filter=@pickle-play/api"
+nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
 startCommand = "cd apps/api && NODE_ENV=production node dist/index.js"
