@@ -193,7 +193,7 @@ jobs:
           cd apps/api
           railway up --environment staging --service pickleball-app-staging --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       - name: Wait for API health check
         run: |
