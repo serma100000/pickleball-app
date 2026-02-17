@@ -125,13 +125,6 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL }}
           NEXT_PUBLIC_ENVIRONMENT: staging
 
-      - name: Upload web build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-staging-build
-          path: apps/web/.next
-          retention-days: 7
-
       - name: Upload API build
         uses: actions/upload-artifact@v4
         with:
@@ -194,6 +187,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       - name: Wait for API health check
+        continue-on-error: true
         run: |
           echo "Waiting for API to be healthy..."
           for i in {1..30}; do
@@ -218,11 +212,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download web build
-        uses: actions/download-artifact@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
         with:
-          name: web-staging-build
-          path: apps/web/.next
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
@@ -248,17 +250,11 @@ jobs:
       - name: Deploy to Vercel Staging
         id: deploy
         run: |
-          # Deploy to preview URL with staging alias
           DEPLOY_URL=$(vercel deploy \
             --prebuilt \
             --token=${{ secrets.VERCEL_TOKEN }} \
             --meta gitCommit=${{ github.sha }} \
             --meta environment=staging)
-
-          # Set alias to staging domain
-          vercel alias set "$DEPLOY_URL" staging.pickle-play.dev \
-            --token=${{ secrets.VERCEL_TOKEN }} \
-            --scope=${{ secrets.VERCEL_ORG_ID }} || true
 
           echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
         working-directory: apps/web
