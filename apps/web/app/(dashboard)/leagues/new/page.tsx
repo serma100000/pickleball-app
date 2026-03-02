@@ -53,6 +53,9 @@ interface LeagueFormState {
   playoffTeams?: number;
   playoffFormat?: PlayoffFormat;
   reportToDupr: boolean;
+  requiresDupr: boolean;
+  requiresDuprPlus: boolean;
+  requiresDuprVerified: boolean;
 }
 
 interface LeagueTypeOption {
@@ -735,6 +738,33 @@ function RatingOptionsStep({ state, setState }: StepProps) {
           </div>
         </div>
       )}
+
+      <ToggleSwitch
+        checked={state.requiresDupr}
+        onChange={(checked) => setState((prev) => ({ ...prev, requiresDupr: checked, ...(!checked ? { requiresDuprPlus: false, requiresDuprVerified: false } : {}) }))}
+        label="Require DUPR Account"
+        description="Players must have a linked DUPR account to join"
+        icon={Shield}
+      />
+
+      {state.requiresDupr && (
+        <>
+          <ToggleSwitch
+            checked={state.requiresDuprPlus}
+            onChange={(checked) => setState((prev) => ({ ...prev, requiresDuprPlus: checked, ...(!checked ? { requiresDuprVerified: false } : {}) }))}
+            label="Require DUPR+"
+            description="Players must have a DUPR+ (Premium) membership"
+            icon={Shield}
+          />
+          <ToggleSwitch
+            checked={state.requiresDuprVerified}
+            onChange={(checked) => setState((prev) => ({ ...prev, requiresDuprVerified: checked, ...(checked ? { requiresDuprPlus: true } : {}) }))}
+            label="Require DUPR Verified"
+            description="Players must have DUPR Verified status (highest level)"
+            icon={Shield}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -909,6 +939,9 @@ export default function NewLeaguePage() {
     playoffTeams: 4,
     playoffFormat: 'single_elimination',
     reportToDupr: false,
+    requiresDupr: false,
+    requiresDuprPlus: false,
+    requiresDuprVerified: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stepAnnouncement, setStepAnnouncement] = useState('');
@@ -1018,6 +1051,9 @@ export default function NewLeaguePage() {
             }
           : {}),
         reportToDupr: state.reportToDupr,
+        requiresDupr: state.requiresDupr,
+        requiresDuprPlus: state.requiresDuprPlus,
+        requiresDuprVerified: state.requiresDuprVerified,
       };
 
       const response = await createLeagueMutation.mutateAsync(submitData);

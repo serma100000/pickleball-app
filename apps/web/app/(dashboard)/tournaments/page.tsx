@@ -49,6 +49,10 @@ interface Tournament {
     city: string | null;
   } | null;
   isDirector: boolean;
+  requiresDupr?: boolean;
+  requiresDuprPlus?: boolean;
+  requiresDuprVerified?: boolean;
+  reportToDupr?: boolean;
 }
 
 interface TournamentsResponse {
@@ -570,6 +574,21 @@ function TournamentCard({
             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
               {statusBadge.label}
             </span>
+            {tournament.reportToDupr && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-pickle-100 dark:bg-pickle-900/30 text-pickle-700 dark:text-pickle-400">
+                DUPR Rated
+              </span>
+            )}
+            {tournament.requiresDuprVerified && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                DUPR Verified
+              </span>
+            )}
+            {tournament.requiresDuprPlus && !tournament.requiresDuprVerified && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                DUPR+
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">

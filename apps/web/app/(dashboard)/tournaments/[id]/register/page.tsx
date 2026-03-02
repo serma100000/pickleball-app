@@ -24,7 +24,9 @@ import {
   useTournamentEvents,
   useRegisterForTournament,
   usePlayerSearch,
+  useDuprEntitlements,
 } from '@/hooks/use-api';
+import { DuprPremiumModal } from '@/components/dupr/DuprPremiumModal';
 
 // Type definitions
 type TournamentStatus = 'draft' | 'registration_open' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
@@ -70,6 +72,10 @@ interface Tournament {
   currentParticipants: number;
   events: TournamentEvent[];
   isUserRegistered?: boolean;
+  requiresDupr?: boolean;
+  requiresDuprPlus?: boolean;
+  requiresDuprVerified?: boolean;
+  reportToDupr?: boolean;
 }
 
 interface Player {
@@ -100,6 +106,8 @@ export default function TournamentRegistrationPage() {
   const [activePartnerSearch, setActivePartnerSearch] = useState<string | null>(null);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [showDuprModal, setShowDuprModal] = useState(false);
+  const [requiredDuprLevel, setRequiredDuprLevel] = useState<'linked' | 'premium' | 'verified'>('linked');
 
   // Queries
   const { data: tournament, isLoading, isError, error } = useTournament(tournamentId);
@@ -111,6 +119,7 @@ export default function TournamentRegistrationPage() {
 
   // Mutations
   const registerMutation = useRegisterForTournament();
+  const { data: duprEntitlements } = useDuprEntitlements();
 
   // Cast data to expected types
   const tournamentData = (tournament as { tournament: Tournament } | undefined)?.tournament;
@@ -170,6 +179,30 @@ export default function TournamentRegistrationPage() {
 
   const handleSubmit = async () => {
     setRegistrationError(null);
+
+    // Check DUPR requirements
+    if (tournamentData?.requiresDuprVerified) {
+      const entitlements = duprEntitlements as { entitlementLevel?: string; linked?: boolean } | undefined;
+      if (entitlements?.entitlementLevel !== 'VERIFIED_L1') {
+        setRequiredDuprLevel('verified');
+        setShowDuprModal(true);
+        return;
+      }
+    } else if (tournamentData?.requiresDuprPlus) {
+      const entitlements = duprEntitlements as { entitlementLevel?: string; linked?: boolean } | undefined;
+      if (entitlements?.entitlementLevel !== 'PREMIUM_L1' && entitlements?.entitlementLevel !== 'VERIFIED_L1') {
+        setRequiredDuprLevel('premium');
+        setShowDuprModal(true);
+        return;
+      }
+    } else if (tournamentData?.requiresDupr) {
+      const entitlements = duprEntitlements as { linked?: boolean } | undefined;
+      if (!entitlements?.linked) {
+        setRequiredDuprLevel('linked');
+        setShowDuprModal(true);
+        return;
+      }
+    }
 
     // Validate selections
     if (selectedEventIds.size === 0) {
@@ -765,6 +798,15 @@ export default function TournamentRegistrationPage() {
           </div>
         </div>
       </div>
+
+      <DuprPremiumModal
+        open={showDuprModal}
+        onOpenChange={setShowDuprModal}
+        requiredLevel={requiredDuprLevel}
+        onSuccess={() => {
+          setShowDuprModal(false);
+        }}
+      />
     </div>
   );
 }

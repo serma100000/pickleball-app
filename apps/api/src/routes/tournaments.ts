@@ -6,6 +6,7 @@ import { validateBody, validateQuery, validateParams, idParamSchema, paginationS
 import { authMiddleware, optionalAuth } from '../middleware/auth.js';
 import { db, schema } from '../db/index.js';
 import { userService } from '../services/userService.js';
+import { submitMatchToDupr } from '../services/duprSubmissionHelper.js';
 import { emitToTournament, SocketEvents } from '../lib/socket.js';
 import { cache } from '../lib/redis.js';
 
@@ -81,6 +82,10 @@ const createTournamentWithEventsSchema = z.object({
     phone: z.string().max(20).optional(),
   }),
   events: z.array(tournamentEventSchema).min(1),
+  requiresDupr: z.boolean().default(false),
+  requiresDuprPlus: z.boolean().default(false),
+  requiresDuprVerified: z.boolean().default(false),
+  reportToDupr: z.boolean().default(false),
 });
 
 // Legacy validation schemas (keeping for backwards compatibility)
@@ -182,6 +187,10 @@ tournamentsRouter.get('/', optionalAuth, validateQuery(searchTournamentsSchema),
       maxParticipants: t.maxParticipants,
       currentParticipants: t.currentParticipants,
       pointsToWin: t.pointsToWin,
+      requiresDupr: t.requiresDupr,
+      requiresDuprPlus: t.requiresDuprPlus,
+      requiresDuprVerified: t.requiresDuprVerified,
+      reportToDupr: t.reportToDupr,
       createdAt: t.createdAt,
       eventsCount: t.events?.length || 0,
       organizer: t.organizer ? {
@@ -258,6 +267,10 @@ tournamentsRouter.post('/', authMiddleware, validateBody(createTournamentWithEve
           winBy: 2,
           bestOf: primaryEvent.scoringFormat === 'best_of_3' ? 3 : 1,
           status: 'draft',
+          requiresDupr: data.requiresDupr,
+          requiresDuprPlus: data.requiresDuprPlus,
+          requiresDuprVerified: data.requiresDuprVerified,
+          reportToDupr: data.reportToDupr,
         })
         .returning();
 
@@ -387,6 +400,10 @@ tournamentsRouter.get('/:idOrSlug', async (c) => {
     rules: tournament.rules,
     logoUrl: tournament.logoUrl,
     bannerUrl: tournament.bannerUrl,
+    requiresDupr: tournament.requiresDupr,
+    requiresDuprPlus: tournament.requiresDuprPlus,
+    requiresDuprVerified: tournament.requiresDuprVerified,
+    reportToDupr: tournament.reportToDupr,
     venue: tournament.venue
       ? {
           id: tournament.venue.id,
@@ -994,6 +1011,37 @@ tournamentsRouter.post(
       });
     }
 
+    // Check DUPR entitlement requirements
+    if (tournament.requiresDupr || tournament.requiresDuprPlus || tournament.requiresDuprVerified) {
+      const duprAccount = await db.query.duprAccounts.findFirst({
+        where: eq(schema.duprAccounts.userId, dbUser.id),
+      });
+
+      if (!duprAccount) {
+        throw new HTTPException(403, {
+          message: 'A linked DUPR account is required for this tournament',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'linked' },
+        });
+      }
+
+      if (tournament.requiresDuprPlus &&
+          duprAccount.entitlementLevel !== 'PREMIUM_L1' &&
+          duprAccount.entitlementLevel !== 'VERIFIED_L1') {
+        throw new HTTPException(403, {
+          message: 'DUPR+ membership is required for this tournament',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'premium', current: duprAccount.entitlementLevel },
+        });
+      }
+
+      if (tournament.requiresDuprVerified &&
+          duprAccount.entitlementLevel !== 'VERIFIED_L1') {
+        throw new HTTPException(403, {
+          message: 'DUPR Verified status is required for this tournament',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'verified', current: duprAccount.entitlementLevel },
+        });
+      }
+    }
+
     // Check if already registered using tournamentRegistrations
     const existingRegistrations = await db
       .select({
@@ -1213,6 +1261,32 @@ tournamentsRouter.put(
     // This would be handled by a bracket management service in production
 
     await cache.del(`tournament:${tournamentId}`);
+
+    // Auto-submit to DUPR if enabled
+    if (tournament.reportToDupr && match.team1RegistrationId && match.team2RegistrationId) {
+      const [team1Reg, team2Reg] = await Promise.all([
+        db.query.tournamentRegistrationPlayers.findMany({
+          where: eq(schema.tournamentRegistrationPlayers.registrationId, match.team1RegistrationId),
+        }),
+        db.query.tournamentRegistrationPlayers.findMany({
+          where: eq(schema.tournamentRegistrationPlayers.registrationId, match.team2RegistrationId),
+        }),
+      ]);
+
+      const matchType = tournament.gameFormat === 'singles' ? 'SINGLES' : 'DOUBLES';
+
+      // Fire-and-forget — don't block scoring on DUPR API
+      submitMatchToDupr({
+        tournamentMatchId: matchId,
+        matchType: matchType as 'SINGLES' | 'DOUBLES',
+        team1UserIds: team1Reg.map((p) => p.userId),
+        team2UserIds: team2Reg.map((p) => p.userId),
+        scores: [{ team1Score: player1Score, team2Score: player2Score }],
+        playedAt: new Date().toISOString(),
+        eventName: tournament.name,
+        submittedByUserId: dbUser.id,
+      }).catch((err) => console.error(`DUPR auto-submit failed for tournament match ${matchId}:`, err));
+    }
 
     return c.json({
       message: 'Match score updated',

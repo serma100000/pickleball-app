@@ -6,6 +6,7 @@ import { validateBody, validateParams, validateQuery, idParamSchema, paginationS
 import { authMiddleware } from '../middleware/auth.js';
 import { gameService } from '../services/gameService.js';
 import { userService } from '../services/userService.js';
+import { submitMatchToDupr } from '../services/duprSubmissionHelper.js';
 import { db, schema } from '../db/index.js';
 
 const { users, games, gameParticipants, courts, venues } = schema;
@@ -1023,9 +1024,36 @@ gamesRouter.post(
       })
       .where(eq(games.id, id));
 
-    // PLACEHOLDER: In production, this would call the actual DUPR API
-    // For now, we simulate a successful submission
-    // await duprService.submitGame(game);
+    // Extract team player user IDs
+    const team1UserIds = (game.players || [])
+      .filter((p: { team: number; userId: string }) => p.team === 1)
+      .map((p: { userId: string }) => p.userId);
+    const team2UserIds = (game.players || [])
+      .filter((p: { team: number; userId: string }) => p.team === 2)
+      .map((p: { userId: string }) => p.userId);
+
+    const matchType = game.gameFormat === 'singles' ? 'SINGLES' : 'DOUBLES';
+
+    const duprResult = await submitMatchToDupr({
+      gameId: id,
+      matchType: matchType as 'SINGLES' | 'DOUBLES',
+      team1UserIds,
+      team2UserIds,
+      scores: [{ team1Score: game.team1Score ?? 0, team2Score: game.team2Score ?? 0 }],
+      playedAt: game.completedAt?.toISOString() || new Date().toISOString(),
+      submittedByUserId: dbUser.id,
+    });
+
+    if (!duprResult.success) {
+      newNotes = encodeDuprStatus('failed', game.notes);
+      await db
+        .update(games)
+        .set({ notes: newNotes, updatedAt: new Date() })
+        .where(eq(games.id, id));
+      throw new HTTPException(502, {
+        message: `DUPR submission failed: ${duprResult.error}`,
+      });
+    }
 
     // Update status to 'submitted' with timestamp
     const submittedAt = new Date();

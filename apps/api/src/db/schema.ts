@@ -1209,6 +1209,12 @@ export const leagueSeasons = pgTable(
     pointsForDraw: integer('points_for_draw').default(1),
     pointsForLoss: integer('points_for_loss').default(0),
 
+    // DUPR Integration
+    requiresDupr: boolean('requires_dupr').default(false),
+    requiresDuprPlus: boolean('requires_dupr_plus').default(false),
+    requiresDuprVerified: boolean('requires_dupr_verified').default(false),
+    reportToDupr: boolean('report_to_dupr').default(false),
+
     status: leagueStatusEnum('status').notNull().default('draft'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

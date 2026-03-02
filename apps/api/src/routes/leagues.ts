@@ -12,6 +12,7 @@ import {
 import { authMiddleware } from '../middleware/auth.js';
 import { db, schema } from '../db/index.js';
 import { userService } from '../services/userService.js';
+import { submitMatchToDupr } from '../services/duprSubmissionHelper.js';
 
 const {
   users,
@@ -66,6 +67,9 @@ const createLeagueSchema = z.object({
   minRating: z.number().min(1).max(7).optional(),
   maxRating: z.number().min(1).max(7).optional(),
   reportToDupr: z.boolean().default(false),
+  requiresDupr: z.boolean().default(false),
+  requiresDuprPlus: z.boolean().default(false),
+  requiresDuprVerified: z.boolean().default(false),
   // Scoring
   pointsForWin: z.number().default(3),
   pointsForDraw: z.number().default(1),
@@ -567,6 +571,10 @@ leaguesRouter.post('/', authMiddleware, validateBody(createLeagueSchema), async 
         pointsForWin: data.pointsForWin,
         pointsForDraw: data.pointsForDraw,
         pointsForLoss: data.pointsForLoss,
+        requiresDupr: data.requiresDupr,
+        requiresDuprPlus: data.requiresDuprPlus,
+        requiresDuprVerified: data.requiresDuprVerified,
+        reportToDupr: data.reportToDupr,
         status: 'draft',
       })
       .returning();
@@ -760,6 +768,37 @@ leaguesRouter.post(
 
     if (Number(participantCount[0]?.count || 0) >= maxPlayers) {
       throw new HTTPException(400, { message: 'League is full' });
+    }
+
+    // Check DUPR entitlement requirements from season
+    if (currentSeason.requiresDupr || currentSeason.requiresDuprPlus || currentSeason.requiresDuprVerified) {
+      const duprAccount = await db.query.duprAccounts.findFirst({
+        where: eq(schema.duprAccounts.userId, dbUser.id),
+      });
+
+      if (!duprAccount) {
+        throw new HTTPException(403, {
+          message: 'A linked DUPR account is required for this league',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'linked' },
+        });
+      }
+
+      if (currentSeason.requiresDuprPlus &&
+          duprAccount.entitlementLevel !== 'PREMIUM_L1' &&
+          duprAccount.entitlementLevel !== 'VERIFIED_L1') {
+        throw new HTTPException(403, {
+          message: 'DUPR+ membership is required for this league',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'premium', current: duprAccount.entitlementLevel },
+        });
+      }
+
+      if (currentSeason.requiresDuprVerified &&
+          duprAccount.entitlementLevel !== 'VERIFIED_L1') {
+        throw new HTTPException(403, {
+          message: 'DUPR Verified status is required for this league',
+          cause: { code: 'DUPR_ENTITLEMENT_REQUIRED', required: 'verified', current: duprAccount.entitlementLevel },
+        });
+      }
     }
 
     // Check if user is already registered
@@ -1570,6 +1609,23 @@ leaguesRouter.post(
 
     // Log activity
     await userService.logActivity(dbUser.id, 'league_match_scored', 'league_match', matchId);
+
+    // Auto-submit to DUPR if enabled
+    const leagueSettings = match.season.league.settings as { reportToDupr?: boolean } | null;
+    if (leagueSettings?.reportToDupr || match.season.reportToDupr) {
+      const matchType = match.season.league.gameFormat === 'singles' ? 'SINGLES' : 'DOUBLES';
+
+      submitMatchToDupr({
+        leagueMatchId: matchId,
+        matchType: matchType as 'SINGLES' | 'DOUBLES',
+        team1UserIds: match.participant1.players.map((p) => p.userId),
+        team2UserIds: match.participant2.players.map((p) => p.userId),
+        scores: scores.map((s) => ({ team1Score: s.team1, team2Score: s.team2 })),
+        playedAt: new Date().toISOString(),
+        eventName: match.season.league.name,
+        submittedByUserId: dbUser.id,
+      }).catch((err) => console.error(`DUPR auto-submit failed for league match ${matchId}:`, err));
+    }
 
     return c.json({
       message: 'Score submitted successfully',

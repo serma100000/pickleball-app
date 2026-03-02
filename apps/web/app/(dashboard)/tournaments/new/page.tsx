@@ -19,6 +19,7 @@ import {
   Save,
   AlertTriangle,
   Loader2,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -101,6 +102,11 @@ interface TournamentFormState {
   directorName: string;
   directorEmail: string;
   directorPhone: string;
+  // DUPR Integration
+  reportToDupr: boolean;
+  requiresDupr: boolean;
+  requiresDuprPlus: boolean;
+  requiresDuprVerified: boolean;
   // Step 2: Events
   events: TournamentEvent[];
   // Draft saving
@@ -753,6 +759,57 @@ function BasicInfoStep({ state, setState }: StepProps) {
               className="w-full"
             />
           </div>
+        </div>
+      </Card>
+
+      {/* DUPR Integration */}
+      <Card className="p-6">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+          <Shield className="w-4 h-4" />
+          DUPR Integration
+        </h3>
+        <div className="space-y-4">
+          <ToggleSwitch
+            label="Report Results to DUPR"
+            description="Automatically submit match results to update DUPR ratings"
+            checked={state.reportToDupr}
+            onChange={(checked) => setState((prev) => ({ ...prev, reportToDupr: checked }))}
+          />
+          <ToggleSwitch
+            label="Require DUPR Account"
+            description="Players must have a linked DUPR account to register"
+            checked={state.requiresDupr}
+            onChange={(checked) => setState((prev) => ({ ...prev, requiresDupr: checked, ...(!checked ? { requiresDuprPlus: false, requiresDuprVerified: false } : {}) }))}
+          />
+          {state.requiresDupr && (
+            <>
+              <ToggleSwitch
+                label="Require DUPR+"
+                description="Players must have a DUPR+ (Premium) membership"
+                checked={state.requiresDuprPlus}
+                onChange={(checked) => setState((prev) => ({ ...prev, requiresDuprPlus: checked, ...(!checked ? { requiresDuprVerified: false } : {}) }))}
+              />
+              <ToggleSwitch
+                label="Require DUPR Verified"
+                description="Players must have DUPR Verified status (highest level)"
+                checked={state.requiresDuprVerified}
+                onChange={(checked) => setState((prev) => ({ ...prev, requiresDuprVerified: checked, ...(checked ? { requiresDuprPlus: true } : {}) }))}
+              />
+            </>
+          )}
+          {state.reportToDupr && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-200">DUPR ID Required</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    All players must have their DUPR accounts linked to report results.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>
@@ -1499,6 +1556,10 @@ export default function NewTournamentPage() {
     directorName: '',
     directorEmail: '',
     directorPhone: '',
+    reportToDupr: false,
+    requiresDupr: false,
+    requiresDuprPlus: false,
+    requiresDuprVerified: false,
     events: [],
     isDraft: false,
     lastSaved: undefined,
@@ -1646,6 +1707,10 @@ export default function NewTournamentPage() {
           email: state.directorEmail,
           phone: state.directorPhone || undefined,
         },
+        reportToDupr: state.reportToDupr,
+        requiresDupr: state.requiresDupr,
+        requiresDuprPlus: state.requiresDuprPlus,
+        requiresDuprVerified: state.requiresDuprVerified,
         events: state.events.map((event) => ({
           name: event.name || getEventDisplayName(event),
           category: event.category,
