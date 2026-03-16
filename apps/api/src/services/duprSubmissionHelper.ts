@@ -1,6 +1,8 @@
 import { db, schema } from '../db/index.js';
 import { eq, inArray } from 'drizzle-orm';
-import { duprService } from './duprService.js';
+import { duprService, isDuprRetryableError } from './duprService.js';
+
+const DUPR_MAX_RETRIES = 3;
 
 const { duprAccounts, duprMatchSubmissions } = schema;
 
@@ -87,8 +89,31 @@ export async function submitMatchToDupr(params: SubmitToDuprParams) {
       duprMatchId: result.matchId,
     };
   } catch (err) {
-    // 5b. Update record to 'failed' with errorMessage
     const errorMessage = err instanceof Error ? err.message : String(err);
+    const retryable = isDuprRetryableError(err);
+    const currentRetryCount = (payload as Record<string, unknown>).retryCount as number || 0;
+
+    if (retryable && currentRetryCount < DUPR_MAX_RETRIES) {
+      // 5b. Mark as pending_retry so the retry worker picks it up
+      await db
+        .update(duprMatchSubmissions)
+        .set({
+          status: 'pending_retry',
+          errorMessage,
+          payload: { ...payload, retryCount: currentRetryCount + 1 },
+          updatedAt: new Date(),
+        })
+        .where(eq(duprMatchSubmissions.id, submission.id));
+
+      return {
+        success: false,
+        submissionId: submission.id,
+        error: errorMessage,
+        pendingRetry: true,
+      };
+    }
+
+    // 5c. Non-retryable or max retries exceeded: mark as failed
     await db
       .update(duprMatchSubmissions)
       .set({

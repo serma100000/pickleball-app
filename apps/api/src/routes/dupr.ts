@@ -5,6 +5,7 @@
  * Authenticated routes use authMiddleware; the webhook route is unauthenticated.
  */
 
+import { createHmac, timingSafeEqual } from 'crypto';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
@@ -608,32 +609,139 @@ duprRouter.get('/sso-url', authMiddleware, async (c) => {
 const duprWebhookRouter = new Hono();
 
 /**
+ * Verify HMAC-SHA256 webhook signature.
+ * Returns true if valid, false otherwise.
+ */
+function verifyWebhookSignature(
+  secret: string,
+  payload: string,
+  signatureHeader: string
+): boolean {
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
+
+  // Support both raw hex and "sha256=<hex>" prefix formats
+  const received = signatureHeader.startsWith('sha256=')
+    ? signatureHeader.slice(7)
+    : signatureHeader;
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(received, 'hex'));
+}
+
+/**
  * POST /dupr/webhook
- * Receives DUPR event callbacks (e.g., LOGIN).
+ * Receives DUPR event callbacks (e.g., LOGIN, MATCH_RESULT).
  * Mounted without auth middleware.
  */
 duprWebhookRouter.post('/webhook', async (c) => {
-  const body = await c.req.json();
+  // Read raw body for signature verification, then parse JSON
+  const rawBody = await c.req.text();
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    throw new HTTPException(400, { message: 'Invalid JSON payload' });
+  }
 
-  // Optional: verify webhook signature if DUPR_WEBHOOK_SECRET is set
+  // --- Signature validation ---
   const webhookSecret = process.env.DUPR_WEBHOOK_SECRET;
   if (webhookSecret) {
-    const signature = c.req.header('x-webhook-signature') || c.req.header('x-signature');
+    const signature =
+      c.req.header('x-dupr-signature') ||
+      c.req.header('x-hub-signature-256');
+
     if (!signature) {
       throw new HTTPException(401, { message: 'Missing webhook signature' });
     }
-    // DUPR hasn't documented exact signature scheme; log and validate later
-    console.log('DUPR webhook signature received:', signature);
+
+    if (!verifyWebhookSignature(webhookSecret, rawBody, signature)) {
+      throw new HTTPException(401, { message: 'Invalid webhook signature' });
+    }
+  } else {
+    console.warn(
+      'DUPR_WEBHOOK_SECRET is not set — accepting webhook without signature verification'
+    );
   }
 
   console.log('DUPR webhook received:', JSON.stringify(body, null, 2));
 
-  const { topic, data } = body;
+  const { topic, data } = body as { topic?: string; data?: Record<string, unknown> };
 
-  if (topic === 'LOGIN') {
-    // A user logged in via our SSO integration
-    // data.duprId, data.userId etc.
-    console.log('DUPR LOGIN webhook for:', data?.duprId);
+  // --- Handle LOGIN: refresh the user's DUPR account data ---
+  if (topic === 'LOGIN' && data?.duprId) {
+    const duprId = String(data.duprId);
+    console.log('DUPR LOGIN webhook for:', duprId);
+
+    try {
+      const duprAccount = await db.query.duprAccounts.findFirst({
+        where: eq(duprAccounts.duprId, duprId),
+      });
+
+      if (duprAccount) {
+        // Refresh ratings from DUPR
+        const ratings = await duprService.syncPlayerRatings(duprId);
+        const now = new Date();
+
+        await db
+          .update(duprAccounts)
+          .set({
+            singlesRating: ratings.singles?.toString() ?? duprAccount.singlesRating,
+            doublesRating: ratings.doubles?.toString() ?? duprAccount.doublesRating,
+            mixedDoublesRating: ratings.mixedDoubles?.toString() ?? duprAccount.mixedDoublesRating,
+            lastSyncAt: now,
+            updatedAt: now,
+          })
+          .where(eq(duprAccounts.id, duprAccount.id));
+
+        // Refresh entitlements if we have a stored token
+        if (duprAccount.duprUserToken) {
+          try {
+            const ent = await duprService.getPlayerEntitlements(duprAccount.duprUserToken);
+            await db
+              .update(duprAccounts)
+              .set({ entitlementLevel: ent.entitlementLevel })
+              .where(eq(duprAccounts.id, duprAccount.id));
+          } catch {
+            // Token may have expired — not fatal for webhook processing
+          }
+        }
+
+        console.log('DUPR LOGIN webhook: refreshed account data for', duprId);
+      } else {
+        console.log('DUPR LOGIN webhook: no linked account found for duprId', duprId);
+      }
+    } catch (error) {
+      console.error('DUPR LOGIN webhook processing error:', error);
+      // Don't throw — still return 200 so DUPR doesn't retry endlessly
+    }
+  }
+
+  // --- Handle MATCH_RESULT: mark submission as confirmed ---
+  if (topic === 'MATCH_RESULT' && data?.matchId) {
+    const matchId = String(data.matchId);
+    console.log('DUPR MATCH_RESULT webhook for matchId:', matchId);
+
+    try {
+      const submission = await db.query.duprMatchSubmissions.findFirst({
+        where: eq(duprMatchSubmissions.duprMatchId, matchId),
+      });
+
+      if (submission) {
+        await db
+          .update(duprMatchSubmissions)
+          .set({ status: 'confirmed', updatedAt: new Date() })
+          .where(eq(duprMatchSubmissions.id, submission.id));
+
+        console.log('DUPR MATCH_RESULT webhook: confirmed submission', submission.id);
+      } else {
+        console.log('DUPR MATCH_RESULT webhook: no submission found for matchId', matchId);
+      }
+    } catch (error) {
+      console.error('DUPR MATCH_RESULT webhook processing error:', error);
+    }
   }
 
   return c.json({ received: true });

@@ -9,6 +9,8 @@
  * - Webhook registration
  */
 
+import { eq } from 'drizzle-orm';
+import { db, schema } from '../db/index.js';
 import { cache } from '../lib/redis.js';
 import type {
   DuprEnvironment,
@@ -26,6 +28,43 @@ import type {
   DuprClubMembership,
   DuprWebhookTopic,
 } from '../types/dupr.js';
+
+// ============================================================================
+// ERRORS
+// ============================================================================
+
+export class DuprRateLimitError extends Error {
+  public retryAfterSeconds: number;
+
+  constructor(message: string, retryAfterSeconds: number) {
+    super(message);
+    this.name = 'DuprRateLimitError';
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+export class DuprRetryableError extends Error {
+  constructor(message: string, public statusCode: number) {
+    super(message);
+    this.name = 'DuprRetryableError';
+  }
+}
+
+/**
+ * Check if an error is retryable (rate limit, server error, or network error)
+ */
+export function isDuprRetryableError(err: unknown): boolean {
+  if (err instanceof DuprRateLimitError) return true;
+  if (err instanceof DuprRetryableError) return true;
+  if (err instanceof TypeError && err.message.includes('fetch')) return true;
+  if (err instanceof Error) {
+    const msg = err.message;
+    // Network errors and retryable HTTP statuses
+    if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket hang up|network/i.test(msg)) return true;
+    if (/\(429\)|\(502\)|\(503\)/.test(msg)) return true;
+  }
+  return false;
+}
 
 // ============================================================================
 // CONFIGURATION
@@ -128,8 +167,15 @@ export const duprService = {
       return inMemoryToken.token;
     }
 
-    // Fetch new token
-    const token = await fetchNewToken();
+    // Fetch new token with one retry
+    let token: string;
+    try {
+      token = await fetchNewToken();
+    } catch (firstError) {
+      console.warn('DUPR partner token fetch failed, retrying in 1s:', firstError);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      token = await fetchNewToken();
+    }
 
     // Cache in Redis
     await cache.set(DUPR_TOKEN_CACHE_KEY, token, DUPR_TOKEN_TTL);
@@ -149,6 +195,92 @@ export const duprService = {
   async clearTokenCache(): Promise<void> {
     await cache.del(DUPR_TOKEN_CACHE_KEY);
     inMemoryToken = null;
+  },
+
+  /**
+   * Refresh a user's SSO token using their stored refresh token.
+   * Returns the existing token if still valid (>5 min until expiry),
+   * otherwise uses the refresh token to obtain a new one.
+   * Returns null if refresh fails or no account found.
+   */
+  async refreshUserToken(userId: string): Promise<string | null> {
+    const EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
+
+    try {
+      const [account] = await db
+        .select()
+        .from(schema.duprAccounts)
+        .where(eq(schema.duprAccounts.userId, userId))
+        .limit(1);
+
+      if (!account) {
+        console.warn(`No DUPR account found for user ${userId}`);
+        return null;
+      }
+
+      // If the token exists and is not near expiry, return it as-is
+      if (
+        account.duprUserToken &&
+        account.tokenExpiresAt &&
+        account.tokenExpiresAt.getTime() > Date.now() + EXPIRY_BUFFER_MS
+      ) {
+        return account.duprUserToken;
+      }
+
+      // No refresh token means we can't refresh
+      if (!account.duprRefreshToken) {
+        console.warn(`No refresh token stored for user ${userId}, cannot refresh`);
+        return null;
+      }
+
+      // Call DUPR to refresh the token
+      const urls = getDuprUrls();
+      const { clientKey, clientSecret } = getClientCredentials();
+      const encoded = Buffer.from(`${clientKey}:${clientSecret}`).toString('base64');
+
+      const response = await fetch(`${urls.partnerApi}/token/refresh`, {
+        method: 'POST',
+        headers: {
+          'x-authorization': encoded,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: account.duprRefreshToken }),
+      });
+
+      if (!response.ok) {
+        console.error(`DUPR user token refresh failed (${response.status}) for user ${userId}`);
+        return null;
+      }
+
+      const data = (await response.json()) as {
+        token?: string;
+        refreshToken?: string;
+        expiresIn?: number;
+      };
+
+      if (!data.token) {
+        console.error('DUPR refresh response missing token field');
+        return null;
+      }
+
+      // Default to 1 hour if expiresIn not provided
+      const expiresInMs = (data.expiresIn || 3600) * 1000;
+
+      await db
+        .update(schema.duprAccounts)
+        .set({
+          duprUserToken: data.token,
+          duprRefreshToken: data.refreshToken || account.duprRefreshToken,
+          tokenExpiresAt: new Date(Date.now() + expiresInMs),
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.duprAccounts.userId, userId));
+
+      return data.token;
+    } catch (error) {
+      console.error(`DUPR user token refresh error for user ${userId}:`, error);
+      return null;
+    }
   },
 
   // --------------------------------------------------------------------------
@@ -204,24 +336,30 @@ export const duprService = {
    * Get player info by DUPR ID using partner token
    */
   async getPlayerByDuprId(duprId: string): Promise<DuprPlayerInfo | null> {
-    const token = await this.getPartnerToken();
     const urls = getDuprUrls();
 
-    try {
+    const attempt = async (bearerToken: string) => {
       const response = await fetch(`${urls.partnerApi}/player/v1.0/${duprId}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${bearerToken}`,
           'Content-Type': 'application/json',
         },
       });
+      return response;
+    };
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          await this.clearTokenCache();
-        }
-        return null;
+    try {
+      let token = await this.getPartnerToken();
+      let response = await attempt(token);
+
+      if (response.status === 401) {
+        await this.clearTokenCache();
+        token = await this.getPartnerToken();
+        response = await attempt(token);
       }
+
+      if (!response.ok) return null;
 
       const data = await response.json();
       return data?.result || data;
@@ -317,32 +455,50 @@ export const duprService = {
    * Submit a match to DUPR
    */
   async createMatch(match: DuprMatchInput): Promise<DuprMatchResult> {
-    const token = await this.getPartnerToken();
     const urls = getDuprUrls();
 
-    const response = await fetch(`${urls.partnerApi}/match/v1.0`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        matchType: match.matchType,
-        team1: match.team1Players.map((p) => ({ duprId: p.duprId })),
-        team2: match.team2Players.map((p) => ({ duprId: p.duprId })),
-        games: match.scores.map((s) => ({
-          team1Score: s.team1Score,
-          team2Score: s.team2Score,
-        })),
-        playedOn: match.playedAt,
-        clubId: match.clubId,
-        eventName: match.eventName,
-      }),
+    const body = JSON.stringify({
+      matchType: match.matchType,
+      team1: match.team1Players.map((p) => ({ duprId: p.duprId })),
+      team2: match.team2Players.map((p) => ({ duprId: p.duprId })),
+      games: match.scores.map((s) => ({
+        team1Score: s.team1Score,
+        team2Score: s.team2Score,
+      })),
+      playedOn: match.playedAt,
+      clubId: match.clubId,
+      eventName: match.eventName,
     });
 
+    const attempt = async (bearerToken: string) => {
+      return fetch(`${urls.partnerApi}/match/v1.0`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+    };
+
+    let token = await this.getPartnerToken();
+    let response = await attempt(token);
+
+    if (response.status === 401) {
+      await this.clearTokenCache();
+      token = await this.getPartnerToken();
+      response = await attempt(token);
+    }
+
     if (!response.ok) {
-      if (response.status === 401) {
-        await this.clearTokenCache();
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retrySeconds = retryAfter ? parseInt(retryAfter, 10) || 60 : 60;
+        throw new DuprRateLimitError(`DUPR rate limited, retry after ${retrySeconds} seconds`, retrySeconds);
+      }
+      if (response.status === 502 || response.status === 503) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new DuprRetryableError(`DUPR match creation failed (${response.status}): ${errorText}`, response.status);
       }
       const errorText = await response.text().catch(() => 'Unknown error');
       throw new Error(`DUPR match creation failed (${response.status}): ${errorText}`);
@@ -360,27 +516,45 @@ export const duprService = {
    * Update an existing match on DUPR
    */
   async updateMatch(matchId: string, update: DuprMatchUpdateInput): Promise<void> {
-    const token = await this.getPartnerToken();
     const urls = getDuprUrls();
 
-    const response = await fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        games: update.scores?.map((s) => ({
-          team1Score: s.team1Score,
-          team2Score: s.team2Score,
-        })),
-        playedOn: update.playedAt,
-      }),
+    const body = JSON.stringify({
+      games: update.scores?.map((s) => ({
+        team1Score: s.team1Score,
+        team2Score: s.team2Score,
+      })),
+      playedOn: update.playedAt,
     });
 
+    const attempt = async (bearerToken: string) => {
+      return fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+    };
+
+    let token = await this.getPartnerToken();
+    let response = await attempt(token);
+
+    if (response.status === 401) {
+      await this.clearTokenCache();
+      token = await this.getPartnerToken();
+      response = await attempt(token);
+    }
+
     if (!response.ok) {
-      if (response.status === 401) {
-        await this.clearTokenCache();
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retrySeconds = retryAfter ? parseInt(retryAfter, 10) || 60 : 60;
+        throw new DuprRateLimitError(`DUPR rate limited, retry after ${retrySeconds} seconds`, retrySeconds);
+      }
+      if (response.status === 502 || response.status === 503) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new DuprRetryableError(`DUPR match update failed (${response.status}): ${errorText}`, response.status);
       }
       const errorText = await response.text().catch(() => 'Unknown error');
       throw new Error(`DUPR match update failed (${response.status}): ${errorText}`);
@@ -391,20 +565,36 @@ export const duprService = {
    * Delete a match from DUPR
    */
   async deleteMatch(matchId: string): Promise<void> {
-    const token = await this.getPartnerToken();
     const urls = getDuprUrls();
 
-    const response = await fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const attempt = async (bearerToken: string) => {
+      return fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    };
+
+    let token = await this.getPartnerToken();
+    let response = await attempt(token);
+
+    if (response.status === 401) {
+      await this.clearTokenCache();
+      token = await this.getPartnerToken();
+      response = await attempt(token);
+    }
 
     if (!response.ok) {
-      if (response.status === 401) {
-        await this.clearTokenCache();
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retrySeconds = retryAfter ? parseInt(retryAfter, 10) || 60 : 60;
+        throw new DuprRateLimitError(`DUPR rate limited, retry after ${retrySeconds} seconds`, retrySeconds);
+      }
+      if (response.status === 502 || response.status === 503) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new DuprRetryableError(`DUPR match deletion failed (${response.status}): ${errorText}`, response.status);
       }
       const errorText = await response.text().catch(() => 'Unknown error');
       throw new Error(`DUPR match deletion failed (${response.status}): ${errorText}`);
