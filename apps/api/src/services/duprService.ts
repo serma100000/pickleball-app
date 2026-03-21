@@ -290,13 +290,13 @@ export const duprService = {
   /**
    * Get the SSO iframe URL for Login with DUPR
    */
-  getSsoUrl(clientId?: string): string {
-    const id = clientId || process.env.DUPR_CLIENT_ID;
-    if (!id) throw new Error('DUPR_CLIENT_ID not configured');
+  getSsoUrl(): string {
+    const clientKey = process.env.DUPR_CLIENT_KEY;
+    if (!clientKey) throw new Error('DUPR_CLIENT_KEY not configured');
 
     const urls = getDuprUrls();
-    const encodedClientId = Buffer.from(id).toString('base64');
-    return `${urls.ssoBase}/login-external-app/${encodedClientId}`;
+    const encodedClientKey = Buffer.from(clientKey).toString('base64');
+    return `${urls.ssoBase}/login-external-app/${encodedClientKey}`;
   },
 
   /**
