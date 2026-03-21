@@ -36,13 +36,13 @@ const duprRouter = new Hono();
 const ssoCallbackSchema = z.object({
   userToken: z.string().min(1, 'userToken is required'),
   refreshToken: z.string().optional(),
-  id: z.string().optional(),
-  duprId: z.string().min(1, 'duprId is required'),
+  id: z.union([z.string(), z.number()]).transform(String).optional(),
+  duprId: z.union([z.string(), z.number()]).transform(String).pipe(z.string().min(1, 'duprId is required')),
   stats: z
     .object({
-      singles: z.number().nullable().optional(),
-      doubles: z.number().nullable().optional(),
-      mixedDoubles: z.number().nullable().optional(),
+      singles: z.union([z.number(), z.string().transform(Number)]).nullable().optional(),
+      doubles: z.union([z.number(), z.string().transform(Number)]).nullable().optional(),
+      mixedDoubles: z.union([z.number(), z.string().transform(Number)]).nullable().optional(),
     })
     .optional(),
 });
