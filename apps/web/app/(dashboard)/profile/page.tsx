@@ -1,17 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import {
   TrendingUp,
   ChevronRight,
   Link as LinkIcon,
-  Check,
-  Loader2,
   ExternalLink,
   Settings,
 } from 'lucide-react';
 import { UserButton, useUser } from '@clerk/nextjs';
-import { toast } from '@/hooks/use-toast';
 
 // Dynamic user avatar component
 function ProfileAvatar() {
@@ -28,10 +24,6 @@ function ProfileAvatar() {
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
-  const [duprId, setDuprId] = useState('');
-  const [isLinkingDupr, setIsLinkingDupr] = useState(false);
-  const [duprLinked, setDuprLinked] = useState(false);
-  const [duprError, setDuprError] = useState('');
 
   // Get display name from Clerk user with better fallbacks
   const displayName =
@@ -42,42 +34,6 @@ export default function ProfilePage() {
         user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
         'Player'
       : 'Loading...';
-
-  const handleLinkDupr = async () => {
-    if (!duprId.trim()) {
-      setDuprError('Please enter your DUPR ID');
-      return;
-    }
-
-    setIsLinkingDupr(true);
-    setDuprError('');
-
-    try {
-      // TODO: Call API to link DUPR account
-      // const response = await fetch('/api/user/dupr', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ duprId: duprId.trim() }),
-      // });
-
-      // Simulate API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setDuprLinked(true);
-      toast.success({
-        title: 'DUPR account linked',
-        description: 'Your DUPR account has been connected successfully.',
-      });
-    } catch (error) {
-      console.error('Failed to link DUPR account:', error);
-      setDuprError('Failed to link DUPR account. Please try again.');
-      toast.error({
-        title: 'Could not link account',
-        description: 'Please check your DUPR ID and try again.',
-      });
-    } finally {
-      setIsLinkingDupr(false);
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -142,7 +98,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* DUPR Account Linking */}
+      {/* DUPR Account */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-4">
           <LinkIcon className="w-5 h-5 text-brand-500" />
@@ -151,83 +107,33 @@ export default function ProfilePage() {
           </h2>
         </div>
 
-        {duprLinked ? (
-          <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  DUPR Account Linked
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  ID: {duprId}
-                </p>
-              </div>
-            </div>
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-300">
+            Link your DUPR account to import your official rating and enable
+            match reporting. DUPR accounts are linked securely via SSO.
+          </p>
+
+          <a
+            href="/profile/dupr-settings"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors"
+          >
+            <LinkIcon className="w-4 h-4" />
+            Manage DUPR Connection
+            <ExternalLink className="w-4 h-4" />
+          </a>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Don&apos;t have a DUPR account?{' '}
             <a
-              href={`https://www.dupr.com/player/${duprId}`}
+              href="https://mydupr.com/signup"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium"
+              className="text-brand-600 hover:text-brand-700 font-medium"
             >
-              View Profile
-              <ExternalLink className="w-4 h-4" />
+              Create one here
             </a>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-300">
-              Link your DUPR account to import your official rating and match
-              history.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={duprId}
-                  onChange={(e) => {
-                    setDuprId(e.target.value);
-                    setDuprError('');
-                  }}
-                  placeholder="Enter your DUPR ID (e.g., 12345678)"
-                  className="w-full px-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                />
-                {duprError && (
-                  <p className="mt-1 text-sm text-red-500">{duprError}</p>
-                )}
-              </div>
-              <button
-                onClick={handleLinkDupr}
-                disabled={isLinkingDupr}
-                className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLinkingDupr ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Linking...
-                  </>
-                ) : (
-                  'Link Account'
-                )}
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Don&apos;t have a DUPR account?{' '}
-              <a
-                href="https://www.dupr.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-600 hover:text-brand-700 font-medium"
-              >
-                Create one here
-              </a>
-            </p>
-          </div>
-        )}
+          </p>
+        </div>
       </div>
 
       {/* Stats Section - Empty State */}
