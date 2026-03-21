@@ -83,7 +83,7 @@ export function DuprSsoModal({ open, onOpenChange, onSuccess }: DuprSsoModalProp
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-lg max-h-[85vh] bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 flex flex-col">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-lg h-[90vh] sm:h-[85vh] bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -95,13 +95,13 @@ export function DuprSsoModal({ open, onOpenChange, onSuccess }: DuprSsoModalProp
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="flex-1 min-h-0 overflow-hidden p-4">
             {loadingSsoUrl ? (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
               </div>
             ) : ssoData?.url ? (
-              <div className="relative w-full" style={{ height: '500px' }}>
+              <div className="relative w-full h-full">
                 {!iframeLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
