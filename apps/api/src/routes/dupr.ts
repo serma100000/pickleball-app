@@ -136,8 +136,9 @@ duprRouter.post('/sso/callback', authMiddleware, validateBody(ssoCallbackSchema)
   const dbUser = await getDbUser(userId);
   const body = c.req.valid('json');
 
-  // 1. Validate the user token with DUPR API
-  const playerInfo = await duprService.validateSsoUser(body.userToken);
+  // 1. Validate the player via partner API (using DUPR ID from SSO), with
+  //    fallback to public API user token validation
+  const playerInfo = await duprService.validateSsoUser(body.userToken, body.duprId);
   if (!playerInfo) {
     throw new HTTPException(400, { message: 'Failed to validate DUPR SSO token. Please try again.' });
   }

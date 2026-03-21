@@ -303,12 +303,26 @@ export const duprService = {
    * Validate SSO user data by fetching their profile from the DUPR public API.
    * Uses the user's own token (from SSO postMessage) for read-only access.
    */
-  async validateSsoUser(userToken: string): Promise<DuprPlayerInfo | null> {
+  async validateSsoUser(userToken: string, duprId?: string): Promise<DuprPlayerInfo | null> {
+    // The SSO user token from postMessage is scoped to DUPR's login flow and
+    // cannot be used against the public API. Instead, validate the player exists
+    // via the partner API using our partner credentials + the DUPR ID from SSO.
+    if (duprId) {
+      console.log(`[DUPR SSO] Validating player ${duprId} via partner API`);
+      const playerInfo = await this.getPlayerByDuprId(duprId);
+      if (playerInfo) {
+        console.log(`[DUPR SSO] Player validated: ${playerInfo.fullName || duprId}`);
+        return playerInfo;
+      }
+      console.error(`[DUPR SSO] Player ${duprId} not found via partner API`);
+    }
+
+    // Fallback: try the public API with the user token (may not work in UAT)
     const urls = getDuprUrls();
     const validateUrl = `${urls.publicApi}/player/v1.0/me`;
 
     try {
-      console.log(`[DUPR SSO] Validating user token against ${validateUrl}`);
+      console.log(`[DUPR SSO] Fallback: validating user token against ${validateUrl}`);
       const response = await fetch(validateUrl, {
         method: 'GET',
         headers: {
@@ -319,15 +333,15 @@ export const duprService = {
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => 'no body');
-        console.error(`[DUPR SSO] Validation failed (${response.status}): ${errorBody}`);
+        console.error(`[DUPR SSO] Fallback validation failed (${response.status}): ${errorBody}`);
         return null;
       }
 
       const data = await response.json();
-      console.log('[DUPR SSO] Validation response:', JSON.stringify(data).slice(0, 500));
+      console.log('[DUPR SSO] Fallback validation response:', JSON.stringify(data).slice(0, 500));
       return data?.result || data;
     } catch (error) {
-      console.error('[DUPR SSO] Validation error:', error);
+      console.error('[DUPR SSO] Fallback validation error:', error);
       return null;
     }
   },
