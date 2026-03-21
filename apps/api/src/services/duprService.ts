@@ -305,9 +305,11 @@ export const duprService = {
    */
   async validateSsoUser(userToken: string): Promise<DuprPlayerInfo | null> {
     const urls = getDuprUrls();
+    const validateUrl = `${urls.publicApi}/player/v1.0/me`;
 
     try {
-      const response = await fetch(`${urls.publicApi}/player/v1.0/me`, {
+      console.log(`[DUPR SSO] Validating user token against ${validateUrl}`);
+      const response = await fetch(validateUrl, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${userToken}`,
@@ -316,14 +318,16 @@ export const duprService = {
       });
 
       if (!response.ok) {
-        console.error(`DUPR SSO validation failed (${response.status})`);
+        const errorBody = await response.text().catch(() => 'no body');
+        console.error(`[DUPR SSO] Validation failed (${response.status}): ${errorBody}`);
         return null;
       }
 
       const data = await response.json();
+      console.log('[DUPR SSO] Validation response:', JSON.stringify(data).slice(0, 500));
       return data?.result || data;
     } catch (error) {
-      console.error('DUPR SSO validation error:', error);
+      console.error('[DUPR SSO] Validation error:', error);
       return null;
     }
   },
