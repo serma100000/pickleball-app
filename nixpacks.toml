@@ -1,8 +1,4 @@
+# Nix environment setup only.
+# Build and install commands are controlled by railway.toml's buildCommand.
 [phases.setup]
 nixPkgs = ["nodejs_20", "nodePackages.pnpm"]
-
-[phases.install]
-cmds = ["pnpm install --frozen-lockfile"]
-
-[phases.build]
-cmds = ["pnpm turbo build --filter=@pickle-play/api"]
