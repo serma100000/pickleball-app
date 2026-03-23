@@ -122,7 +122,7 @@ async function fetchNewToken(): Promise<string> {
 
   const encoded = Buffer.from(`${clientKey}:${clientSecret}`).toString('base64');
 
-  const response = await fetch(`${urls.partnerApi}/token`, {
+  const response = await fetch(`${urls.partnerApi}/auth/v1.0/token`, {
     method: 'POST',
     headers: {
       'x-authorization': encoded,

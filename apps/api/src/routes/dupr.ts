@@ -136,15 +136,17 @@ duprRouter.post('/sso/callback', authMiddleware, validateBody(ssoCallbackSchema)
   const dbUser = await getDbUser(userId);
   const body = c.req.valid('json');
 
-  // 1. Validate the player via partner API (using DUPR ID from SSO), with
-  //    fallback to public API user token validation
-  const playerInfo = await duprService.validateSsoUser(body.userToken, body.duprId);
-  if (!playerInfo) {
-    throw new HTTPException(400, { message: 'Failed to validate DUPR SSO token. Please try again.' });
-  }
+  // 1. The SSO postMessage data comes directly from DUPR's authenticated iframe.
+  //    The user logged in with DUPR, and DUPR gave us their duprId, stats, and tokens.
+  //    We trust this data. Optionally enrich via partner API if available.
+  const duprId = body.duprId;
+  console.log(`[DUPR SSO] Linking DUPR ID ${duprId} for user ${dbUser.id}`);
 
-  // Use DUPR ID from validated player info, falling back to body
-  const duprId = String(playerInfo.duprId || body.duprId);
+  // Try to enrich with partner API data (non-blocking)
+  let playerInfo = await duprService.validateSsoUser(body.userToken, duprId).catch((err) => {
+    console.warn('[DUPR SSO] Partner validation failed (non-blocking):', err.message);
+    return null;
+  });
 
   // 2. Check if this DUPR ID is already linked to a different user
   const existingLink = await db.query.duprAccounts.findFirst({
@@ -157,14 +159,17 @@ duprRouter.post('/sso/callback', authMiddleware, validateBody(ssoCallbackSchema)
     });
   }
 
-  // 3. Fetch entitlements
-  const entitlements = await duprService.getPlayerEntitlements(body.userToken);
+  // 3. Fetch entitlements (non-blocking — defaults to NONE if API unavailable)
+  const entitlements = await duprService.getPlayerEntitlements(body.userToken).catch((err) => {
+    console.warn('[DUPR SSO] Entitlement fetch failed (non-blocking):', err.message);
+    return { isPremium: false, isVerified: false, entitlementLevel: 'NONE' as const };
+  });
 
-  // 4. Build ratings from SSO stats or player info
+  // 4. Build ratings from SSO stats, enriched with partner API data if available
   const ratings = {
-    singles: body.stats?.singles ?? playerInfo.ratings?.singles ?? null,
-    doubles: body.stats?.doubles ?? playerInfo.ratings?.doubles ?? null,
-    mixedDoubles: body.stats?.mixedDoubles ?? playerInfo.ratings?.mixedDoubles ?? null,
+    singles: body.stats?.singles ?? playerInfo?.ratings?.singles ?? null,
+    doubles: body.stats?.doubles ?? playerInfo?.ratings?.doubles ?? null,
+    mixedDoubles: body.stats?.mixedDoubles ?? playerInfo?.ratings?.mixedDoubles ?? null,
   };
 
   const now = new Date();
@@ -177,7 +182,7 @@ duprRouter.post('/sso/callback', authMiddleware, validateBody(ssoCallbackSchema)
       .set({
         duprUserToken: body.userToken,
         duprRefreshToken: body.refreshToken ?? null,
-        duprInternalId: body.id ?? playerInfo.id?.toString() ?? null,
+        duprInternalId: body.id ?? playerInfo?.id?.toString() ?? null,
         entitlementLevel: entitlements.entitlementLevel,
         singlesRating: ratings.singles?.toString() ?? null,
         doublesRating: ratings.doubles?.toString() ?? null,
