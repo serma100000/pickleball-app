@@ -5,7 +5,7 @@
  * Authenticated routes use authMiddleware; the webhook route is unauthenticated.
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
@@ -14,6 +14,7 @@ import { validateBody } from '../middleware/validation.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { db, schema } from '../db/index.js';
 import { duprService } from '../services/duprService.js';
+import type { DuprMatchUpdateInput } from '../types/dupr.js';
 
 const {
   users,
@@ -47,34 +48,47 @@ const ssoCallbackSchema = z.object({
     .optional(),
 });
 
+const duprTeamSchema = z.object({
+  player1: z.string().min(1),
+  player2: z.string().optional(),
+  game1: z.number().int().min(0),
+  game2: z.number().int().min(0).optional(),
+  game3: z.number().int().min(0).optional(),
+  game4: z.number().int().min(0).optional(),
+  game5: z.number().int().min(0).optional(),
+});
+
 const submitMatchSchema = z.object({
   gameId: z.string().uuid().optional(),
   tournamentMatchId: z.string().uuid().optional(),
   leagueMatchId: z.string().uuid().optional(),
-  matchType: z.enum(['SINGLES', 'DOUBLES']),
-  team1Players: z.array(z.object({ duprId: z.string() })).min(1).max(2),
-  team2Players: z.array(z.object({ duprId: z.string() })).min(1).max(2),
-  scores: z.array(
-    z.object({
-      team1Score: z.number().int().min(0),
-      team2Score: z.number().int().min(0),
-    })
-  ).min(1),
-  playedAt: z.string(),
-  clubId: z.string().optional(),
-  eventName: z.string().optional(),
+  format: z.enum(['SINGLES', 'DOUBLES']),
+  matchDate: z.string(),
+  event: z.string(),
+  identifier: z.string().optional(),
+  teamA: duprTeamSchema,
+  teamB: duprTeamSchema,
+  matchSource: z.enum(['PARTNER']).optional().default('PARTNER'),
+  location: z.string().optional(),
+  clubId: z.number().optional(),
 });
 
 const updateMatchSchema = z.object({
-  scores: z
-    .array(
-      z.object({
-        team1Score: z.number().int().min(0),
-        team2Score: z.number().int().min(0),
-      })
-    )
-    .optional(),
-  playedAt: z.string().optional(),
+  matchId: z.number(),
+  format: z.enum(['SINGLES', 'DOUBLES']),
+  matchDate: z.string(),
+  event: z.string(),
+  identifier: z.string(),
+  teamA: duprTeamSchema,
+  teamB: duprTeamSchema,
+  matchSource: z.enum(['PARTNER']).optional().default('PARTNER'),
+  location: z.string().optional(),
+  clubId: z.number().optional(),
+});
+
+const deleteMatchSchema = z.object({
+  matchCode: z.string().min(1),
+  identifier: z.string().min(1),
 });
 
 // --------------------------------------------------------------------------
@@ -466,6 +480,22 @@ duprRouter.post('/matches', authMiddleware, validateBody(submitMatchSchema), asy
     });
   }
 
+  // Auto-generate identifier if not provided
+  const identifier = body.identifier ?? `paddleup-${randomUUID()}`;
+
+  // Build the DUPR API payload
+  const duprPayload = {
+    format: body.format,
+    matchDate: body.matchDate,
+    event: body.event,
+    identifier,
+    teamA: body.teamA,
+    teamB: body.teamB,
+    matchSource: body.matchSource ?? 'PARTNER',
+    ...(body.location && { location: body.location }),
+    ...(body.clubId != null && { clubId: body.clubId }),
+  };
+
   // Create a pending submission record
   const [submission] = await db
     .insert(duprMatchSubmissions)
@@ -475,21 +505,13 @@ duprRouter.post('/matches', authMiddleware, validateBody(submitMatchSchema), asy
       leagueMatchId: body.leagueMatchId ?? null,
       status: 'pending',
       submittedBy: dbUser.id,
-      payload: body,
+      payload: duprPayload,
     })
     .returning();
 
   try {
     // Submit to DUPR
-    const result = await duprService.createMatch({
-      matchType: body.matchType,
-      team1Players: body.team1Players as { duprId: string }[],
-      team2Players: body.team2Players as { duprId: string }[],
-      scores: body.scores as { team1Score: number; team2Score: number }[],
-      playedAt: body.playedAt,
-      clubId: body.clubId,
-      eventName: body.eventName,
-    });
+    const result = await duprService.createMatch(duprPayload);
 
     // Update submission with DUPR's response
     await db
@@ -546,14 +568,24 @@ duprRouter.put('/matches/:id', authMiddleware, validateBody(updateMatchSchema), 
   }
 
   try {
-    await duprService.updateMatch(submission.duprMatchId, {
-      scores: body.scores as { team1Score: number; team2Score: number }[] | undefined,
-      playedAt: body.playedAt,
-    });
+    const updatePayload = {
+      matchId: body.matchId,
+      format: body.format,
+      matchDate: body.matchDate,
+      event: body.event,
+      identifier: body.identifier,
+      teamA: body.teamA,
+      teamB: body.teamB,
+      matchSource: (body.matchSource ?? 'PARTNER') as 'PARTNER',
+      location: body.location,
+      clubId: body.clubId,
+    };
+
+    await duprService.updateMatch(updatePayload as DuprMatchUpdateInput);
 
     await db
       .update(duprMatchSubmissions)
-      .set({ updatedAt: new Date() })
+      .set({ payload: updatePayload, updatedAt: new Date() })
       .where(eq(duprMatchSubmissions.id, submissionId));
 
     return c.json({ message: 'Match updated on DUPR successfully' });
@@ -564,8 +596,9 @@ duprRouter.put('/matches/:id', authMiddleware, validateBody(updateMatchSchema), 
 });
 
 /** DELETE /dupr/matches/:id — Delete a match from DUPR */
-duprRouter.delete('/matches/:id', authMiddleware, async (c) => {
+duprRouter.delete('/matches/:id', authMiddleware, validateBody(deleteMatchSchema), async (c) => {
   const submissionId = c.req.param('id');
+  const body = c.req.valid('json');
   const { userId } = c.get('user');
   const dbUser = await getDbUser(userId);
 
@@ -582,7 +615,7 @@ duprRouter.delete('/matches/:id', authMiddleware, async (c) => {
   }
 
   try {
-    await duprService.deleteMatch(submission.duprMatchId);
+    await duprService.deleteMatch(body.matchCode, body.identifier);
 
     await db
       .update(duprMatchSubmissions)

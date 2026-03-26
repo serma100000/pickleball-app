@@ -89,38 +89,52 @@ export interface DuprEntitlements {
 }
 
 // ============================================================================
-// MATCH SUBMISSION
+// MATCH SUBMISSION (DUPR Partner API /match/v1.0)
 // ============================================================================
 
-export interface DuprMatchPlayer {
-  duprId: string;
+/** Team structure for DUPR ExternalMatchRequest */
+export interface DuprMatchTeam {
+  player1: string;       // DUPR ID (required)
+  player2?: string;      // DUPR ID (doubles only)
+  game1: number;         // required
+  game2?: number;
+  game3?: number;
+  game4?: number;
+  game5?: number;
 }
 
-export interface DuprMatchScore {
-  team1Score: number;
-  team2Score: number;
-}
-
+/** POST /match/v1.0/create - ExternalMatchRequest */
 export interface DuprMatchInput {
-  matchType: 'SINGLES' | 'DOUBLES' | 'MIXED_DOUBLES';
-  team1Players: DuprMatchPlayer[];
-  team2Players: DuprMatchPlayer[];
-  scores: DuprMatchScore[];
-  playedAt: string;     // ISO 8601 date string
-  clubId?: string;      // DUPR club ID if applicable
-  eventName?: string;
-  isVerified?: boolean;
+  format: 'SINGLES' | 'DOUBLES';       // required
+  matchDate: string;                    // yyyy-MM-dd (required)
+  event: string;                        // event name (required)
+  identifier: string;                   // unique match identifier (required)
+  teamA: DuprMatchTeam;                 // required
+  teamB: DuprMatchTeam;                 // required
+  matchSource?: 'PARTNER';             // optional
+  matchType?: 'RALLY' | 'SIDEOUT';    // scoring type (optional)
+  location?: string;                    // e.g. "City, ST" (optional)
+  clubId?: number;                      // DUPR club ID (optional)
+  bracket?: string;                     // bracket name (optional)
 }
 
+/** Response from match create/update */
 export interface DuprMatchResult {
   matchId: string;
+  matchCode: string;    // used for delete operations
   status: 'SUCCESS' | 'FAILURE';
   message?: string;
 }
 
-export interface DuprMatchUpdateInput {
-  scores?: DuprMatchScore[];
-  playedAt?: string;
+/** POST /match/v1.0/update - same as create but with matchId required */
+export interface DuprMatchUpdateInput extends DuprMatchInput {
+  matchId: number;      // required for updates
+}
+
+/** DELETE /match/v1.0/delete */
+export interface DuprMatchDeleteInput {
+  matchCode: string;    // returned from create response (required)
+  identifier: string;   // unique match identifier (required)
 }
 
 // ============================================================================

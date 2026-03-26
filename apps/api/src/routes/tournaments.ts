@@ -1278,12 +1278,12 @@ tournamentsRouter.put(
       // Fire-and-forget — don't block scoring on DUPR API
       submitMatchToDupr({
         tournamentMatchId: matchId,
-        matchType: matchType as 'SINGLES' | 'DOUBLES',
+        format: matchType as 'SINGLES' | 'DOUBLES',
         team1UserIds: team1Reg.map((p) => p.userId),
         team2UserIds: team2Reg.map((p) => p.userId),
         scores: [{ team1Score: player1Score, team2Score: player2Score }],
-        playedAt: new Date().toISOString(),
-        eventName: tournament.name,
+        matchDate: new Date().toISOString().slice(0, 10),
+        event: tournament.name,
         submittedByUserId: dbUser.id,
       }).catch((err) => console.error(`DUPR auto-submit failed for tournament match ${matchId}:`, err));
     }

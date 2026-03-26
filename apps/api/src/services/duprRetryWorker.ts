@@ -50,14 +50,9 @@ export async function retryFailedSubmissions(): Promise<void> {
       }
 
       try {
-        const result = await duprService.createMatch({
-          matchType: payload.matchType as 'SINGLES' | 'DOUBLES',
-          team1Players: payload.team1Players as { duprId: string }[],
-          team2Players: payload.team2Players as { duprId: string }[],
-          scores: payload.scores as { team1Score: number; team2Score: number }[],
-          playedAt: payload.playedAt as string,
-          eventName: payload.eventName as string | undefined,
-        });
+        // The payload is already in DUPR's API format (teamA/teamB, format, matchDate, etc.)
+        const { retryCount: _rc, ...matchPayload } = payload;
+        const result = await duprService.createMatch(matchPayload as any);
 
         // Success - update to submitted
         await db

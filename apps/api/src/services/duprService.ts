@@ -472,24 +472,13 @@ export const duprService = {
   /**
    * Submit a match to DUPR
    */
-  async createMatch(match: DuprMatchInput): Promise<DuprMatchResult> {
+  async createMatch(match: any): Promise<DuprMatchResult> {
     const urls = getDuprUrls();
 
-    const body = JSON.stringify({
-      matchType: match.matchType,
-      team1: match.team1Players.map((p) => ({ duprId: p.duprId })),
-      team2: match.team2Players.map((p) => ({ duprId: p.duprId })),
-      games: match.scores.map((s) => ({
-        team1Score: s.team1Score,
-        team2Score: s.team2Score,
-      })),
-      playedOn: match.playedAt,
-      clubId: match.clubId,
-      eventName: match.eventName,
-    });
+    const body = JSON.stringify(match);
 
     const attempt = async (bearerToken: string) => {
-      return fetch(`${urls.partnerApi}/match/v1.0`, {
+      return fetch(`${urls.partnerApi}/match/v1.0/create`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${bearerToken}`,
@@ -524,7 +513,8 @@ export const duprService = {
 
     const data = await response.json();
     return {
-      matchId: data?.result?.id || data?.id || '',
+      matchId: data?.result?.matchId || data?.result?.id || data?.matchId || data?.id || '',
+      matchCode: data?.result?.matchCode || data?.matchCode || '',
       status: 'SUCCESS',
       message: data?.message,
     };
@@ -533,20 +523,14 @@ export const duprService = {
   /**
    * Update an existing match on DUPR
    */
-  async updateMatch(matchId: string, update: DuprMatchUpdateInput): Promise<void> {
+  async updateMatch(update: DuprMatchUpdateInput): Promise<void> {
     const urls = getDuprUrls();
 
-    const body = JSON.stringify({
-      games: update.scores?.map((s) => ({
-        team1Score: s.team1Score,
-        team2Score: s.team2Score,
-      })),
-      playedOn: update.playedAt,
-    });
+    const body = JSON.stringify(update);
 
     const attempt = async (bearerToken: string) => {
-      return fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
-        method: 'PUT',
+      return fetch(`${urls.partnerApi}/match/v1.0/update`, {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${bearerToken}`,
           'Content-Type': 'application/json',
@@ -582,16 +566,19 @@ export const duprService = {
   /**
    * Delete a match from DUPR
    */
-  async deleteMatch(matchId: string): Promise<void> {
+  async deleteMatch(matchCode: string, identifier: string): Promise<void> {
     const urls = getDuprUrls();
 
+    const body = JSON.stringify({ matchCode, identifier });
+
     const attempt = async (bearerToken: string) => {
-      return fetch(`${urls.partnerApi}/match/v1.0/${matchId}`, {
+      return fetch(`${urls.partnerApi}/match/v1.0/delete`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${bearerToken}`,
           'Content-Type': 'application/json',
         },
+        body,
       });
     };
 

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { db, schema } from '../db/index.js';
 import { eq, inArray } from 'drizzle-orm';
 import { duprService, isDuprRetryableError } from './duprService.js';
@@ -10,12 +11,12 @@ interface SubmitToDuprParams {
   gameId?: string;
   tournamentMatchId?: string;
   leagueMatchId?: string;
-  matchType: 'SINGLES' | 'DOUBLES';
+  format: 'SINGLES' | 'DOUBLES';
   team1UserIds: string[];
   team2UserIds: string[];
   scores: { team1Score: number; team2Score: number }[];
-  playedAt: string;
-  eventName?: string;
+  matchDate: string;
+  event?: string;
   submittedByUserId: string;
 }
 
@@ -38,14 +39,42 @@ export async function submitMatchToDupr(params: SubmitToDuprParams) {
     };
   }
 
-  // Build payload
+  // Build teamA/teamB with player DUPR IDs and game scores
+  const team1DuprIds = params.team1UserIds.map((uid) => accountMap.get(uid)!);
+  const team2DuprIds = params.team2UserIds.map((uid) => accountMap.get(uid)!);
+
+  const teamA: Record<string, string | number> = {
+    player1: team1DuprIds[0],
+  };
+  if (team1DuprIds[1]) {
+    teamA.player2 = team1DuprIds[1];
+  }
+
+  const teamB: Record<string, string | number> = {
+    player1: team2DuprIds[0],
+  };
+  if (team2DuprIds[1]) {
+    teamB.player2 = team2DuprIds[1];
+  }
+
+  // Map scores array to game1-game5 on each team
+  params.scores.forEach((score, idx) => {
+    const gameKey = `game${idx + 1}` as string;
+    teamA[gameKey] = score.team1Score;
+    teamB[gameKey] = score.team2Score;
+  });
+
+  const identifier = `paddleup-${randomUUID()}`;
+
+  // Build DUPR API payload
   const payload = {
-    matchType: params.matchType,
-    team1Players: params.team1UserIds.map((uid) => ({ duprId: accountMap.get(uid)! })),
-    team2Players: params.team2UserIds.map((uid) => ({ duprId: accountMap.get(uid)! })),
-    scores: params.scores,
-    playedAt: params.playedAt,
-    eventName: params.eventName,
+    format: params.format,
+    matchDate: params.matchDate,
+    event: params.event ?? 'PaddleUp Match',
+    identifier,
+    teamA,
+    teamB,
+    matchSource: 'PARTNER' as const,
   };
 
   // 3. Insert pending record into duprMatchSubmissions
@@ -63,14 +92,7 @@ export async function submitMatchToDupr(params: SubmitToDuprParams) {
 
   try {
     // 4. Call duprService.createMatch() (real DUPR API)
-    const result = await duprService.createMatch({
-      matchType: params.matchType,
-      team1Players: payload.team1Players,
-      team2Players: payload.team2Players,
-      scores: params.scores,
-      playedAt: params.playedAt,
-      eventName: params.eventName,
-    });
+    const result = await duprService.createMatch(payload);
 
     // 5. Update record to 'submitted' with duprMatchId
     await db

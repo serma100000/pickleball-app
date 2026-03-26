@@ -1617,12 +1617,12 @@ leaguesRouter.post(
 
       submitMatchToDupr({
         leagueMatchId: matchId,
-        matchType: matchType as 'SINGLES' | 'DOUBLES',
+        format: matchType as 'SINGLES' | 'DOUBLES',
         team1UserIds: match.participant1.players.map((p) => p.userId),
         team2UserIds: match.participant2.players.map((p) => p.userId),
         scores: scores.map((s) => ({ team1Score: s.team1, team2Score: s.team2 })),
-        playedAt: new Date().toISOString(),
-        eventName: match.season.league.name,
+        matchDate: new Date().toISOString().slice(0, 10),
+        event: match.season.league.name,
         submittedByUserId: dbUser.id,
       }).catch((err) => console.error(`DUPR auto-submit failed for league match ${matchId}:`, err));
     }

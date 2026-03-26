@@ -1036,11 +1036,11 @@ gamesRouter.post(
 
     const duprResult = await submitMatchToDupr({
       gameId: id,
-      matchType: matchType as 'SINGLES' | 'DOUBLES',
+      format: matchType as 'SINGLES' | 'DOUBLES',
       team1UserIds,
       team2UserIds,
       scores: [{ team1Score: game.team1Score ?? 0, team2Score: game.team2Score ?? 0 }],
-      playedAt: game.completedAt?.toISOString() || new Date().toISOString(),
+      matchDate: (game.completedAt ?? new Date()).toISOString().slice(0, 10),
       submittedByUserId: dbUser.id,
     });
 
